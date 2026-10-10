@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Azure DevOps Niceties</title>
+    <link rel="stylesheet" href="options.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <span class="mark" aria-hidden="true">✓</span>
+        <div><h1>Azure DevOps Niceties</h1><p>System theme · Better copying</p></div>
+      </header>
+
+      <section aria-labelledby="privacy-heading" class="disclosure">
+        <h2 id="privacy-heading">Your work-item data</h2>
+        <p>Enhanced copying reads work-item IDs, titles, types, and URLs on this device and writes your chosen format to the clipboard. Parent context requests information from your signed-in Azure DevOps organization. Preferences can sync through Chrome. Work-item content is not sent to the publisher. No analytics or ads.</p>
+        <label class="toggle-row">
+          <span><strong>Enable enhanced copying</strong><small>I agree to this use of my work-item data</small></span>
+          <input id="data-consent" type="checkbox" role="switch" disabled>
+        </label>
+      </section>
+
+      <label class="toggle-row">
+        <span><strong>Include parent context</strong><small>Feature 900 › PBI 1234: Title</small></span>
+        <input id="include-parent" type="checkbox" role="switch" disabled>
+      </label>
+
+      <label class="field-row" for="branch-prefix">
+        <span><strong>Branch prefix</strong><small>Used for copied branch names</small></span>
+        <input id="branch-prefix" type="text" maxlength="30" spellcheck="false" placeholder="feature" disabled>
+      </label>
+
+      <section aria-labelledby="shortcuts-heading">
+        <h2 id="shortcuts-heading">Copy variants</h2>
+        <dl>
+          <div><dt>Click</dt><dd>Rich linked title</dd></div>
+          <div><dt>Shift-click</dt><dd>Markdown link</dd></div>
+          <div><dt>Option/Alt-click</dt><dd>#ID</dd></div>
+          <div><dt>Command/Ctrl-click</dt><dd>URL</dd></div>
+          <div><dt>Shift+Option/Alt-click</dt><dd>Branch name</dd></div>
+          <div><dt>Shift+Alt+C</dt><dd>Copy selected item</dd></div>
+          <div><dt>Shift+Alt+B</dt><dd>Copy branch</dd></div>
+        </dl>
+      </section>
+      <p class="theme-note">Azure DevOps follows your system light/dark appearance automatically. High contrast is preserved.</p>
+      <p><a href="https://kylestay.github.io/Azure-DevOps-Niceties/privacy.html" target="_blank" rel="noopener noreferrer">Privacy policy</a></p>
+      <p id="status" role="status" aria-live="polite"></p>
+    </main>
+    <script src="../src/work-item.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Azure DevOps Niceties fixture</title>
+    <style>
+      body { font: 16px system-ui; padding: 40px; background: #f3f2f1; }
+      .wit-card { width: 420px; padding: 16px; background: white; border-left: 4px solid #009ccc; box-shadow: 0 1px 4px #0002; }
+      .wit-type { color: #555; font-size: 12px; text-transform: uppercase; }
+      .work-item-title { display: block; color: #0078d4; margin: 8px 0 16px; }
+      button { padding: 6px 10px; }
+    </style>
+  </head>
+  <body>
+    <section id="retained-old-form" class="work-item-form-page" hidden>
+      <div class="work-item-form-header">
+        <a href="https://dev.azure.com/example/project/_workitems/edit/8400">PRODUCT BACKLOG ITEM 8400</a>
+        <input aria-label="Title field" value="Retained old form">
+        <button id="retained-old-form-copy" type="button" aria-label="Copy to clipboard">Copy</button>
+      </div>
+    </section>
+    <section id="current-visible-form" class="work-item-form-page">
+      <div class="work-item-form-header">
+        <a href="https://dev.azure.com/example/project/_workitems/edit/8401">PRODUCT BACKLOG ITEM 8401</a>
+        <input aria-label="Title field" value="Current visible form">
+        <button id="current-visible-form-copy" type="button" aria-label="Copy to clipboard">Copy</button>
+      </div>
+    </section>
+    <article class="wit-card" data-work-item-id="1234">
+      <span class="wit-type">Product Backlog Item</span>
+      <a class="work-item-title" href="https://dev.azure.com/example/project/_workitems/edit/1234">Improve board copy</a>
+      <button type="button" aria-label="Copy work item to clipboard">Copy</button>
+    </article>
+    <article class="wit-card editable-card" data-work-item-id="2345">
+      <span class="wit-type">Product Backlog Item</span>
+      <a class="work-item-title" aria-label="Product Backlog Item 2345" href="https://dev.azure.com/example/project/_workitems/edit/2345">PRODUCT BACKLOG ITEM 2345</a>
+      <input autocomplete="off" aria-label="Title field" class="bolt-textfield-input flex-grow" placeholder="Enter title" value="Improve sample workflow">
+      <button type="button" aria-label="Copy work item to clipboard">Copy</button>
+    </article>
+    <section class="work-item-form-page">
+      <div class="work-item-form-header">
+        <div class="secondary-text">
+          <a href="https://dev.azure.com/example/project/_workitems/edit/5">PRODUCT BACKLOG ITEM 5</a>
+        </div>
+        <input aria-label="Title field" value="test 2">
+        <div class="form-copy-wrapper-1"><div class="form-copy-wrapper-2"><div class="bolt-clipboard-button invisible">
+          <button id="live-form-copy" type="button" role="button" aria-label="Copy to clipboard">Copy</button>
+        </div></div></div>
+        <button id="live-form-save" type="button">Save</button>
+      </div>
+      <div id="generic-related-wrapper">
+        <a href="https://dev.azure.com/example/project/_workitems/edit/201">PBI 201: Generic related item</a>
+        <button id="generic-related-copy" type="button" aria-label="Copy link">Copy generic related item</button>
+      </div>
+    </section>
+    <section class="work-item-form-page unrelated-form-page">
+      <a href="https://dev.azure.com/example/project/_workitems/edit/6">PRODUCT BACKLOG ITEM 6</a>
+      <input aria-label="Title field" value="Copy safety">
+      <div class="description-code-block">
+        <button id="description-copy" type="button" aria-label="Copy to clipboard">Copy description</button>
+        <button id="clone-url-copy" type="button" aria-label="Copy clone URL">Copy clone URL</button>
+      </div>
+    </section>
+    <div id="related-item-row" role="row" data-item-id="200">
+      <a href="https://dev.azure.com/example/project/_workitems/edit/200">PBI 200: Related item</a>
+      <button id="related-item-copy" type="button" aria-label="Copy link">Copy related item</button>
+    </div>
+    <div id="generic-copy-row">
+      <a href="https://dev.azure.com/example/project/_workitems/edit/202">PBI 202: Generic copy controls</a>
+      <button id="generic-copy-link" type="button" aria-label="Copy link">Copy link</button>
+      <button id="generic-copy-iteration" type="button" aria-label="Copy iteration path">Copy iteration path</button>
+    </div>
+    <div id="data-item-mixed-row" data-item-id="203">
+      <a href="https://dev.azure.com/example/project/_workitems/edit/203">PBI 203: Data item copy controls</a>
+      <button id="data-item-copy-link" type="button" aria-label="Copy link">Copy link</button>
+      <button id="data-item-copy-iteration" type="button" aria-label="Copy iteration path">Copy iteration path</button>
+    </div>
+    <article class="wit-card async-card-a" data-work-item-id="7001">
+      <span class="wit-type">Bug</span>
+      <a class="work-item-title" href="https://dev.azure.com/example/project/_workitems/edit/7001">Slow parent lookup</a>
+      <button id="async-copy-a" type="button" aria-label="Copy work item to clipboard">Copy</button>
+    </article>
+    <article class="wit-card async-card-b" data-work-item-id="7002">
+      <span class="wit-type">Bug</span>
+      <a class="work-item-title" href="https://dev.azure.com/example/project/_workitems/edit/7002">Fast parent lookup</a>
+      <button id="async-copy-b" type="button" aria-label="Copy work item to clipboard">Copy</button>
+    </article>
+    <article class="wit-card retry-parent-card" data-work-item-id="8001">
+      <span class="wit-type">Task</span>
+      <a class="work-item-title" href="https://dev.azure.com/example/project/_workitems/edit/8001">Retry parent lookup</a>
+      <button id="retry-parent-copy" type="button" aria-label="Copy work item to clipboard">Copy</button>
+    </article>
+    <article class="wit-card cross-org-a" data-work-item-id="8100">
+      <span class="wit-type">Task</span>
+      <a class="work-item-title" href="https://dev.azure.com/org-a/project/_workitems/edit/8100">Organization A child</a>
+      <button id="cross-org-a-copy" type="button" aria-label="Copy work item to clipboard">Copy</button>
+    </article>
+    <article class="wit-card cross-org-b" data-work-item-id="8100">
+      <span class="wit-type">Task</span>
+      <a class="work-item-title" href="https://dev.azure.com/org-b/project/_workitems/edit/8100">Organization B child</a>
+      <button id="cross-org-b-copy" type="button" aria-label="Copy work item to clipboard">Copy</button>
+    </article>
+    <article class="wit-card hidden-hover-card" data-work-item-id="8200">
+      <span class="wit-type">Bug</span>
+      <a class="work-item-title" href="https://dev.azure.com/example/project/_workitems/edit/8200">Hidden hovered card</a>
+      <button id="hidden-hover-copy" type="button" aria-label="Copy work item to clipboard">Copy</button>
+    </article>
+    <section class="pull-request">
+      <header class="pull-request-header">
+        <button id="pr-clone-copy" type="button" aria-label="Copy clone URL">Copy clone URL</button>
+      </header>
+      <div class="bolt-table-row" role="row">
+        <a href="https://dev.azure.com/example/project/_workitems/edit/2345">PBI 2345: Improve sample workflow</a>
+        <button id="pr-work-item-copy" type="button" title="Copy link">Copy work item</button>
+        <button id="pr-field-copy" type="button" aria-label="Copy iteration path">Copy iteration path</button>
+      </div>
+    </section>
+    <script>
+      window.nativeCopyClicks = {};
+      document.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => {
+        const key = button.id || button.closest("article")?.dataset.workItemId || "unknown";
+        window.nativeCopyClicks[key] = (window.nativeCopyClicks[key] || 0) + 1;
+        if (button.id === "pr-clone-copy" && window.expectNativeCloneCopy) {
+          window.copiedPayload = { plainText: "native-clone-url", rich: false };
+        }
+      }));
+    </script>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+[data-azure-niceties-copied="true"] {
+  color: #107c10 !important;
+  outline: 2px solid color-mix(in srgb, #107c10 35%, transparent) !important;
+  outline-offset: 1px;
+}
+
+[data-azure-niceties-status] {
+  position: fixed !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}

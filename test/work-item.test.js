@@ -1,0 +1,96 @@
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const workItem = require("../src/work-item.js");
+
+test("shortens Product Backlog Item to PBI", () => {
+  assert.equal(workItem.shortType("Product Backlog Item"), "PBI");
+});
+
+test("formats the entire label as one rich-text link", () => {
+  const result = workItem.formatWorkItem({
+    id: "1234",
+    type: "Product Backlog Item",
+    title: "  Improve   board copy  ",
+    url: "https://dev.azure.com/example/project/_workitems/edit/1234",
+  });
+
+  assert.equal(result.label, "PBI 1234: Improve board copy");
+  assert.equal(
+    result.html,
+    '<a href="https://dev.azure.com/example/project/_workitems/edit/1234">PBI 1234: Improve board copy</a>'
+  );
+  assert.equal(
+    result.plainText,
+    "PBI 1234: Improve board copy"
+  );
+});
+
+test("escapes work item content in rich text", () => {
+  const result = workItem.formatWorkItem({
+    id: "8",
+    type: "Bug",
+    title: "Fix <copy> & paste",
+    url: "https://dev.azure.com/example/_workitems/edit/8?x=1&y=2",
+  });
+
+  assert.equal(
+    result.html,
+    '<a href="https://dev.azure.com/example/_workitems/edit/8?x=1&amp;y=2">Bug 8: Fix &lt;copy&gt; &amp; paste</a>'
+  );
+});
+
+test("extracts an id from an Azure DevOps work item URL", () => {
+  assert.equal(workItem.workItemIdFromUrl("https://dev.azure.com/o/p/_workitems/edit/9876"), "9876");
+});
+
+test("supports Markdown, ID, URL, and branch copy formats", () => {
+  const item = {
+    id: "2345",
+    type: "Product Backlog Item",
+    title: "Improve sample workflow",
+    url: "https://dev.azure.com/example/project/_workitems/edit/2345",
+  };
+
+  assert.equal(
+    workItem.formatWorkItem(item, { mode: "markdown" }).plainText,
+    "[PBI 2345: Improve sample workflow](https://dev.azure.com/example/project/_workitems/edit/2345)"
+  );
+  assert.equal(workItem.formatWorkItem(item, { mode: "id" }).plainText, "#2345");
+  assert.equal(workItem.formatWorkItem(item, { mode: "url" }).plainText, item.url);
+  assert.equal(
+    workItem.formatWorkItem(item, { mode: "branch", branchPrefix: "feature" }).plainText,
+    "feature/2345-improve-sample-workflow"
+  );
+});
+
+test("adds separately linked parent context to rich and Markdown copies", () => {
+  const child = { id: "1234", type: "Product Backlog Item", title: "Child", url: "https://dev.azure.com/o/p/_workitems/edit/1234" };
+  const parent = { id: "900", type: "Feature", title: "Parent", url: "https://dev.azure.com/o/p/_workitems/edit/900" };
+  const rich = workItem.formatWorkItem(child, { parent });
+  const markdown = workItem.formatWorkItem(child, { mode: "markdown", parent });
+
+  assert.equal(rich.plainText, "Feature 900: Parent › PBI 1234: Child");
+  assert.equal(
+    rich.html,
+    '<a href="https://dev.azure.com/o/p/_workitems/edit/900">Feature 900: Parent</a> &rsaquo; <a href="https://dev.azure.com/o/p/_workitems/edit/1234">PBI 1234: Child</a>'
+  );
+  assert.equal(
+    markdown.plainText,
+    "[Feature 900: Parent](https://dev.azure.com/o/p/_workitems/edit/900) › [PBI 1234: Child](https://dev.azure.com/o/p/_workitems/edit/1234)"
+  );
+});
+
+test("maps modifier keys to deterministic copy modes", () => {
+  assert.equal(workItem.modeFromModifiers({}), "rich");
+  assert.equal(workItem.modeFromModifiers({ shiftKey: true }), "markdown");
+  assert.equal(workItem.modeFromModifiers({ altKey: true }), "id");
+  assert.equal(workItem.modeFromModifiers({ metaKey: true }), "url");
+  assert.equal(workItem.modeFromModifiers({ shiftKey: true, altKey: true }), "branch");
+});
+
+test("sanitizes branch names", () => {
+  assert.equal(
+    workItem.branchName({ id: "42", title: "Café & API: make it work!" }, "Feature Work"),
+    "feature-work/42-cafe-and-api-make-it-work"
+  );
+});

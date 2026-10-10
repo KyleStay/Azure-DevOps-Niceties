@@ -1,0 +1,34 @@
+:root { color-scheme: light dark; font: 13px/1.4 system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 340px; color: CanvasText; background: Canvas; }
+a { color: LinkText; }
+main { padding: 16px; max-width: 440px; margin: auto; }
+header { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
+.mark { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: white; background: #0078d4; font-size: 20px; }
+h1 { margin: 0; font-size: 16px; }
+header p, small { color: GrayText; }
+header p { margin: 1px 0 0; }
+.toggle-row, .field-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px solid color-mix(in srgb, CanvasText 14%, transparent); }
+label span { display: flex; flex-direction: column; }
+input[type="checkbox"] { width: 36px; height: 20px; accent-color: #0078d4; }
+input[type="text"] { width: 106px; padding: 6px 8px; border: 1px solid color-mix(in srgb, CanvasText 28%, transparent); border-radius: 4px; background: Canvas; color: CanvasText; }
+section { margin-top: 10px; padding-top: 2px; border-top: 1px solid color-mix(in srgb, CanvasText 14%, transparent); }
+h2 { margin: 12px 0 6px; font-size: 13px; }
+dl { margin: 0; }
+dl div { display: flex; justify-content: space-between; gap: 16px; padding: 3px 0; }
+dt { color: GrayText; }
+dd { margin: 0; text-align: right; }
+#status { min-height: 18px; margin: 10px 0 -4px; color: #107c10; text-align: right; }
+.disclosure p, .theme-note { font-size: 12px; color: GrayText; }
+.disclosure { border: 0; margin-top: 0; }
+.disclosure .toggle-row { border: 0; padding-top: 4px; }
+:root { --status-color: #107c10; }
+@media (prefers-color-scheme: dark) { :root { --status-color: #79d279; } }
+#status { color: var(--status-color); }
+@media (min-width: 600px) {
+  :root { font-size: 16px; }
+  main { max-width: 600px; padding: 28px; }
+  h1 { font-size: 24px; }
+  h2 { font-size: 16px; }
+  .disclosure p, .theme-note { font-size: 14px; }
+}
