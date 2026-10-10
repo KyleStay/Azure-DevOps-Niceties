@@ -3,6 +3,7 @@
 
   const core = globalThis.AzureNicetiesWorkItem;
   const parentCache = new Map();
+  const activeParentLookups = new Set();
   const PARENT_CACHE_TTL_MS = 30_000;
   const PARENT_LOOKUP_TIMEOUT_MS = 3_000;
   let enabled = false;
@@ -275,6 +276,8 @@
     enabled = false;
     hoveredContainer = null;
     latestCopyRequest += 1;
+    for (const controller of activeParentLookups) controller.abort();
+    parentCache.clear();
     if (globalThis.azureNicetiesTestSettings) {
       enabled = globalThis.azureNicetiesTestSettings.dataConsent === true;
       return;
@@ -343,6 +346,7 @@
   }
 
   async function fetchParent(workItem) {
+    if (!enabled) return null;
     const cacheKey = parentCacheKey(workItem);
     const cached = parentCache.get(cacheKey);
     if (cached?.promise) return cached.promise;
@@ -350,7 +354,14 @@
     if (cached) parentCache.delete(cacheKey);
 
     const controller = new AbortController();
-    let deadline;
+    const consentVersion = consentLoad;
+    const isActive = () => enabled && consentVersion === consentLoad && !controller.signal.aborted;
+    activeParentLookups.add(controller);
+    // Resolve cancellation even when a fetch implementation ignores abort.
+    const cancelled = new Promise((resolve) => {
+      controller.signal.addEventListener("abort", () => resolve(null), { once: true });
+    });
+    const deadline = window.setTimeout(() => controller.abort(), PARENT_LOOKUP_TIMEOUT_MS);
     const lookup = (async () => {
       try {
         const childUrl = core.safeWorkItemUrl(workItem.url);
@@ -364,10 +375,12 @@
         itemUrl.hash = "";
         const requestOptions = { credentials: "include", redirect: "error", signal: controller.signal };
         const childResponse = await fetch(itemUrl.href, requestOptions);
+        if (!isActive()) return null;
         if (!childResponse.ok || childResponse.redirected) return null;
         if (childResponse.url
           && parentApiUrl(childResponse.url, childUrl) !== parentApiUrl(itemUrl.href, childUrl)) return null;
         const child = await childResponse.json();
+        if (!isActive()) return null;
         if (child.id != null && String(child.id) !== String(workItem.id)) return null;
         const relation = Array.isArray(child.relations) && child.relations.find((candidate) =>
           candidate.rel === "System.LinkTypes.Hierarchy-Reverse" || candidate.attributes?.name === "Parent"
@@ -377,9 +390,11 @@
         if (!relationApiUrl) return null;
         const expectedId = new URL(relationApiUrl).pathname.match(/\/(\d+)\/?$/)[1];
         const response = await fetch(relationApiUrl, requestOptions);
+        if (!isActive()) return null;
         if (!response.ok || response.redirected) return null;
         if (response.url && parentApiUrl(response.url, childUrl) !== relationApiUrl) return null;
         const parent = await response.json();
+        if (!isActive()) return null;
         const fields = parent.fields || {};
         const id = String(parent.id ?? fields["System.Id"] ?? "");
         if (!/^\d+$/.test(id) || id !== expectedId
@@ -396,19 +411,15 @@
         return null;
       }
     })();
-    // Race the whole lookup, including JSON parsing: not all fetch implementations honor abort.
-    const timeout = new Promise((resolve) => {
-      deadline = window.setTimeout(() => {
-        controller.abort();
-        resolve(null);
-      }, PARENT_LOOKUP_TIMEOUT_MS);
+    const request = Promise.race([lookup, cancelled]).finally(() => {
+      window.clearTimeout(deadline);
+      activeParentLookups.delete(controller);
     });
-    const request = Promise.race([lookup, timeout]).finally(() => window.clearTimeout(deadline));
 
     const entry = { promise: request };
     parentCache.set(cacheKey, entry);
     const parent = await request;
-    if (parent) {
+    if (parent && isActive() && parentCache.get(cacheKey) === entry) {
       parentCache.set(cacheKey, {
         value: parent,
         expiresAt: Date.now() + PARENT_CACHE_TTL_MS,
@@ -416,7 +427,7 @@
     } else if (parentCache.get(cacheKey) === entry) {
       parentCache.delete(cacheKey);
     }
-    return parent;
+    return isActive() ? parent : null;
   }
 
   function writeClipboard(formatted) {
@@ -481,6 +492,7 @@
     const parent = preferences.includeParent && (mode === "rich" || mode === "markdown")
       ? await fetchParent(workItem)
       : null;
+    if (!enabled || requestId !== latestCopyRequest) return;
     const formatted = core.formatWorkItem(workItem, {
       mode,
       parent,

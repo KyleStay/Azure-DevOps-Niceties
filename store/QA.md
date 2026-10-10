@@ -1,6 +1,14 @@
 # Release verification — 0.4.0
 
-Verified October 9, 2026 in a disposable Chrome for Testing 153.0.8010.12 profile on macOS. Ten subagents covered security/privacy, copy behavior, async behavior, native theme integration, settings, regression coverage, fixes, and store requirements. No known release-blocking finding remains in the reviewed source and tested scenarios.
+Browser verification below describes the October 9, 2026 snapshot in a disposable Chrome for Testing 153.0.8010.12 profile on macOS. Ten subagents covered security/privacy, copy behavior, async behavior, native theme integration, settings, regression coverage, fixes, and store requirements.
+
+## October 10 consent cancellation fix
+
+Three independent whole-app reviews found that withdrawing copying approval could leave an in-flight parent lookup running. Approval withdrawal now aborts pending lookups, clears cached details, and prevents late responses from starting another request or caching results, even after approval is restored. Timeout cancellation also prevents late follow-up requests.
+
+All 66 unit tests pass, including five new regressions for withdrawal during child/parent fetch and JSON parsing, renewed approval, cache clearing, disabled lookups, and late timed-out responses. Syntax, public-content, whitespace, and package checks pass. The publisher and submission kit have been regenerated with the corrected runtime ZIP.
+
+Fresh browser verification is unavailable in the current sandbox: disposable Chrome aborts with SIGABRT at launch before assertions. Both owned processes exited and their profiles were removed. Earlier browser results below do not establish runtime verification of this fix. Authenticated Azure checks remain required before public release.
 
 ## Results
 
@@ -20,7 +28,7 @@ Verified October 9, 2026 in a disposable Chrome for Testing 153.0.8010.12 profil
 | Publishing helper | Exact ZIP + four PNG downloads, native/fallback clipboard, reviewer-note privacy, and all five mobile steps passed |
 | Cleanup | Test browser closed, disposable profile and extracted test package removed |
 
-Exact tested upload ZIP SHA-256:
+Previously browser-tested upload ZIP SHA-256 (before the October 10 fix):
 
 ```text
 c792052fbe6e29e6851b2ae979d8d1205938793e526591a05d840a0fc72b3779

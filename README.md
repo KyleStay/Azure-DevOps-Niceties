@@ -36,7 +36,7 @@ Select the extension's toolbar button or its extension options to:
 - Include linked parent context: `Feature 900: Parent › PBI 1234: Title`
 - Customize the branch prefix (default: `feature`)
 
-Parent information is requested only for rich or Markdown copying when the option is enabled, using the user's existing signed-in session and the same Azure DevOps organization. Requests time out after three seconds; missing or inaccessible parent information never prevents the work item itself from being copied. Parent results have a 30-second freshness window in page memory. No work-item data is saved in Chrome storage or sent to the publisher.
+Parent information is requested only for rich or Markdown copying when the option is enabled, using the user's existing signed-in session and the same Azure DevOps organization. Requests time out after three seconds; missing or inaccessible parent information never prevents the work item itself from being copied. Parent results have a 30-second freshness window in page memory. Withdrawing enhanced-copying approval cancels pending parent requests and clears cached parent details. No work-item data is saved in Chrome storage or sent to the publisher.
 
 ## Install locally
 
