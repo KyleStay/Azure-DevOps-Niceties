@@ -1,6 +1,6 @@
 # Azure DevOps Niceties privacy policy
 
-Effective date: October 9, 2026
+Effective date: October 10, 2026
 
 Azure DevOps Niceties improves work-item copying and follows your system's light or dark appearance on Azure DevOps. This policy describes the extension's handling of information.
 
@@ -26,7 +26,7 @@ The extension has no analytics, advertising, tracking service, or sale of user d
 
 ## Retention and controls
 
-Work-item information is used in the open page. Parent details may be cached in that page's memory, with a 30-second freshness period; an expired entry may remain in memory until reused or the page is closed. These details are not written to persistent extension storage. Closing the Azure DevOps tab removes the extension's in-memory state for that page.
+Work-item information is used in the open page. Parent details may be cached in that page's memory, with a 30-second freshness period; an expired entry may remain in memory until reused or the page is closed. Withdrawing enhanced-copying approval cancels pending parent requests and clears cached parent details. These details are not written to persistent extension storage. Closing the Azure DevOps tab removes the extension's in-memory state for that page.
 
 Copied data remains in the clipboard until replaced or cleared and may be retained longer by operating-system clipboard history or another application. The extension cannot delete copies you paste elsewhere.
 

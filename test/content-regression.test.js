@@ -5,7 +5,7 @@ const vm = require("node:vm");
 const core = require("../src/work-item.js");
 const source = fs.readFileSync(require.resolve("../src/content.js"), "utf8").replace(/\}\)\(\);\s*$/, `globalThis.contentHelpers = {
   titleWithoutWorkItemPrefix, extractWorkItem, isWorkItemCopyControl, fetchParent,
-  parentApiUrl, parentCache, nativeFallbackControls, reloadConsent, writeClipboard, showConfirmation,
+  parentApiUrl, parentCache, activeParentLookups, nativeFallbackControls, reloadConsent, writeClipboard, showConfirmation,
   copyForTest: workItem => copyWorkItem(workItem, "rich", null, ++latestCopyRequest), enabled: () => enabled
 }; })();`);
 
@@ -180,6 +180,83 @@ test("work-item processing remains off until local consent loads and turns off o
   resolveConsent();
   await Promise.resolve();
   assert.equal(h.enabled(), false);
+});
+
+for (const stage of ["child-fetch", "child-json", "parent-fetch", "parent-json"]) {
+  test(`revocation cancels parent copying during ${stage} and discards late responses after reapproval`, async () => {
+    let release;
+    let reached;
+    const held = new Promise(resolve => { release = resolve; });
+    const pending = new Promise(resolve => { reached = resolve; });
+    const childData = { id: 12, relations: [{ rel: "System.LinkTypes.Hierarchy-Reverse", url: api }] };
+    const parentData = { id: 900, fields: { "System.Title": "Parent" } };
+    const signals = [];
+    let blocked = false;
+    const h = harness({ fetch: async (url, options) => {
+      signals.push(options.signal);
+      const phase = new URL(url).pathname.endsWith("/12") ? "child" : "parent";
+      const data = phase === "child" ? childData : parentData;
+      if (!blocked && stage === `${phase}-fetch`) {
+        blocked = true;
+        reached();
+        return held;
+      }
+      return { ok: true, json: () => {
+        if (!blocked && stage === `${phase}-json`) {
+          blocked = true;
+          reached();
+          return held;
+        }
+        return Promise.resolve(data);
+      } };
+    } });
+    h.context.azureNicetiesTestSettings.includeParent = true;
+    let settled = false;
+    const copy = h.copyForTest(child).then(() => { settled = true; });
+    await pending;
+    h.context.azureNicetiesTestSettings.dataConsent = false;
+    await h.reloadConsent();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(signals[0].aborted, true);
+    assert.equal(settled, true, "revocation settles copying without waiting for the response or deadline");
+    assert.equal(h.activeParentLookups.size, 0);
+    assert.equal(h.parentCache.size, 0);
+    assert.deepEqual(h.clipboard, {});
+    const callsBeforeLateResponse = signals.length;
+    h.context.azureNicetiesTestSettings.dataConsent = true;
+    await h.reloadConsent();
+    const lateData = stage.startsWith("child") ? childData : parentData;
+    release(stage.endsWith("fetch") ? response(lateData) : lateData);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(signals.length, callsBeforeLateResponse, "an obsolete response cannot launch another request");
+    assert.equal(h.parentCache.size, 0, "an obsolete response cannot cache parent details");
+    assert.deepEqual(h.clipboard, {});
+    await copy;
+    const fresh = await h.fetchParent(child);
+    assert.equal(fresh.title, "Parent", "a new approval permits a fresh lookup");
+    assert.equal(h.parentCache.size, 1);
+    h.context.azureNicetiesTestSettings.dataConsent = false;
+    await h.reloadConsent();
+    assert.equal(h.parentCache.size, 0, "revocation clears previously cached details too");
+    assert.equal(await h.fetchParent(child), null);
+    assert.equal(signals.length, callsBeforeLateResponse + 2, "disabled copying never starts a lookup");
+  });
+}
+
+test("a timed-out child response cannot resume its parent lookup", async () => {
+  let release;
+  let calls = 0;
+  const h = harness({ timeout: 20, fetch: async () => {
+    calls++;
+    if (calls === 1) return new Promise(resolve => { release = resolve; });
+    return response({ id: 900, fields: { "System.Title": "Parent" } });
+  } });
+  assert.equal(await h.fetchParent(child), null);
+  assert.equal(h.activeParentLookups.size, 0);
+  release(response({ relations: [{ rel: "System.LinkTypes.Hierarchy-Reverse", url: api }] }));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls, 1);
+  assert.equal(h.parentCache.size, 0);
 });
 
 test("parent requests stay in the page organization and reject hostile relation routes", async () => {
