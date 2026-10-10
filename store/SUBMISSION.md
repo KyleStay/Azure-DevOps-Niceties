@@ -7,6 +7,7 @@ Prepared October 9, 2026. This kit prepares the submission; it does not create a
 | Item | File / source |
 | --- | --- |
 | Extension package | `release/0.4.0/azure-devops-niceties-0.4.0.zip` — upload this ZIP |
+| Copy-and-paste publishing helper | Open `release/0.4.0/publish.html` or https://kylestay.github.io/Azure-DevOps-Niceties/publish.html |
 | All submission materials | `release/0.4.0/azure-devops-niceties-0.4.0-submission-kit.zip` — unpack locally; upload the inner runtime ZIP |
 | Listing and privacy-tab answers | `store/LISTING.md` |
 | Hosted privacy policy | https://kylestay.github.io/Azure-DevOps-Niceties/privacy.html (source: `docs/privacy.html`) |
@@ -17,6 +18,8 @@ Prepared October 9, 2026. This kit prepares the submission; it does not create a
 | Package and asset checksums | `release/0.4.0/SHA256SUMS.txt` |
 
 The upload ZIP must have `manifest.json` at its root, with packaged `src/`, `options/`, and `icons/` files present. Do not include `node_modules`, tests, Git files, account credentials, or this submission documentation in the runtime package. The release target is version 0.4.0 with Chrome 111 or later; confirm the final manifest matches. The package version is the version in the final manifest; do not upload an earlier ZIP after code changes.
+
+The HTML helper has copy buttons for every text field, downloads for the exact ZIP and four images, a private reviewer-notes editor, and a submission checklist. It also works offline as one file. Reviewer notes remain only in the open tab and are not saved or uploaded. `npm run package` regenerates the helper from `LISTING.md`, `REVIEWER-TESTS.md`, and the current release files, and includes it at the root of the submission kit.
 
 ## Information only the publisher can supply
 

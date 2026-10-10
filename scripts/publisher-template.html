@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Copy-and-paste Chrome Web Store publishing helper for Azure DevOps Niceties.">
+  <title>Publish Azure DevOps Niceties</title>
+  <style>
+    :root { color-scheme: light dark; --bg: #f4f6fa; --surface: #fff; --ink: #17243b; --muted: #617087; --line: #dce2eb; --accent: #1264df; --soft: #edf3ff; --good: #147449; font: 15px/1.5 system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); }
+    button, input, textarea { font: inherit; }
+    a { color: var(--accent); }
+    button, .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink); padding: 9px 14px; cursor: pointer; text-decoration: none; font-weight: 600; }
+    button:hover, .button:hover { border-color: var(--accent); color: var(--accent); }
+    button:focus-visible, a:focus-visible, textarea:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    .primary { background: var(--accent); color: white; border-color: var(--accent); }
+    .primary:hover { background: #084dae; color: white; }
+    .shell { max-width: 1240px; margin: auto; padding: 34px 28px 70px; }
+    header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 30px; }
+    .eyebrow { color: var(--accent); text-transform: uppercase; letter-spacing: .12em; font-size: 11px; font-weight: 750; margin: 0 0 8px; }
+    h1 { font-size: clamp(26px, 4vw, 34px); letter-spacing: -.04em; line-height: 1.15; margin: 0 0 10px; }
+    h2 { font-size: 24px; letter-spacing: -.025em; margin: 0 0 7px; }
+    h3 { font-size: 16px; margin: 0; }
+    p { margin: 0 0 14px; }
+    .muted { color: var(--muted); }
+    .version { white-space: nowrap; background: var(--soft); border: 1px solid var(--line); border-radius: 20px; padding: 7px 13px; font-size: 13px; font-weight: 650; }
+    .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 34px; align-items: start; }
+    aside { position: sticky; top: 24px; }
+    nav { display: grid; gap: 7px; }
+    nav button { text-align: left; justify-content: flex-start; border-color: transparent; background: transparent; padding: 12px; }
+    nav button[aria-current="step"] { background: var(--soft); border-color: var(--line); color: var(--accent); }
+    .step-number { display: grid; place-items: center; width: 25px; height: 25px; flex-shrink: 0; border: 1px solid var(--line); border-radius: 50%; font-size: 12px; }
+    .aside-note { padding: 20px 12px; font-size: 12px; color: var(--muted); }
+    .section-intro { margin-bottom: 23px; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 13px; padding: 20px; margin-bottom: 15px; }
+    .field-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 11px; }
+    .field-top label { font-weight: 650; }
+    .copy { font-size: 13px; min-width: 75px; padding: 6px 12px; }
+    .copy[data-copied="true"] { color: var(--good); border-color: var(--good); }
+    textarea, .value { width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 11px 12px; color: var(--ink); font-size: 14px; line-height: 1.55; resize: vertical; overflow-wrap: anywhere; }
+    textarea[readonly] { cursor: text; }
+    .hint { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+    .facts { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+    .fact { border: 1px solid var(--line); background: var(--surface); border-radius: 7px; padding: 6px 10px; font-size: 13px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    code { font: 12px/1.6 ui-monospace, monospace; overflow-wrap: anywhere; }
+    .asset-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 20px; }
+    .asset { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+    .asset-preview { height: 160px; display: grid; place-items: center; border-radius: 7px; background: var(--bg); border: 1px solid var(--line); overflow: hidden; margin-bottom: 8px; }
+    .asset-preview img { display: block; max-width: 100%; max-height: 158px; object-fit: contain; }
+    .check { display: flex; gap: 11px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .check:last-child { border-bottom: 0; }
+    .check input { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--accent); margin-top: 3px; }
+    .notice { border-left: 3px solid var(--accent); padding: 13px 16px; background: var(--soft); border-radius: 0 8px 8px 0; margin-bottom: 18px; font-size: 14px; }
+    .footer { display: flex; justify-content: space-between; gap: 14px; margin-top: 24px; }
+    .footer #next { margin-left: auto; }
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); max-width: calc(100% - 32px); padding: 11px 18px; background: var(--ink); color: var(--surface); border-radius: 10px; box-shadow: 0 5px 25px #0003; z-index: 5; }
+    [hidden] { display: none !important; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #111827; --surface: #192334; --ink: #e7edf7; --muted: #a0aec3; --line: #334156; --accent: #81b3ff; --soft: #20304b; --good: #7cdbaf; } .primary { background: #2674e8; color: white; border-color: #2674e8; } }
+    @media (max-width: 760px) { .shell { padding: 24px 16px 60px; } header { gap: 10px; } .layout { grid-template-columns: 1fr; gap: 22px; } aside { position: static; } nav { display: flex; flex-wrap: wrap; gap: 5px; } nav button { padding: 7px 9px; font-size: 13px; } .aside-note { display: none; } .card { padding: 16px; } }
+    @media (max-width: 450px) { .asset-grid { grid-template-columns: 1fr; } .version { font-size: 11px; padding: 5px 8px; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div><p class="eyebrow">Chrome Web Store publishing</p><h1>Publish Azure DevOps Niceties</h1><p class="muted">Copy a field, paste it into the dashboard, and move to the next step.</p></div>
+      <span class="version" id="version"></span>
+    </header>
+    <div class="layout">
+      <aside>
+        <nav aria-label="Publishing steps">
+          <button type="button" data-step="package" aria-current="step"><span class="step-number">1</span> Package &amp; images</button>
+          <button type="button" data-step="listing"><span class="step-number">2</span> Store listing</button>
+          <button type="button" data-step="privacy"><span class="step-number">3</span> Privacy</button>
+          <button type="button" data-step="review"><span class="step-number">4</span> Reviewer access</button>
+          <button type="button" data-step="finish"><span class="step-number">5</span> Submit</button>
+        </nav>
+        <p class="aside-note">Works offline. Copy buttons use plain text. Your reviewer notes stay in this tab and are never saved or uploaded.</p>
+      </aside>
+      <main>
+        <section id="package" aria-labelledby="package-title">
+          <div class="section-intro"><h2 id="package-title" tabindex="-1">Start with the upload</h2><p class="muted">Download the extension ZIP, then add a new item in your developer dashboard.</p></div>
+          <div class="card"><h3 id="zip-name"></h3><p class="hint">Upload this extension ZIP directly. It contains the runtime files only.</p><div class="actions"><button class="primary" type="button" id="download-zip">Download upload ZIP</button><a class="button" href="https://chrome.google.com/webstore/devconsole" target="_blank" rel="noopener noreferrer">Open developer dashboard ↗</a></div><p class="hint" style="margin-top:16px">SHA-256</p><code id="zip-sha"></code></div>
+          <div class="section-intro" style="margin-top:28px"><h3>Listing images</h3><p class="muted">Download each image and upload it into the matching Store listing field.</p></div>
+          <div class="asset-grid" id="assets"></div>
+        </section>
+        <section id="listing" aria-labelledby="listing-title" hidden>
+          <div class="section-intro"><h2 id="listing-title" tabindex="-1">Store listing</h2><p class="muted">Paste these into the Store listing tab. Copy preserves the full text and line breaks.</p></div>
+          <div class="facts"><span class="fact">Language: English</span><span class="fact">Category: Developer Tools</span><span class="fact">Price: Free</span><span class="fact">Mature content: No</span></div>
+          <div id="listing-fields"></div>
+        </section>
+        <section id="privacy" aria-labelledby="privacy-title" hidden>
+          <div class="section-intro"><h2 id="privacy-title" tabindex="-1">Privacy declarations</h2><p class="muted">Paste each explanation into its matching field on the Privacy tab.</p></div>
+          <div class="notice">Data categories: select <strong>Website content</strong> and <strong>Web history / browsing activity</strong>, using the dashboard's current labels. Azure work-item URLs are handled locally; Chrome's history database is not read.</div>
+          <div id="privacy-fields"></div>
+          <div class="card"><h3>Data-use certifications</h3><p class="hint">Confirm each dashboard certification after reviewing the listing and privacy policy.</p><ul><li>Data is not sold or transferred for unrelated purposes.</li><li>Data is used only for the disclosed Azure DevOps features.</li><li>Data is not used for lending or creditworthiness.</li></ul></div>
+          <p class="hint">The native page-service integration is disclosed in the remote-code explanation. Google determines whether it meets its policy; this helper does not establish approval.</p>
+        </section>
+        <section id="review" aria-labelledby="review-title" hidden>
+          <div class="section-intro"><h2 id="review-title" tabindex="-1">Give reviewers usable access</h2><p class="muted">Add your test access details, then copy the complete instructions into the dashboard's private Test instructions field.</p></div>
+          <div class="card"><label for="reviewer-notes"><strong>Private reviewer access details</strong></label><p class="hint">Use a dedicated account with sample data. These notes are kept only in this tab, not in the downloaded tool or public repository.</p><textarea id="reviewer-notes" rows="8" autocomplete="off" spellcheck="false" placeholder="Test project URL:
+Sample work-item URL:
+Dedicated account and sign-in instructions:
+Parent/child test items:
+Where to find the board, backlog, query, and linked pull request:"></textarea></div>
+          <div class="card"><div class="field-top"><label for="reviewer-output">Complete reviewer instructions</label><button class="copy" type="button" data-copy="reviewer-output" aria-label="Copy complete reviewer instructions">Copy</button></div><textarea id="reviewer-output" readonly rows="15" spellcheck="false"></textarea><p class="hint">Access details are included only if you enter them above. Check this text before copying it.</p></div>
+        </section>
+        <section id="finish" aria-labelledby="finish-title" hidden>
+          <div class="section-intro"><h2 id="finish-title" tabindex="-1">Ready to submit</h2><p class="muted">Finish the account-specific choices in the dashboard. This helper does not submit or publish for you.</p></div>
+          <div class="card" id="checklist">
+            <label class="check"><input type="checkbox"><span>Publisher account, contact details, and Two-Step Verification are complete.</span></label>
+            <label class="check"><input type="checkbox"><span>The upload ZIP matches the version shown in this helper.</span></label>
+            <label class="check"><input type="checkbox"><span>The listing text, icon, promo image, and screenshots are uploaded.</span></label>
+            <label class="check"><input type="checkbox"><span>The Privacy tab includes the hosted policy URL, permissions, data categories, and remote-code explanation.</span></label>
+            <label class="check"><input type="checkbox"><span>A reviewer can sign in and access the sample project using the private test instructions.</span></label>
+            <label class="check"><input type="checkbox"><span>Signed-in copy and parent-context checks passed in a non-sensitive test organization.</span></label>
+            <label class="check"><input type="checkbox"><span>Distribution regions, visibility, and publication timing are selected.</span></label>
+          </div>
+          <p class="muted" id="check-progress" role="status">0 of 7 checks complete</p>
+          <div class="actions"><a class="button primary" href="https://chrome.google.com/webstore/devconsole" target="_blank" rel="noopener noreferrer">Open dashboard to submit ↗</a><a class="button" href="https://kylestay.github.io/Azure-DevOps-Niceties/privacy.html" target="_blank" rel="noopener noreferrer">View privacy policy ↗</a></div>
+        </section>
+        <div class="footer"><button type="button" id="back" hidden>← Back</button><button type="button" class="primary" id="next">Next: Store listing →</button></div>
+      </main>
+    </div>
+  </div>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+  <script id="publishing-data" type="application/json">@@PUBLISHING_DATA@@</script>
+  <script>
+    (() => {
+      "use strict";
+      const data = JSON.parse(document.getElementById("publishing-data").textContent);
+      const steps = ["package", "listing", "privacy", "review", "finish"];
+      const stepLabels = ["Package & images", "Store listing", "Privacy", "Reviewer access", "Submit"];
+      let current = 0;
+      let toastTimer;
+      const copyTimers = new WeakMap();
+      document.getElementById("version").textContent = `Version ${data.version}`;
+      document.getElementById("zip-name").textContent = data.zipName;
+      document.getElementById("zip-sha").textContent = data.zipSha;
+
+      function notify(message) {
+        clearTimeout(toastTimer);
+        const toast = document.getElementById("toast");
+        toast.textContent = message;
+        toast.hidden = false;
+        toastTimer = setTimeout(() => { toast.hidden = true; }, 3500);
+      }
+
+      function fields(container, values) {
+        for (const field of values) {
+          const card = document.createElement("div"); card.className = "card";
+          const top = document.createElement("div"); top.className = "field-top";
+          const label = document.createElement("label"); label.htmlFor = field.key; label.textContent = field.label;
+          const button = document.createElement("button"); button.type = "button"; button.className = "copy";
+          button.dataset.copy = field.key; button.setAttribute("aria-label", `Copy ${field.label}`); button.textContent = "Copy";
+          top.append(label, button);
+          const value = document.createElement("textarea"); value.id = field.key; value.readOnly = true; value.spellcheck = false;
+          value.rows = field.key === "description" ? 16 : field.multiline ? 5 : field.value.length > 90 ? 2 : 1;
+          value.value = field.value;
+          card.append(top, value);
+          if (field.note) { const note = document.createElement("p"); note.className = "hint"; note.textContent = field.note; card.append(note); }
+          if (field.key === "short") { const count = document.createElement("p"); count.className = "hint"; count.textContent = `${field.value.length} / 132 characters`; card.append(count); }
+          document.getElementById(container).append(card);
+        }
+      }
+      fields("listing-fields", data.listing);
+      fields("privacy-fields", data.privacy);
+
+      async function copy(button) {
+        const field = document.getElementById(button.dataset.copy);
+        let copied = false;
+        try { await navigator.clipboard.writeText(field.value); copied = true; } catch (_) {}
+        if (!copied) {
+          field.focus(); field.select();
+          try { copied = document.execCommand("copy"); } catch (_) {}
+        }
+        if (!copied) { notify("Text selected. Press Ctrl+C or Command+C to copy."); return; }
+        clearTimeout(copyTimers.get(button));
+        button.textContent = "Copied ✓"; button.dataset.copied = "true";
+        notify(`${field.id === "reviewer-output" ? "Reviewer instructions" : button.getAttribute("aria-label").replace(/^Copy /, "")} copied`);
+        copyTimers.set(button, setTimeout(() => { button.textContent = "Copy"; delete button.dataset.copied; }, 1800));
+      }
+      document.addEventListener("click", event => {
+        const button = event.target.closest("button[data-copy]");
+        if (button) copy(button);
+      });
+
+      function download(name, encoded, type) {
+        const binary = atob(encoded);
+        const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+        const url = URL.createObjectURL(new Blob([bytes], { type }));
+        const link = document.createElement("a"); link.href = url; link.download = name;
+        document.body.append(link); link.click(); link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      }
+      document.getElementById("download-zip").addEventListener("click", () => download(data.zipName, data.zipData, "application/zip"));
+      for (const asset of data.assets) {
+        const card = document.createElement("div"); card.className = "card asset";
+        const preview = document.createElement("div"); preview.className = "asset-preview";
+        const image = document.createElement("img"); image.src = `data:image/png;base64,${asset.data}`; image.alt = asset.label;
+        preview.append(image);
+        const label = document.createElement("h3"); label.textContent = asset.label;
+        const note = document.createElement("p"); note.className = "hint"; note.textContent = asset.use;
+        const button = document.createElement("button"); button.type = "button"; button.textContent = "Download PNG"; button.setAttribute("aria-label", `Download ${asset.label}`);
+        button.addEventListener("click", () => download(asset.name, asset.data, "image/png"));
+        card.append(preview, label, note, button); document.getElementById("assets").append(card);
+      }
+
+      function showStep(index) {
+        current = index;
+        for (const step of steps) document.getElementById(step).hidden = step !== steps[index];
+        document.querySelectorAll("nav button").forEach(button => {
+          if (button.dataset.step === steps[index]) button.setAttribute("aria-current", "step");
+          else button.removeAttribute("aria-current");
+        });
+        const back = document.getElementById("back"); const next = document.getElementById("next");
+        back.hidden = index === 0; next.hidden = index === steps.length - 1;
+        if (!next.hidden) next.textContent = `Next: ${stepLabels[index + 1]} →`;
+        document.getElementById(`${steps[index]}-title`).focus(); window.scrollTo(0, 0);
+      }
+      document.querySelectorAll("nav button").forEach(button => button.addEventListener("click", () => showStep(steps.indexOf(button.dataset.step))));
+      document.getElementById("back").addEventListener("click", () => showStep(current - 1));
+      document.getElementById("next").addEventListener("click", () => showStep(current + 1));
+      const notes = document.getElementById("reviewer-notes");
+      const updateReviewer = () => { document.getElementById("reviewer-output").value = (notes.value.trim() ? `REVIEWER ACCESS\n${notes.value.trim()}\n\n` : "") + `TEST PROCEDURE\n${data.reviewerProcedure}`; };
+      notes.addEventListener("input", updateReviewer); updateReviewer();
+      document.getElementById("checklist").addEventListener("change", () => {
+        const checked = document.querySelectorAll("#checklist input:checked").length;
+        document.getElementById("check-progress").textContent = `${checked} of 7 checks complete`;
+      });
+    })();
+  </script>
+</body>
+</html>

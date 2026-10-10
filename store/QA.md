@@ -17,6 +17,7 @@ Verified October 9, 2026 in a disposable Chrome for Testing 153.0.8010.12 profil
 | Security regressions | Unsafe links/Markdown HTML, mismatched IDs, synthetic gestures, cross-organization parent requests, redirects, hung requests, revocation and clipboard ordering passed |
 | Theme regressions | 23 tests covering loader failures, navigation, concurrent requests, malformed definitions, forced colors, explicit high contrast and changing preferences passed |
 | Images | Two actual 1280 × 800 options screenshots, 440 × 280 promotional PNG, 128 × 128 icon inspected |
+| Publishing helper | Exact ZIP + four PNG downloads, native/fallback clipboard, reviewer-note privacy, and all five mobile steps passed |
 | Cleanup | Test browser closed, disposable profile and extracted test package removed |
 
 Exact tested upload ZIP SHA-256:
