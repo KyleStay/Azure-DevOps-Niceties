@@ -14,11 +14,22 @@ async function runReleaseListSmoke(browser, extensionId) {
   try {
     await options.goto(`chrome-extension://${extensionId}/options/options.html`);
     await options.waitForFunction(() => !document.querySelector("#data-consent").disabled);
+    await options.evaluate(async () => chrome.storage.local.remove("dataConsent"));
+    await options.reload();
+    await options.waitForFunction(() => !document.querySelector("#data-consent").disabled);
+    assert.equal(await options.locator("#data-consent").isChecked(), true, "copying starts enabled with no saved preference");
+    await page.goto(url);
+    await page.getByRole("button", { name: "Copy all loaded (4)", exact: true }).waitFor();
+    assert.equal(await page.locator("#items thead tr > :first-child [aria-label='Select all loaded work items']").count(), 1, "select-all is in the first header column");
+    assert.equal(await page.locator("#items tbody tr > :first-child").evaluateAll(cells => cells.every(cell => cell.hasAttribute("data-azure-niceties-release-column"))), true, "every table row has its own first selection cell");
+    assert.equal(await page.locator("#items colgroup > col").count(), 4, "native table colgroups include the selection column");
     await options.locator("#data-consent").uncheck();
     await options.waitForFunction(async () => (await chrome.storage.local.get("dataConsent")).dataConsent === false);
     await page.goto(url);
     await page.waitForTimeout(200);
-    assert.equal(await page.locator(selector).count(), 0, "bulk copying is off before local approval");
+    assert.equal(await page.locator(selector).count(), 0, "saved copying opt-out survives reload");
+    assert.equal(await page.locator("[data-azure-niceties-release-column]").count(), 0, "opting out removes the selection column");
+    assert.equal(await page.locator("#items colgroup > col").count(), 3, "opting out restores native table columns");
     await page.getByRole("button", { name: "Enable copying", exact: true }).evaluate(button => button.click());
     assert.equal(await options.evaluate(async () => (await chrome.storage.local.get({ dataConsent: false })).dataConsent), false, "synthetic clicks cannot approve copying");
     await page.getByRole("button", { name: "Enable copying", exact: true }).click();
@@ -104,6 +115,15 @@ async function runReleaseListSmoke(browser, extensionId) {
     try {
       await page.goto(demoUrl);
       await page.getByRole("button", { name: "Copy all loaded (4)", exact: true }).waitFor();
+      assert.equal(await page.locator("#items [role='row'] > :first-child").evaluateAll(cells => cells.every(cell => cell.hasAttribute("data-azure-niceties-release-column"))), true, "ARIA grids have a dedicated first selection column");
+      const centers = await page.locator("#items [data-azure-niceties-release-column] input").evaluateAll(inputs => inputs.map(input => {
+        const box = input.getBoundingClientRect(); return box.x + box.width / 2;
+      }));
+      assert.ok(centers.every(center => Math.abs(center - centers[0]) < 1), "header and row checkboxes align");
+      await page.getByRole("checkbox", { name: "Select all loaded work items", exact: true }).check();
+      await page.getByRole("button", { name: "Copy selected (4)", exact: true }).waitFor();
+      await page.getByRole("checkbox", { name: "Select all loaded work items", exact: true }).uncheck();
+      await page.getByRole("button", { name: "Copy selected (0)", exact: true }).waitFor();
       assert.equal(await page.locator("[data-azure-niceties-release-actions] a").count(), 4, "linkless cells get safe Open links");
       assert.equal(await page.locator("[data-azure-niceties-release-actions] a").first().getAttribute("href"), "https://dev.azure.com/example/project/_workitems/edit/601");
       await page.getByRole("checkbox", { name: "Select PBI 601: Improve search results", exact: true }).check();
@@ -123,6 +143,8 @@ async function runReleaseListSmoke(browser, extensionId) {
       const originals = await page.locator("#items [role='row']").evaluateAll(rows => rows.slice(1).map(row => {
         const copy = row.cloneNode(true);
         copy.querySelectorAll("[data-azure-niceties-release-actions]").forEach(node => node.remove());
+        copy.querySelectorAll("[data-azure-niceties-release-column]").forEach(node => node.remove());
+        copy.removeAttribute("data-azure-niceties-release-column-layout"); copy.removeAttribute("data-azure-niceties-release-column-relative");
         copy.removeAttribute("data-azure-niceties-release-row"); copy.removeAttribute("data-azure-niceties-release-selected");
         return copy.outerHTML;
       }));
@@ -133,7 +155,7 @@ async function runReleaseListSmoke(browser, extensionId) {
       await page.getByRole("button", { name: "Copy all loaded (4)", exact: true }).waitFor();
       await page.waitForFunction(() => document.querySelector("[data-azure-niceties-summary] > summary")?.textContent === "2 selected · Effort: 7");
       await page.locator("#items [role='row']").nth(3).evaluate(row => {
-        const cells = row.querySelectorAll("[role='gridcell']");
+        const cells = row.querySelectorAll("[role='gridcell']:not([data-azure-niceties-release-column])");
         cells[0].textContent = "605";
         cells[1].innerHTML = '<span aria-label="Work item type: Test Case"></span>';
         cells[2].textContent = "Verify smoke test";
@@ -145,7 +167,7 @@ async function runReleaseListSmoke(browser, extensionId) {
       await recycled.click();
       await recycledRow.getByRole("checkbox", { name: "Select TC 605: Verify smoke test", exact: true }).check();
       await page.waitForFunction(() => document.querySelector("[data-azure-niceties-summary]")?.textContent.includes("Test Case: 1"));
-      await recycledRow.evaluate(row => { row.querySelector("[role='gridcell']").innerHTML = '<a href="/example/project/_workitems/edit/605">605</a>'; });
+      await recycledRow.evaluate(row => { row.querySelector("[role='gridcell']:not([data-azure-niceties-release-column])").innerHTML = '<a href="/example/project/_workitems/edit/605">605</a>'; });
       await recycledRow.locator("[data-azure-niceties-release-actions] a").waitFor({ state: "detached" });
       await recycledRow.evaluate(row => { row.setAttribute("data-item-id", "999"); row.setAttribute("aria-selected", "true"); });
       await page.getByRole("button", { name: "Copy all loaded (3)", exact: true }).waitFor();
@@ -167,6 +189,14 @@ async function runReleaseListSmoke(browser, extensionId) {
       await page.keyboard.press("Space");
       assert.equal(await page.getByRole("button", { name: "Copy selected (0)", exact: true }).count(), 1, "Space toggles a selected row without navigation");
       await page.locator("[data-azure-niceties-summary]").waitFor({ state: "detached" });
+      await page.locator("#items [role='row']").first().evaluate(row => { row.removeAttribute("role"); row.className = "grid-header"; });
+      await page.waitForTimeout(250);
+      assert.equal(await page.locator("#items .grid-header > :first-child [aria-label='Select all loaded work items']").count(), 1, "legacy headers keep select-all in their first column");
+      await page.getByRole("checkbox", { name: "Select all loaded work items", exact: true }).check();
+      await page.getByRole("button", { name: "Copy selected (4)", exact: true }).waitFor();
+      await options.locator("#data-consent").uncheck();
+      await page.waitForFunction(() => !document.querySelector("[data-azure-niceties-release-column]"));
+      assert.equal(await page.locator("[data-azure-niceties-release-column-layout],[data-azure-niceties-release-column-relative]").count(), 0, "opting out restores native grid row layout");
     } finally { await context.unroute(demoUrl, demoRoute); }
     console.log(JSON.stringify({ releaseListSmoke: "passed", variants: 4, rows: "deduped, hidden/unsafe/ambiguous excluded", realPaste: "one clean linked line per item" }));
   } finally {

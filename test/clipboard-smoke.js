@@ -16,7 +16,7 @@ async function runClipboardSmoke(browser, extensionId) {
     await options.waitForFunction(() => !document.querySelector("#data-consent").disabled);
     originalConsent = await options.locator("#data-consent").isChecked();
     await options.locator("#data-consent").check();
-    await options.waitForFunction(async () => (await chrome.storage.local.get("dataConsent")).dataConsent === true);
+    await options.waitForFunction(async () => (await chrome.storage.local.get({ dataConsent: true })).dataConsent === true);
     await options.locator("#include-parent").uncheck();
     await options.locator("#branch-prefix").fill("feature");
     await options.locator("#branch-prefix").blur();

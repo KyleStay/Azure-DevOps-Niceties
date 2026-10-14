@@ -118,13 +118,13 @@
       if (grid) {
         if (!headerCache.has(grid)) {
           headerCache.set(grid, [...grid.querySelectorAll("[role='columnheader'], th, .grid-header-column, .bolt-table-header-cell")]
-            .filter((header) => header.closest(GRID) === grid)
+            .filter((header) => header.closest(GRID) === grid && !header.hasAttribute("data-azure-niceties-release-column"))
             .map((header, index) => ({ index: header.getAttribute("aria-colindex") || String(index + 1),
               name: fieldName(header.getAttribute("data-field") || header.getAttribute("data-column-name")
                 || header.getAttribute("data-column-key") || header.textContent) })));
         }
         const headers = headerCache.get(grid);
-        [...row.querySelectorAll(CELL)].filter((cell) => cell.closest(ROW) === row).forEach((cell, index) => {
+        [...row.querySelectorAll(CELL)].filter((cell) => cell.closest(ROW) === row && !cell.hasAttribute("data-azure-niceties-release-column")).forEach((cell, index) => {
           const name = headers.find((header) => header.index === (cell.getAttribute("aria-colindex") || String(index + 1)))?.name;
           if (name) fields[name] = value(cell);
         });

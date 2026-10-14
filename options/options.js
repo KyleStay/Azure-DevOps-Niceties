@@ -21,13 +21,13 @@
   async function restore() {
     const [values, local] = await Promise.all([
       chrome.storage.sync.get(core.DEFAULT_SETTINGS),
-      chrome.storage.local.get({ dataConsent: false, selectionSummary: true }),
+      chrome.storage.local.get({ dataConsent: true, selectionSummary: true }),
     ]);
     includeParent.checked = values.includeParent;
     branchPrefix.value = values.branchPrefix;
     syncSystemTheme.value = values.syncSystemTheme === true ? "on" : values.syncSystemTheme === false ? "off" : "auto";
     savedSystemTheme = syncSystemTheme.value;
-    approved = local.dataConsent === true;
+    approved = local.dataConsent !== false;
     dataConsent.checked = approved;
     summaryEnabled = local.selectionSummary !== false;
     selectionSummary.checked = summaryEnabled;

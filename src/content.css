@@ -58,7 +58,15 @@
 [data-azure-niceties-release-toolbar] label { display: inline-flex; align-items: center; gap: 6px; }
 [data-azure-niceties-release-toolbar] small { flex-basis: 100%; opacity: 0.8; }
 [data-azure-niceties-release-actions] { display: inline-flex; vertical-align: middle; align-items: center; gap: 6px; margin-right: 12px; }
-[data-azure-niceties-release-actions] input { margin: 0; accent-color: Highlight; }
+[data-azure-niceties-release-column] { box-sizing: border-box; width: 40px; min-width: 40px; text-align: center; border-inline-end: 1px solid var(--palette-neutral-20, #ddd); }
+th[data-azure-niceties-release-column], td[data-azure-niceties-release-column] { padding: 8px !important; vertical-align: middle; }
+[data-azure-niceties-release-column] input { margin: 0; accent-color: Highlight; cursor: pointer; }
+[data-azure-niceties-release-column] input:focus-visible { outline: 2px solid Highlight; outline-offset: 3px; }
+[data-azure-niceties-release-column-layout='overlay'] { box-sizing: border-box; padding-inline-start: calc(var(--azure-niceties-native-padding, 0px) + 40px) !important; }
+[data-azure-niceties-release-column-relative] { position: relative; }
+[data-azure-niceties-release-column-layout='overlay'] > [data-azure-niceties-release-column] { position: absolute; inset-inline-start: 0; inset-block: 0; display: flex; align-items: center; justify-content: center; }
+[data-azure-niceties-release-header] { min-height: 36px; }
+[data-azure-niceties-release-header] > [role='row'] { min-height: 36px; }
 [data-azure-niceties-release-toolbar] button,
 [data-azure-niceties-release-actions] button,
 [data-azure-niceties-release-prompt] button {

@@ -1,4 +1,4 @@
-# Release verification — 0.6.0
+# Release verification — 0.6.1
 
 Verified October 14, 2026, on macOS with disposable Chrome for Testing 151.0.7922.34.
 
@@ -6,7 +6,7 @@ Verified October 14, 2026, on macOS with disposable Chrome for Testing 151.0.792
 
 | Check | Result |
 | --- | --- |
-| Unit tests | 116 passed, 0 failed, 0 skipped |
+| Unit tests | 118 passed, 0 failed, 0 skipped |
 | Syntax, public-content, diff whitespace | Passed |
 | Upload ZIP | 14 allowlisted runtime files; manifest at root; integrity and referenced-file checks passed |
 | Exact upload ZIP browser suite | Passed after extracting the ZIP into a new directory |
@@ -22,14 +22,18 @@ Verified October 14, 2026, on macOS with disposable Chrome for Testing 151.0.792
 Tested upload ZIP SHA-256:
 
 ```text
-9e70a98fe889af6188d4963132cf5c362b2864a7745dd049425b829d78f92c44
+db333647a42fba1d319398dc35cef8f7ba6a2f42f7723efea941c3a751782374
 ```
 
 The ZIP is reproducible. Regenerating the submission kit to refresh screenshots or this report must preserve that runtime hash. Any later runtime edit requires a new package and browser verification.
 
 ## Default-on selection summaries — October 14, 2026
 
-Selection summaries now start enabled when no preference is saved, independently of enhanced-copying approval. Existing explicit opt-outs remain off. New unit regressions verify default startup, saved opt-out restoration, live disabling and failed-save rollback. The browser regression checks the default summary before changing settings, then disables it, reloads, and confirms the saved opt-out.
+Selection summaries now start enabled when no preference is saved, independently of enhanced copying. Existing explicit opt-outs remain off. New unit regressions verify default startup, saved opt-out restoration, live disabling and failed-save rollback. The browser regression checks the default summary before changing settings, then disables it, reloads, and confirms the saved opt-out.
+
+## Default-on copying and checkbox column — October 14, 2026
+
+New unit regressions verify copying with no saved preference, preservation of explicit off choices, and failure recovery. Browser scenarios verify immediate release controls, opt-out persistence after reload, a header select-all checkbox, aligned first-column checkboxes in ARIA grids, native table colgroup restoration, and unchanged clipboard output and estimate totals. The optional parent-context setting remains off by default; theme Automatic continues preserving native dark/high-contrast choices.
 
 ## Automatic theme default — October 14, 2026
 
@@ -39,9 +43,9 @@ Per-service state distinguishes extension-applied dark/light changes from observ
 
 ## Release-stage interaction — October 14, 2026
 
-Release lists now expose a visible Enable copying disclosure before approval, then row selection, individual Copy, safe Open links for linkless typed grids, Select loaded items, Copy selected, Copy all loaded and Clear selection. Copy selected retains explicit reference snapshots while a mounted list is open, including temporarily unloaded rows; closing/replacing the list, changing views or withdrawing approval clears them. Summary totals remain limited to selected loaded rows.
+Release copying starts enabled when no local preference exists, and preserves explicit opt-outs. Each list has a dedicated first selection column with a header select-all checkbox, individual Copy, safe Open links for linkless typed grids, Copy selected, Copy all loaded and Clear selection. Turning copying off removes the injected column and restores native table colgroups; a visible Enable copying card can re-enable it. Copy selected retains explicit reference snapshots while a mounted list is open, including temporarily unloaded rows; closing/replacing the list, changing views or turning copying off clears them. Summary totals remain limited to selected loaded rows.
 
-Controlled browser tests cover linked tables, linkless ARIA grids, Type/Work Item Type headers, stage-dialog summary placement, duplicate/unsafe/mismatched references, per-row and selected clipboard output, text/keyboard interaction and consent cleanup. These are actual manifest-loaded controls with real clipboard reads/paste, using synthetic page fixtures. No signed-in release tab was available in the connected browser, so compatibility with the user's exact stage view is not established. The version is raised to 0.6.0 so the new package is distinct from prior 0.5.0 artifacts.
+Controlled browser tests cover linked tables, linkless ARIA grids, Type/Work Item Type headers, stage-dialog summary placement, duplicate/unsafe/mismatched references, per-row and selected clipboard output, text/keyboard interaction and opt-out cleanup. These are actual manifest-loaded controls with real clipboard reads/paste, using synthetic page fixtures. No signed-in release tab was available in the connected browser, so compatibility with the user's exact stage view is not established. The version is raised to 0.6.1 so the new package is distinct from prior 0.6.0 artifacts.
 
 A focused independent review found selection-lifetime wording, recycled Open-link controls, overly broad Ctrl/Command+C interception and missing test-type icon recognition. The changes now preserve selections while a mounted scope collapses or loses rows, state their view lifetime, rebuild widgets when a row or link mode changes, reserve ordinary copy interception for the extension's own selection controls, and recognize test types in summaries. Regression scenarios cover these fixes.
 
@@ -55,13 +59,13 @@ Live theme verification exposed a Microsoft loader compatibility issue. The curr
 
 Copied references collapse source whitespace, including tabs and Unicode line separators, and trim both ends. Individual and parent/child copies have no newline. Release lists insert exactly one newline between distinct references and no trailing newline. Rich HTML uses bare inline anchors; only list copies add one `<br>` separator between items. No fonts, styles, paragraph/table wrappers, or selected-page markup enter the clipboard. Standard long work-item types shorten to PBI, US, TC, TP, and TS.
 
-List copying is explicitly limited to visible loaded rows and omits parent context. The count is shown on the button. Approval withdrawal removes the control and cancels pending copying; filtering updates its count. Pasted links in editable destinations do not become another release list.
+List copying is explicitly limited to visible loaded rows and omits parent context. The count is shown on the button. Turning copying off removes the control and cancels pending copying; filtering updates its count. Pasted links in editable destinations do not become another release list.
 
 ## Evidence limits and submission requirements
 
 Controlled Azure-domain fixtures exercise the actual manifest-loaded extension, with real system clipboard reads and keyboard paste. Other browser scenarios simulate parent API responses and failure conditions. Native theme checks use a public anonymous Azure DevOps page. No private organization, authenticated parent API, live release-stage page, legacy host, Windows/Linux, or Chrome 111 was available for service-specific verification. The user requested direct clipboard-format verification rather than an Excel web workbook test; Excel itself was not exercised. Microsoft service/markup changes may affect compatibility.
 
-The public privacy policy URL was reachable but still served the October 10 version, which omits the new selection-summary handling. Publish the prepared `docs/privacy.html` before submitting. Listing, local policy and dashboard explanations now disclose selection summaries, release lists, sync preferences and displayed assignments. The store's remote-code review note explicitly describes the native page-owned theme service; store acceptance has not been established.
+The 0.6.0 public policy was verified after publication. This release updates the policy to describe default-on copying and saved opt-outs; publish and verify the matching `docs/privacy.html` before store submission. Listing, local policy and dashboard explanations now disclose selection summaries, release lists, sync preferences and displayed assignments. The store's remote-code review note explicitly describes the native page-owned theme service; store acceptance has not been established.
 
 Provide dedicated, non-sensitive reviewer access and complete the authenticated procedure in `REVIEWER-TESTS.md` where available. Publisher account fields and Google review remain external steps. No Web Store upload or publication was performed.
 
