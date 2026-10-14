@@ -337,6 +337,7 @@
     for (const [row, controls] of entry.rows) {
       controls.actions.remove();
       controls.checkbox.remove();
+      controls.copy.remove();
       row.removeAttribute("data-azure-niceties-release-row");
       row.removeAttribute("data-azure-niceties-release-selected");
     }
@@ -344,15 +345,19 @@
     for (const row of entry.columns.keys()) removeReleaseColumn(entry, row);
     entry.header?.remove();
     entry.col?.remove();
+    entry.copyCol?.remove();
     entry.selected.clear();
   }
 
   function removeReleaseColumn(entry, row) {
     entry.columns.get(row)?.remove();
+    entry.copyColumns.get(row)?.remove();
     row.removeAttribute("data-azure-niceties-release-column-layout");
     row.removeAttribute("data-azure-niceties-release-column-relative");
     row.style.removeProperty("--azure-niceties-native-padding");
+    row.style.removeProperty("--azure-niceties-native-end-padding");
     entry.columns.delete(row);
+    entry.copyColumns.delete(row);
   }
 
   function updateReleaseColumns(entry, records) {
@@ -378,24 +383,32 @@
     for (const row of entry.columns.keys()) if (!rows.has(row)) removeReleaseColumn(entry, row);
     for (const row of rows) {
       let cell = entry.columns.get(row);
-      if (!cell || cell.parentElement !== row) {
+      let copyCell = entry.copyColumns.get(row);
+      if (!cell || cell.parentElement !== row || !copyCell || copyCell.parentElement !== row) {
         cell?.remove();
+        copyCell?.remove();
         row.querySelectorAll(`:scope > ${RELEASE_COLUMN}`).forEach((cloned) => cloned.remove());
         const tableRow = row.tagName === "TR";
         cell = document.createElement(tableRow ? row === header ? "th" : "td" : "span");
-        cell.dataset.azureNicetiesReleaseColumn = "true";
+        cell.dataset.azureNicetiesReleaseColumn = "select";
         cell.setAttribute("role", row === header ? "columnheader" : tableRow ? "cell" : "gridcell");
         if (row === header && tableRow) cell.scope = "col";
+        copyCell = cell.cloneNode(false);
+        copyCell.dataset.azureNicetiesReleaseColumn = "copy";
+        if (row === header) copyCell.textContent = "Copy";
         if (!tableRow) {
           row.removeAttribute("data-azure-niceties-release-column-layout");
           row.removeAttribute("data-azure-niceties-release-column-relative");
           const layout = getComputedStyle(row);
           row.style.setProperty("--azure-niceties-native-padding", layout.paddingInlineStart);
+          row.style.setProperty("--azure-niceties-native-end-padding", layout.paddingInlineEnd);
           row.dataset.azureNicetiesReleaseColumnLayout = "overlay";
           if (layout.position === "static") row.dataset.azureNicetiesReleaseColumnRelative = "true";
         }
         row.prepend(cell);
+        row.append(copyCell);
         entry.columns.set(row, cell);
+        entry.copyColumns.set(row, copyCell);
       }
       if (row === header && !cell.contains(entry.all)) cell.append(entry.all);
     }
@@ -403,8 +416,14 @@
     if (colgroup && entry.col?.parentElement !== colgroup) {
       entry.col?.remove();
       entry.col = document.createElement("col");
-      entry.col.dataset.azureNicetiesReleaseColumn = "true";
+      entry.col.dataset.azureNicetiesReleaseColumn = "select";
       colgroup.prepend(entry.col);
+    }
+    if (colgroup && entry.copyCol?.parentElement !== colgroup) {
+      entry.copyCol?.remove();
+      entry.copyCol = document.createElement("col");
+      entry.copyCol.dataset.azureNicetiesReleaseColumn = "copy";
+      colgroup.append(entry.copyCol);
     }
   }
 
@@ -475,7 +494,7 @@
     hint.textContent = "Selections stay while this list is open. Copy all covers loaded, visible rows.";
     toolbar.append(selectedButton, allButton, clear, hint);
     scope.before(toolbar);
-    return { scope, toolbar, all, selectedButton, allButton, clear, selected: new Map(), rows: new Map(), columns: new Map(), page: location.href };
+    return { scope, toolbar, all, selectedButton, allButton, clear, selected: new Map(), rows: new Map(), columns: new Map(), copyColumns: new Map(), page: location.href };
   }
 
   function updateReleaseEntry(entry, records) {
@@ -488,6 +507,7 @@
       if (!current.has(row)) {
         controls.actions.remove();
         controls.checkbox.remove();
+        controls.copy.remove();
         row.removeAttribute("data-azure-niceties-release-row");
         row.removeAttribute("data-azure-niceties-release-selected");
         entry.rows.delete(row);
@@ -497,19 +517,21 @@
       const { row, item, key } = record;
       let controls = entry.rows.get(row);
       if (!controls || !row.contains(controls.actions) || !entry.columns.get(row)?.contains(controls.checkbox)
+        || !entry.copyColumns.get(row)?.contains(controls.copy)
         || controls.key !== key || controls.linked !== record.linked) {
         controls?.actions.remove();
         controls?.checkbox.remove();
+        controls?.copy.remove();
         row.querySelectorAll(RELEASE_ACTIONS).forEach((cloned) => cloned.remove());
         const actions = document.createElement("span");
         actions.dataset.azureNicetiesReleaseActions = "true";
         actions.setAttribute("role", "group");
-        actions.setAttribute("aria-label", "Work-item copying");
+        actions.setAttribute("aria-label", "Work-item links");
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.dataset.azureNicetiesReleaseSelect = "true";
         const copy = releaseButton("Copy", "item");
-        actions.append(copy);
+        entry.copyColumns.get(row).append(copy);
         entry.columns.get(row).append(checkbox);
         if (!record.linked) {
           const open = document.createElement("a");

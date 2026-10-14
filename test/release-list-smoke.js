@@ -22,7 +22,9 @@ async function runReleaseListSmoke(browser, extensionId) {
     await page.getByRole("button", { name: "Copy all loaded (4)", exact: true }).waitFor();
     assert.equal(await page.locator("#items thead tr > :first-child [aria-label='Select all loaded work items']").count(), 1, "select-all is in the first header column");
     assert.equal(await page.locator("#items tbody tr > :first-child").evaluateAll(cells => cells.every(cell => cell.hasAttribute("data-azure-niceties-release-column"))), true, "every table row has its own first selection cell");
-    assert.equal(await page.locator("#items colgroup > col").count(), 4, "native table colgroups include the selection column");
+    assert.equal(await page.locator("#items colgroup > col").count(), 5, "native table colgroups include selection and copy columns");
+    assert.equal(await page.locator("#items thead tr > :last-child").innerText(), "Copy", "the final header names the Copy column");
+    assert.equal(await page.locator("#items tbody tr [data-azure-niceties-release-copy='item']").evaluateAll(buttons => buttons.every(button => button.parentElement === button.closest("tr").lastElementChild)), true, "table Copy buttons occupy a dedicated last cell");
     await options.locator("#data-consent").uncheck();
     await options.waitForFunction(async () => (await chrome.storage.local.get("dataConsent")).dataConsent === false);
     await page.goto(url);
@@ -116,6 +118,11 @@ async function runReleaseListSmoke(browser, extensionId) {
       await page.goto(demoUrl);
       await page.getByRole("button", { name: "Copy all loaded (4)", exact: true }).waitFor();
       assert.equal(await page.locator("#items [role='row'] > :first-child").evaluateAll(cells => cells.every(cell => cell.hasAttribute("data-azure-niceties-release-column"))), true, "ARIA grids have a dedicated first selection column");
+      assert.equal(await page.locator("#items [role='row'] > :last-child").evaluateAll(cells => cells.every(cell => cell.getAttribute("data-azure-niceties-release-column") === "copy")), true, "ARIA grids have a dedicated last Copy column");
+      const copyCenters = await page.locator("#items [data-azure-niceties-release-column='copy']").evaluateAll(cells => cells.map(cell => {
+        const box = cell.getBoundingClientRect(); return box.x + box.width / 2;
+      }));
+      assert.ok(copyCenters.every(center => Math.abs(center - copyCenters[0]) < 1), "Copy column header and cells align");
       const centers = await page.locator("#items [data-azure-niceties-release-column] input").evaluateAll(inputs => inputs.map(input => {
         const box = input.getBoundingClientRect(); return box.x + box.width / 2;
       }));

@@ -1,23 +1,23 @@
 # Chrome Web Store submission kit
 
-Prepared October 14, 2026, for version 0.6.1. The runtime ZIP, three screenshots, icon, promotional image, listing, privacy answers, and reviewer procedure are prepared and tested. Publisher verification, private reviewer access, the public policy update, and dashboard submission remain separate steps. Store approval is determined by Google.
+Prepared October 14, 2026, for version 0.6.2. The runtime ZIP, three screenshots, icon, promotional image, listing, privacy answers, and reviewer procedure are prepared and tested. Publisher verification, private reviewer access, the public policy update, and dashboard submission remain separate steps. Store approval is determined by Google.
 
 ## Files to use
 
 | Item | File / source |
 | --- | --- |
-| Extension package | `release/0.6.1/azure-devops-niceties-0.6.1.zip` — upload this ZIP |
-| Copy-and-paste publishing helper | Open `release/0.6.1/publish.html` or https://kylestay.github.io/Azure-DevOps-Niceties/publish.html |
-| All submission materials | `release/0.6.1/azure-devops-niceties-0.6.1-submission-kit.zip` — unpack locally; upload the inner runtime ZIP |
+| Extension package | `release/0.6.2/azure-devops-niceties-0.6.2.zip` — upload this ZIP |
+| Copy-and-paste publishing helper | Open `release/0.6.2/publish.html` or https://kylestay.github.io/Azure-DevOps-Niceties/publish.html |
+| All submission materials | `release/0.6.2/azure-devops-niceties-0.6.2-submission-kit.zip` — unpack locally; upload the inner runtime ZIP |
 | Listing and privacy-tab answers | `store/LISTING.md` |
 | Hosted privacy policy | https://kylestay.github.io/Azure-DevOps-Niceties/privacy.html (source: `docs/privacy.html`) |
 | Reviewer's test steps | `store/REVIEWER-TESTS.md` |
 | Extension icon | `store/assets/icon-128.png` (128 × 128 PNG) |
 | Store screenshots and promo image | `store/assets/` (instructions in `assets/README.md`) |
 | Verification evidence and limits | `store/QA.md` |
-| Package and asset checksums | `release/0.6.1/SHA256SUMS.txt` |
+| Package and asset checksums | `release/0.6.2/SHA256SUMS.txt` |
 
-The upload ZIP must have `manifest.json` at its root, with packaged `src/`, `options/`, and `icons/` files present. Do not include `node_modules`, tests, Git files, account credentials, or this submission documentation in the runtime package. The release target is version 0.6.1 with Chrome 111 or later; confirm the final manifest matches. The package version is the version in the final manifest; do not upload an earlier ZIP after code changes.
+The upload ZIP must have `manifest.json` at its root, with packaged `src/`, `options/`, and `icons/` files present. Do not include `node_modules`, tests, Git files, account credentials, or this submission documentation in the runtime package. The release target is version 0.6.2 with Chrome 111 or later; confirm the final manifest matches. The package version is the version in the final manifest; do not upload an earlier ZIP after code changes.
 
 The HTML helper has copy buttons for every text field, downloads for the exact ZIP and five images, a private reviewer-notes editor, and a submission checklist. It also works offline as one file. Reviewer notes remain only in the open tab and are not saved or uploaded. `npm run package` regenerates the helper from `LISTING.md`, `REVIEWER-TESTS.md`, and the current release files, and includes it at the root of the submission kit.
 
