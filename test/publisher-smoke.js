@@ -41,6 +41,11 @@ async function main() {
     const zipName = `azure-devops-niceties-${manifest.version}.zip`;
     assert.equal(zip.suggestedFilename(), zipName);
     assert.equal(hash(await fs.readFile(await zip.path())), hash(await fs.readFile(path.join(release, zipName))));
+    const [guide] = await Promise.all([
+      page.waitForEvent("download"), page.getByRole("button", { name: "Download submission guide", exact: true }).click(),
+    ]);
+    assert.equal(guide.suggestedFilename(), `azure-devops-niceties-${manifest.version}-submission-guide.md`);
+    assert.equal(hash(await fs.readFile(await guide.path())), hash(await fs.readFile(path.join(root, "store/SUBMISSION.md"))));
     for (const [label, filename] of [
       ["Extension icon", "icon-128.png"], ["Small promotional tile", "promo-440x280.png"],
       ["Light settings screenshot", "settings-light-1280x800.png"], ["Dark settings screenshot", "settings-dark-1280x800.png"],
@@ -101,7 +106,7 @@ async function main() {
     assert.equal(await page.locator("#reviewer-output").inputValue().then(value => value.includes(notes)), false);
     assert.ok(requests.every(url => url.startsWith("file:") || url.startsWith("data:")), "the helper never uploads private notes or makes network requests");
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ publisher: "passed", downloads: "ZIP + 5 PNGs match release bytes", clipboard: "native + fallback passed", mobile: "5 steps fit", privateNotes: "not persisted or transmitted" }));
+    console.log(JSON.stringify({ publisher: "passed", downloads: "ZIP, submission guide and 5 PNGs match release bytes", clipboard: "native + fallback passed", mobile: "5 steps fit", privateNotes: "not persisted or transmitted" }));
   } finally {
     try {
       if (originalClipboard && context?.browser()?.isConnected()) {

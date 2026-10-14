@@ -81,8 +81,8 @@
       </aside>
       <main>
         <section id="package" aria-labelledby="package-title">
-          <div class="section-intro"><h2 id="package-title" tabindex="-1">Start with the upload</h2><p class="muted">Download the extension ZIP, then add a new item in your developer dashboard.</p></div>
-          <div class="card"><h3 id="zip-name"></h3><p class="hint">Upload this extension ZIP directly. It contains the runtime files only.</p><div class="actions"><button class="primary" type="button" id="download-zip">Download upload ZIP</button><a class="button" href="https://chrome.google.com/webstore/devconsole" target="_blank" rel="noopener noreferrer">Open developer dashboard ↗</a></div><p class="hint" style="margin-top:16px">SHA-256</p><code id="zip-sha"></code></div>
+          <div class="section-intro"><h2 id="package-title" tabindex="-1">Start with the upload</h2><p class="muted">Download the extension ZIP and guide. Upload to your existing store item, or add a new item for a first submission.</p></div>
+          <div class="card"><h3 id="zip-name"></h3><p class="hint">Upload this extension ZIP directly. It contains the runtime files only. Keep the submission guide and images for the listing fields.</p><div class="actions"><button class="primary" type="button" id="download-zip">Download upload ZIP</button><button type="button" id="download-guide">Download submission guide</button><a class="button" href="https://chrome.google.com/webstore/devconsole" target="_blank" rel="noopener noreferrer">Open developer dashboard ↗</a></div><p class="hint" style="margin-top:16px">SHA-256</p><code id="zip-sha"></code></div>
           <div class="section-intro" style="margin-top:28px"><h3>Listing images</h3><p class="muted">Download each image and upload it into the matching Store listing field.</p></div>
           <div class="asset-grid" id="assets"></div>
         </section>
@@ -196,6 +196,7 @@ Where to find the board, backlog, query, and linked pull request:"></textarea></
         setTimeout(() => URL.revokeObjectURL(url), 10000);
       }
       document.getElementById("download-zip").addEventListener("click", () => download(data.zipName, data.zipData, "application/zip"));
+      document.getElementById("download-guide").addEventListener("click", () => download(data.guideName, data.guideData, "text/markdown;charset=utf-8"));
       for (const asset of data.assets) {
         const card = document.createElement("div"); card.className = "card asset";
         const preview = document.createElement("div"); preview.className = "asset-preview";
