@@ -64,6 +64,7 @@ for name, label, use in [
     ("promo-440x280.png", "Small promotional tile", "440 × 280 PNG"),
     ("settings-light-1280x800.png", "Light settings screenshot", "1280 × 800 PNG"),
     ("settings-dark-1280x800.png", "Dark settings screenshot", "1280 × 800 PNG"),
+    ("release-selection-demo-1280x800.png", "Release selection demo", "1280 × 800 PNG · synthetic sample"),
 ]:
     data["assets"].append({"name": name, "label": label, "use": use,
                            "data": base64.b64encode((root / "store/assets" / name).read_bytes()).decode()})

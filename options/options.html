@@ -10,15 +10,29 @@
     <main>
       <header>
         <span class="mark" aria-hidden="true">✓</span>
-        <div><h1>Azure DevOps Niceties</h1><p>System theme · Better copying</p></div>
+        <div><h1>Azure DevOps Niceties</h1><p>System theme · Copying · Selection totals</p></div>
       </header>
+
+      <label class="toggle-row">
+        <span><strong>Sync theme with system</strong><small>Automatic follows the default theme and preserves dark/high contrast</small></span>
+        <select id="sync-system-theme" disabled>
+          <option value="auto">Automatic</option>
+          <option value="on">On</option>
+          <option value="off">Off</option>
+        </select>
+      </label>
 
       <section aria-labelledby="privacy-heading" class="disclosure">
         <h2 id="privacy-heading">Your work-item data</h2>
-        <p>Enhanced copying reads work-item IDs, titles, types, and URLs on this device and writes your chosen format to the clipboard. Parent context requests information from your signed-in Azure DevOps organization. Preferences can sync through Chrome. Work-item content is not sent to the publisher. No analytics or ads.</p>
+        <p>Enhanced copying reads work-item IDs, titles, types, and URLs locally and writes your chosen format to the clipboard. Release selections keep references in page memory while the list is open. Parent context requests information from your signed-in Azure DevOps organization. Preferences can sync through Chrome. Work-item content is not sent to the publisher. No analytics or ads.</p>
         <label class="toggle-row">
           <span><strong>Enable enhanced copying</strong><small>I agree to this use of my work-item data</small></span>
           <input id="data-consent" type="checkbox" role="switch" disabled>
+        </label>
+        <p>Selection summaries read the selected work-item rows and their displayed estimates, types, states, and assignments (which may contain names or email addresses) locally. No extra requests are made and no work-item data is saved.</p>
+        <label class="toggle-row">
+          <span><strong>Enable selection summary</strong><small>On by default · Selected count and estimate totals from loaded rows</small></span>
+          <input id="selection-summary" type="checkbox" role="switch" disabled>
         </label>
       </section>
 
@@ -44,7 +58,7 @@
           <div><dt>Shift+Alt+B</dt><dd>Copy branch</dd></div>
         </dl>
       </section>
-      <p class="theme-note">Azure DevOps follows your system light/dark appearance automatically. High contrast is preserved.</p>
+      <p class="theme-note">Automatic syncs when Azure DevOps starts with its default light theme. Selected dark and high-contrast themes are preserved. On and Off override the automatic choice; high contrast is always preserved.</p>
       <p><a href="https://kylestay.github.io/Azure-DevOps-Niceties/privacy.html" target="_blank" rel="noopener noreferrer">Privacy policy</a></p>
       <p id="status" role="status" aria-live="polite"></p>
     </main>

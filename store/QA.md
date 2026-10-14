@@ -1,57 +1,68 @@
-# Release verification — 0.4.0
+# Release verification — 0.6.0
 
-Browser verification below describes the October 9, 2026 snapshot in a disposable Chrome for Testing 153.0.8010.12 profile on macOS. Ten subagents covered security/privacy, copy behavior, async behavior, native theme integration, settings, regression coverage, fixes, and store requirements.
-
-## October 10 consent cancellation fix
-
-Three independent whole-app reviews found that withdrawing copying approval could leave an in-flight parent lookup running. Approval withdrawal now aborts pending lookups, clears cached details, and prevents late responses from starting another request or caching results, even after approval is restored. Timeout cancellation also prevents late follow-up requests.
-
-All 66 unit tests pass, including five new regressions for withdrawal during child/parent fetch and JSON parsing, renewed approval, cache clearing, disabled lookups, and late timed-out responses. Syntax, public-content, whitespace, and package checks pass. The publisher and submission kit have been regenerated with the corrected runtime ZIP.
-
-Fresh browser verification is unavailable in the current sandbox: disposable Chrome aborts with SIGABRT at launch before assertions. Both owned processes exited and their profiles were removed. Earlier browser results below do not establish runtime verification of this fix. Authenticated Azure checks remain required before public release.
+Verified October 14, 2026, on macOS with disposable Chrome for Testing 151.0.7922.34.
 
 ## Results
 
 | Check | Result |
 | --- | --- |
-| `npm test` | 61 passed, 0 failed, 0 skipped |
-| `npm run check` | All runtime and browser test scripts passed syntax checks |
-| `git diff --check` | Passed |
-| Upload ZIP | 12 allowlisted runtime files; manifest at root; integrity and referenced-file checks passed |
-| Exact upload package browser run | Passed after extracting the upload ZIP; SHA-256 below |
-| Real public Azure DevOps theme | Native dark on startup and light after changing system preference, without reloading |
-| Packaged content scripts | Matched Azure fixture loaded automatically; default-off consent preserved native copying, approval enabled enhanced copying |
-| Browser sample scenarios | Rich/Markdown/ID/URL/branch gestures, shortcuts, parent requests/cache, parent-wait cancellation, editable/hidden-item guards, native fallback, options persistence passed |
-| Security regressions | Unsafe links/Markdown HTML, mismatched IDs, synthetic gestures, cross-organization parent requests, redirects, hung requests, revocation and clipboard ordering passed |
-| Theme regressions | 23 tests covering loader failures, navigation, concurrent requests, malformed definitions, forced colors, explicit high contrast and changing preferences passed |
-| Images | Two actual 1280 × 800 options screenshots, 440 × 280 promotional PNG, 128 × 128 icon inspected |
-| Publishing helper | Exact ZIP + four PNG downloads, native/fallback clipboard, reviewer-note privacy, and all five mobile steps passed |
-| Cleanup | Test browser closed, disposable profile and extracted test package removed |
+| Unit tests | 116 passed, 0 failed, 0 skipped |
+| Syntax, public-content, diff whitespace | Passed |
+| Upload ZIP | 14 allowlisted runtime files; manifest at root; integrity and referenced-file checks passed |
+| Exact upload ZIP browser suite | Passed after extracting the ZIP into a new directory |
+| Real public Azure DevOps theme | Native dark/light switching, live opt-out, persisted opt-out after reload and appearance changes, re-enable passed |
+| Real system clipboard | All five individual copy formats; single-line plain text; rich inline link without font styling, paragraphs, or blank rows |
+| Real paste | Rich editor, editable table cell, plain textarea; links remain clickable and inherit destination font |
+| Release-stage list | Visible enable disclosure, row selection, individual Copy/Open, selected/all-loaded copying, clear and keyboard controls; linked and linkless grids, stage-dialog summary, collapsed/recycled rows; rich, Markdown, IDs, URLs with one item per line; duplicates, hidden, unsafe, mismatched and ambiguous rows excluded |
+| Selection summaries | Separate estimates, zero/missing values, localized digits/grouping, document-start restoration, duplicate/legacy/checkbox selections, live edits, collapse, clearing and independent opt-out |
+| Theme recovery | Current synchronous and legacy AMD loaders; delayed readiness, failed/hung providers, stale callbacks, navigation resets, visible-tab recovery, high contrast and forced colors |
+| Existing copy behavior | Modifiers, shortcuts, optional parent lookup/cache, request cancellation, editable/hidden guards, native fallback and clipboard ordering passed |
+| Publishing helper | Exact ZIP and five PNG downloads match release bytes; native/fallback copy, private-note handling and all five mobile steps passed |
 
-Previously browser-tested upload ZIP SHA-256 (before the October 10 fix):
+Tested upload ZIP SHA-256:
 
 ```text
-c792052fbe6e29e6851b2ae979d8d1205938793e526591a05d840a0fc72b3779
+9e70a98fe889af6188d4963132cf5c362b2864a7745dd049425b829d78f92c44
 ```
 
-Browser fixture assertions use direct injection with a simulated clipboard and parent API in addition to a packaged-content-script test. These controlled tests establish extraction, formatting and cancellation behavior; they do not establish authenticated Microsoft API compatibility. The real service theme check used a public Azure DevOps project and the packaged native theme script. Its URL and screenshots are omitted from published materials to avoid exposing instance details. Live theme checks now take a locally supplied `AZURE_NICETIES_TEST_URL`; the default browser run uses sample fixtures only.
+The ZIP is reproducible. Regenerating the submission kit to refresh screenshots or this report must preserve that runtime hash. Any later runtime edit requires a new package and browser verification.
 
-## Changes made during release review
+## Default-on selection summaries — October 14, 2026
 
-- Follow system light/dark appearance through Azure DevOps's native theme service, while preserving high contrast and saved account preferences.
-- Add prominent data disclosure and device-local approval before enhanced copying processes work-item content.
-- Validate Azure work-item destinations and IDs, escape rich/Markdown content, and keep ambiguous copy controls native.
-- Keep optional parent requests within the current organization, request only required fields, reject redirects and mismatched responses, and impose one three-second deadline.
-- Prevent older asynchronous copies from replacing newer native clipboard contents, and prevent competing page copy handlers from overwriting enhanced output.
-- Serialize preference writes and protect settings initialization and status messages from races.
-- Reset each copy control's confirmation timer so an older copy cannot clear its newer feedback.
+Selection summaries now start enabled when no preference is saved, independently of enhanced-copying approval. Existing explicit opt-outs remain off. New unit regressions verify default startup, saved opt-out restoration, live disabling and failed-save rollback. The browser regression checks the default summary before changing settings, then disables it, reloads, and confirms the saved opt-out.
 
-## Checks still required before public release
+## Automatic theme default — October 14, 2026
 
-Complete the authenticated checks in `REVIEWER-TESTS.md` using a non-sensitive organization. This run did not have a signed-in test organization and did not verify live private boards, pull requests, parent permissions, legacy `visualstudio.com`, Windows/Linux, or Chrome 111. The native theme service and semantic page markup are Microsoft internals and may change. Current Chrome supports the synchronous `execCommand("copy")` path; if it becomes unavailable the extension restores the native copy action.
+The extension now defaults to Automatic. The native theme metadata exposes the standard/default theme as Light (`ms.vss-web.vsts-theme`); a separate Default theme ID is not exposed. Automatic follows system appearance when that theme is initially selected and preserves selected dark, high-contrast and unrecognized theme IDs. It cannot distinguish an explicitly selected standard Light theme from that same default theme ID. The options menu exposes Automatic, On and Off; existing boolean On/Off settings remain compatible and take precedence.
 
-The privacy policy is prepared for GitHub Pages at the URL in `LISTING.md`; complete the publisher's dashboard/account fields, provide reviewer access, and disclose the page-native AMD integration as explained there. Google determines store acceptance. No Chrome Web Store upload or publication was performed.
+Per-service state distinguishes extension-applied dark/light changes from observable native changes. Automatic continues following system changes after it applies dark mode, rechecks recreated services during navigation, preserves later manual dark selections when their theme ID changes, and discards pending theme definitions if a native selection changes while loading. An explicit Off makes no native module/provider requests. High contrast and forced colors are always preserved. Unit regressions cover these paths; browser scenarios verify automatic startup, both overrides and existing recovery behavior.
 
-## Public-source preparation
+## Release-stage interaction — October 14, 2026
 
-Only synthetic Azure organization/project URLs, titles and IDs are published. Instance-identifying screenshots were removed. The old Git history and closed pull request are retained in a separate private repository; the public repository starts from a sanitized snapshot. `npm run check:public` checks publishable text files for non-sample Azure URLs and likely credentials. The privacy page is served from `docs/privacy.html`; the extension options link to its public HTTPS address.
+Release lists now expose a visible Enable copying disclosure before approval, then row selection, individual Copy, safe Open links for linkless typed grids, Select loaded items, Copy selected, Copy all loaded and Clear selection. Copy selected retains explicit reference snapshots while a mounted list is open, including temporarily unloaded rows; closing/replacing the list, changing views or withdrawing approval clears them. Summary totals remain limited to selected loaded rows.
+
+Controlled browser tests cover linked tables, linkless ARIA grids, Type/Work Item Type headers, stage-dialog summary placement, duplicate/unsafe/mismatched references, per-row and selected clipboard output, text/keyboard interaction and consent cleanup. These are actual manifest-loaded controls with real clipboard reads/paste, using synthetic page fixtures. No signed-in release tab was available in the connected browser, so compatibility with the user's exact stage view is not established. The version is raised to 0.6.0 so the new package is distinct from prior 0.5.0 artifacts.
+
+A focused independent review found selection-lifetime wording, recycled Open-link controls, overly broad Ctrl/Command+C interception and missing test-type icon recognition. The changes now preserve selections while a mounted scope collapses or loses rows, state their view lifetime, rebuild widgets when a row or link mode changes, reserve ordinary copy interception for the extension's own selection controls, and recognize test types in summaries. Regression scenarios cover these fixes.
+
+## Review fixes
+
+An independent read-only review identified two selection-summary defects, both confirmed and fixed: locale parsing rejected valid localized digits/Indian grouping, and preferences arriving before the document root could lose selection observation. New regression tests pass for both.
+
+A focused second review found that a raw Title-column value could lose a legitimate leading type/ID phrase. Explicit Title values now retain their full text; prefix removal is limited to composite display labels. Unit and real clipboard regressions cover the preserved title.
+
+Live theme verification exposed a Microsoft loader compatibility issue. The current native registry accepts a string and returns its module synchronously; older pages use AMD array/callback loading. The extension now supports both, with bounded load timeouts, stale-result guards, backoff, and visible-tab recovery.
+
+Copied references collapse source whitespace, including tabs and Unicode line separators, and trim both ends. Individual and parent/child copies have no newline. Release lists insert exactly one newline between distinct references and no trailing newline. Rich HTML uses bare inline anchors; only list copies add one `<br>` separator between items. No fonts, styles, paragraph/table wrappers, or selected-page markup enter the clipboard. Standard long work-item types shorten to PBI, US, TC, TP, and TS.
+
+List copying is explicitly limited to visible loaded rows and omits parent context. The count is shown on the button. Approval withdrawal removes the control and cancels pending copying; filtering updates its count. Pasted links in editable destinations do not become another release list.
+
+## Evidence limits and submission requirements
+
+Controlled Azure-domain fixtures exercise the actual manifest-loaded extension, with real system clipboard reads and keyboard paste. Other browser scenarios simulate parent API responses and failure conditions. Native theme checks use a public anonymous Azure DevOps page. No private organization, authenticated parent API, live release-stage page, legacy host, Windows/Linux, or Chrome 111 was available for service-specific verification. The user requested direct clipboard-format verification rather than an Excel web workbook test; Excel itself was not exercised. Microsoft service/markup changes may affect compatibility.
+
+The public privacy policy URL was reachable but still served the October 10 version, which omits the new selection-summary handling. Publish the prepared `docs/privacy.html` before submitting. Listing, local policy and dashboard explanations now disclose selection summaries, release lists, sync preferences and displayed assignments. The store's remote-code review note explicitly describes the native page-owned theme service; store acceptance has not been established.
+
+Provide dedicated, non-sensitive reviewer access and complete the authenticated procedure in `REVIEWER-TESTS.md` where available. Publisher account fields and Google review remain external steps. No Web Store upload or publication was performed.
+
+Only synthetic instance URLs and sample content are committed. Disposable browser profiles are removed by the harness; supported original clipboard formats are kept in memory and restored without logging their contents. The exact ZIP run restored the clipboard and removed its profile. Recorded owned browser birth identities were verified gone after the runs; the final supported process inventory contained no Chrome for Testing processes.

@@ -2,6 +2,8 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { chromium } = require("playwright");
+const { runSelectionSummarySmoke } = require("./selection-summary-smoke.js");
+const { runThemeSmoke } = require("./theme-smoke.js");
 
 async function main(providedBrowser, providedExtensionId) {
   const port = process.argv[2];
@@ -513,7 +515,7 @@ async function main(providedBrowser, providedExtensionId) {
     await popup.getByLabel("Include parent context").check();
     await popup.getByLabel("Branch prefix").fill("Feature Work");
     await popup.getByLabel("Branch prefix").blur();
-    await popup.getByText("Saved").waitFor();
+    await popup.locator("#status").getByText("Saved", { exact: true }).waitFor();
     assert.equal(await popup.getByLabel("Branch prefix").inputValue(), "feature-work");
 
     await popup.evaluate(() => {
@@ -596,9 +598,11 @@ async function main(providedBrowser, providedExtensionId) {
     }));
     assert.equal(result.nativeCopyClicks["1234"] || 0, 0, "enhanced card copy suppressed Azure DevOps's native handler");
     assert.equal(result.nativeCopyClicks["2345"] || 0, 0, "editable work-item copy suppressed Azure DevOps's native handler");
+    await runThemeSmoke(browser, extensionId);
+    await runSelectionSummarySmoke(browser, extensionId, process.env.AZURE_NICETIES_SUMMARY_SCREENSHOTS);
     console.log(JSON.stringify({ ok: true, ...result, optionsVerified: true }, null, 2));
   } finally {
-    await closeBrowser();
+    if (!providedBrowser) await closeBrowser();
     process.removeListener("SIGINT", interrupt);
     process.removeListener("SIGTERM", terminate);
   }

@@ -5,8 +5,13 @@
   const branchPrefix = document.querySelector("#branch-prefix");
   const status = document.querySelector("#status");
   const dataConsent = document.querySelector("#data-consent");
-  const controls = [includeParent, branchPrefix, dataConsent];
+  const selectionSummary = document.querySelector("#selection-summary");
+  const syncSystemTheme = document.querySelector("#sync-system-theme");
+  const controls = [includeParent, branchPrefix, dataConsent, selectionSummary, syncSystemTheme];
   let approved = false;
+  let summaryEnabled = false;
+  let savedSystemTheme = "auto";
+  let latestPreferenceSave = 0;
   let saveQueue = Promise.resolve();
   let latestStatus = 0;
   let statusTimer;
@@ -16,12 +21,16 @@
   async function restore() {
     const [values, local] = await Promise.all([
       chrome.storage.sync.get(core.DEFAULT_SETTINGS),
-      chrome.storage.local.get({ dataConsent: false }),
+      chrome.storage.local.get({ dataConsent: false, selectionSummary: true }),
     ]);
     includeParent.checked = values.includeParent;
     branchPrefix.value = values.branchPrefix;
+    syncSystemTheme.value = values.syncSystemTheme === true ? "on" : values.syncSystemTheme === false ? "off" : "auto";
+    savedSystemTheme = syncSystemTheme.value;
     approved = local.dataConsent === true;
     dataConsent.checked = approved;
+    summaryEnabled = local.selectionSummary !== false;
+    selectionSummary.checked = summaryEnabled;
     controls.forEach((control) => { control.disabled = false; });
   }
 
@@ -31,15 +40,19 @@
     window.clearTimeout(statusTimer);
     status.textContent = "";
     const request = ++latestStatus;
-    const values = { includeParent: includeParent.checked, branchPrefix: prefix };
+    latestPreferenceSave = request;
+    const values = { includeParent: includeParent.checked, branchPrefix: prefix,
+      syncSystemTheme: syncSystemTheme.value === "auto" ? "auto" : syncSystemTheme.value === "on" };
     try {
       const write = saveQueue.then(() => chrome.storage.sync.set(values));
       saveQueue = write.catch(() => {});
       await write;
+      savedSystemTheme = values.syncSystemTheme === "auto" ? "auto" : values.syncSystemTheme ? "on" : "off";
       if (request !== latestStatus) return;
       status.textContent = "Saved";
       statusTimer = window.setTimeout(() => { status.textContent = ""; }, 1200);
     } catch (error) {
+      if (request === latestPreferenceSave) syncSystemTheme.value = savedSystemTheme;
       if (request !== latestStatus) return;
       status.textContent = `Could not save settings: ${error.message}`;
     }
@@ -47,6 +60,7 @@
 
   includeParent.addEventListener("change", save);
   branchPrefix.addEventListener("change", save);
+  syncSystemTheme.addEventListener("change", save);
   dataConsent.addEventListener("change", async () => {
     dataConsent.disabled = true;
     window.clearTimeout(statusTimer);
@@ -63,6 +77,22 @@
       status.textContent = `Could not save settings: ${error.message}`;
     } finally {
       dataConsent.disabled = false;
+    }
+  });
+  selectionSummary.addEventListener("change", async () => {
+    selectionSummary.disabled = true;
+    window.clearTimeout(statusTimer);
+    const request = ++latestStatus;
+    status.textContent = "";
+    try {
+      await chrome.storage.local.set({ selectionSummary: selectionSummary.checked });
+      summaryEnabled = selectionSummary.checked;
+      if (request === latestStatus) status.textContent = summaryEnabled ? "Selection summary enabled" : "Selection summary disabled";
+    } catch (error) {
+      selectionSummary.checked = summaryEnabled;
+      if (request === latestStatus) status.textContent = `Could not save settings: ${error.message}`;
+    } finally {
+      selectionSummary.disabled = false;
     }
   });
   restore().catch((error) => { status.textContent = `Could not load settings: ${error.message}`; });

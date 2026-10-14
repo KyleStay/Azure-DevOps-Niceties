@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Clipboard compatibility fixture</title>
+<style>
+  body { font: 26px monospace; padding: 24px; }
+  .wit-card { margin-bottom: 24px; }
+  .wit-card a { font: bold 32px Georgia; }
+  #rich { font: 14px Arial; }
+  #cell { font: 16px Verdana; }
+  #rich, #cell, textarea { border: 1px solid #888; min-height: 32px; min-width: 480px; padding: 8px; }
+</style>
+<article class="wit-card" data-work-item-id="94001">
+  <span class="wit-type">Product Backlog Item</span>
+  <a class="work-item-title" href="https://dev.azure.com/example/project/_workitems/edit/94001">Paste
+    across	 apps</a>
+  <button aria-label="Copy work item to clipboard">Copy</button>
+</article>
+<div id="rich" contenteditable="true" aria-label="Rich text destination"></div>
+<table><tbody><tr><td id="cell" contenteditable="true" aria-label="Spreadsheet cell destination"></td></tr></tbody></table>
+<textarea aria-label="Plain text destination"></textarea>
+</html>

@@ -1,25 +1,25 @@
 # Chrome Web Store submission kit
 
-Prepared October 9, 2026. This kit prepares the submission; it does not create a publisher account, publish a privacy page, provision reviewer credentials, or submit the extension. Store approval is determined by Google.
+Prepared October 14, 2026, for version 0.6.0. The runtime ZIP, three screenshots, icon, promotional image, listing, privacy answers, and reviewer procedure are prepared and tested. Publisher verification, private reviewer access, the public policy update, and dashboard submission remain separate steps. Store approval is determined by Google.
 
 ## Files to use
 
 | Item | File / source |
 | --- | --- |
-| Extension package | `release/0.4.0/azure-devops-niceties-0.4.0.zip` — upload this ZIP |
-| Copy-and-paste publishing helper | Open `release/0.4.0/publish.html` or https://kylestay.github.io/Azure-DevOps-Niceties/publish.html |
-| All submission materials | `release/0.4.0/azure-devops-niceties-0.4.0-submission-kit.zip` — unpack locally; upload the inner runtime ZIP |
+| Extension package | `release/0.6.0/azure-devops-niceties-0.6.0.zip` — upload this ZIP |
+| Copy-and-paste publishing helper | Open `release/0.6.0/publish.html` or https://kylestay.github.io/Azure-DevOps-Niceties/publish.html |
+| All submission materials | `release/0.6.0/azure-devops-niceties-0.6.0-submission-kit.zip` — unpack locally; upload the inner runtime ZIP |
 | Listing and privacy-tab answers | `store/LISTING.md` |
 | Hosted privacy policy | https://kylestay.github.io/Azure-DevOps-Niceties/privacy.html (source: `docs/privacy.html`) |
 | Reviewer's test steps | `store/REVIEWER-TESTS.md` |
 | Extension icon | `store/assets/icon-128.png` (128 × 128 PNG) |
 | Store screenshots and promo image | `store/assets/` (instructions in `assets/README.md`) |
 | Verification evidence and limits | `store/QA.md` |
-| Package and asset checksums | `release/0.4.0/SHA256SUMS.txt` |
+| Package and asset checksums | `release/0.6.0/SHA256SUMS.txt` |
 
-The upload ZIP must have `manifest.json` at its root, with packaged `src/`, `options/`, and `icons/` files present. Do not include `node_modules`, tests, Git files, account credentials, or this submission documentation in the runtime package. The release target is version 0.4.0 with Chrome 111 or later; confirm the final manifest matches. The package version is the version in the final manifest; do not upload an earlier ZIP after code changes.
+The upload ZIP must have `manifest.json` at its root, with packaged `src/`, `options/`, and `icons/` files present. Do not include `node_modules`, tests, Git files, account credentials, or this submission documentation in the runtime package. The release target is version 0.6.0 with Chrome 111 or later; confirm the final manifest matches. The package version is the version in the final manifest; do not upload an earlier ZIP after code changes.
 
-The HTML helper has copy buttons for every text field, downloads for the exact ZIP and four images, a private reviewer-notes editor, and a submission checklist. It also works offline as one file. Reviewer notes remain only in the open tab and are not saved or uploaded. `npm run package` regenerates the helper from `LISTING.md`, `REVIEWER-TESTS.md`, and the current release files, and includes it at the root of the submission kit.
+The HTML helper has copy buttons for every text field, downloads for the exact ZIP and five images, a private reviewer-notes editor, and a submission checklist. It also works offline as one file. Reviewer notes remain only in the open tab and are not saved or uploaded. `npm run package` regenerates the helper from `LISTING.md`, `REVIEWER-TESTS.md`, and the current release files, and includes it at the root of the submission kit.
 
 ## Information only the publisher can supply
 
@@ -39,11 +39,11 @@ Use assets that demonstrate the final extension. If a screenshot is a project-ow
 ## Submission sequence
 
 1. Confirm the final release handoff's verification results and limitations. Load the final package locally and complete the actual Azure DevOps checks in `REVIEWER-TESTS.md`. Fixture tests alone do not establish compatibility with today's authenticated service.
-2. Resolve the native AMD/theme-service remote-code review point described in `LISTING.md` against the final implementation. Do not silently omit that integration or assume MAIN-world code creates a policy exemption.
+2. Use the native theme-service disclosure in `LISTING.md` for the remote-code field. All extension logic is packaged; the explanation identifies the page-owned Microsoft integration so Google can assess it. No additional extension scripts are downloaded.
 3. Host the privacy policy, verify its public URL, and finish publisher account verification and Two-Step Verification.
 4. In the dashboard, choose **Add new item** and upload the final ZIP. For an existing item, upload the new version to that item rather than making a duplicate listing.
 5. Fill the Store listing tab with `LISTING.md`, upload the icon/screenshots/small promo tile, and choose the offered category closest to Developer Tools and English language. Add genuine support/homepage URLs if available.
-6. Fill the Privacy tab: single purpose, `clipboardWrite`, `storage`, site-access explanations, remote-code declaration (**Yes**, with native page-service explanation), Website content and Web history/browsing activity data handling, and the hosted privacy-policy URL. Review the certifications against the final code.
+6. Fill the Privacy tab: single purpose, `clipboardWrite`, `storage`, site-access explanations, remote-code declaration (**Yes**, with native page-service explanation), Website content, Web history/browsing activity, and Personally identifiable information data handling, and the hosted privacy-policy URL. Review the certifications against the final code.
 7. Fill Distribution with your intended audience and regions. This extension is free and requires an Azure DevOps account/project that the user already has access to.
 8. Fill private Test instructions using `REVIEWER-TESTS.md` and the dedicated account/project details. Avoid inaccessible or incomplete login instructions.
 9. Review every tab and submit for review. To control the release timing, choose deferred/manual publishing if offered instead of publishing automatically after approval.

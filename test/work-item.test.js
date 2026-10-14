@@ -94,3 +94,32 @@ test("sanitizes branch names", () => {
     "feature-work/42-cafe-and-api-make-it-work"
   );
 });
+
+test("long standard work-item types use readable abbreviations", () => {
+  assert.equal(workItem.shortType("User Story"), "US");
+  assert.equal(workItem.shortType("Test Case"), "TC");
+  assert.equal(workItem.shortType("Bug"), "Bug");
+  assert.equal(workItem.shortType("Task"), "Task");
+  assert.equal(workItem.shortType("constructor"), "constructor");
+});
+
+test("every individual copy variant normalizes newlines, tabs, and Unicode line separators", () => {
+  const item = { id: "42", type: "Product\nBacklog Item", title: "Fix\tcopy\r\n across\u0085apps\u2028today", url: "https://dev.azure.com/o/p/_workitems/edit/42" };
+  for (const mode of ["rich", "markdown", "id", "url", "branch"]) {
+    const result = workItem.formatWorkItem(item, { mode });
+    assert.equal(/[\r\n\t\u0085\u2028\u2029]/.test(result.plainText), false, mode);
+    assert.doesNotMatch(result.html, /<(?:font|style|p|div|table|br)\b|font-family/i);
+  }
+});
+
+test("bulk references preserve display order, safe links, and one line per distinct work item", () => {
+  const first = { id: "12", type: "Product Backlog Item", title: "First\nitem", url: "https://dev.azure.com/o/p/_workitems/edit/12" };
+  const second = { id: "13", type: "User Story", title: "Second\titem", url: "https://dev.azure.com/o/p/_workitems/edit/13" };
+  const result = workItem.formatWorkItems([first, second, { ...first, url: first.url + "?x=1" },
+    { id: "14", title: "Unsafe", url: "https://example.com/_workitems/edit/14" }]);
+  assert.equal(result.count, 2);
+  assert.equal(result.plainText, "PBI 12: First item\nUS 13: Second item");
+  assert.equal(result.html, `<a href="${first.url}">PBI 12: First item</a><br><a href="${second.url}">US 13: Second item</a>`);
+  assert.doesNotMatch(result.html, /font|style=|<p>|<div>|<table>/i);
+  assert.equal(workItem.formatWorkItems([]), null);
+});

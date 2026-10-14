@@ -15,3 +15,71 @@
   white-space: nowrap !important;
   border: 0 !important;
 }
+
+[data-azure-niceties-summary] {
+  color-scheme: light dark;
+  position: fixed;
+  inset: auto 16px 16px auto;
+  z-index: 1000;
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - 32px));
+  max-height: 50vh;
+  overflow: auto;
+  border: 1px solid var(--palette-neutral-20, GrayText);
+  border-radius: 8px;
+  background: var(--background-color, Canvas);
+  color: var(--text-primary-color, CanvasText);
+  box-shadow: 0 4px 20px #0003;
+  font: 13px/1.5 system-ui, sans-serif;
+  text-align: left;
+}
+
+[data-azure-niceties-summary] > summary {
+  padding: 12px 16px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+[data-azure-niceties-summary] > summary:focus-visible {
+  outline: 2px solid Highlight;
+  outline-offset: -3px;
+}
+
+[data-azure-niceties-summary] .azure-niceties-summary-body { padding: 0 16px 12px; }
+[data-azure-niceties-summary] p { margin: 0 0 8px; }
+[data-azure-niceties-summary] .azure-niceties-summary-note { font-size: 11px; opacity: 0.8; margin-bottom: 0; }
+
+@media (forced-colors: active) {
+  [data-azure-niceties-summary] { border-color: CanvasText; }
+}
+
+[data-azure-niceties-release-toolbar] { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; }
+[data-azure-niceties-release-toolbar][hidden] { display: none !important; }
+[data-azure-niceties-release-toolbar] label { display: inline-flex; align-items: center; gap: 6px; }
+[data-azure-niceties-release-toolbar] small { flex-basis: 100%; opacity: 0.8; }
+[data-azure-niceties-release-actions] { display: inline-flex; vertical-align: middle; align-items: center; gap: 6px; margin-right: 12px; }
+[data-azure-niceties-release-actions] input { margin: 0; accent-color: Highlight; }
+[data-azure-niceties-release-toolbar] button,
+[data-azure-niceties-release-actions] button,
+[data-azure-niceties-release-prompt] button {
+  font: inherit;
+  color: var(--text-primary-color, CanvasText);
+  background: var(--background-color, Canvas);
+  border: 1px solid var(--palette-neutral-20, GrayText);
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+[data-azure-niceties-release-actions] button { padding: 2px 6px; }
+[data-azure-niceties-release-toolbar] button:disabled { opacity: 0.5; cursor: default; }
+[data-azure-niceties-release-selected='true'] { outline: 1px solid Highlight; outline-offset: -1px; }
+[data-azure-niceties-release-toolbar] button:focus-visible,
+[data-azure-niceties-release-actions] button:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+[data-azure-niceties-release-prompt] {
+  position: fixed; inset: auto auto 16px 16px; z-index: 1000;
+  width: min(340px, calc(100vw - 32px)); box-sizing: border-box;
+  padding: 12px; border: 1px solid var(--palette-neutral-20, GrayText); border-radius: 6px;
+  color: var(--text-primary-color, CanvasText); background: var(--background-color, Canvas);
+  font: 13px/1.5 system-ui, sans-serif; box-shadow: 0 4px 20px #0003;
+}
+[data-azure-niceties-release-prompt] p { margin: 8px 0; }

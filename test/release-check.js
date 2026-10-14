@@ -5,8 +5,12 @@ const os = require("node:os");
 const crypto = require("node:crypto");
 const assert = require("node:assert/strict");
 const { runBrowserSmoke } = require("./browser-smoke.js");
+const { runClipboardSmoke } = require("./clipboard-smoke.js");
+const { runReleaseListSmoke } = require("./release-list-smoke.js");
+const { saveClipboard, restoreClipboard } = require("./clipboard-state.js");
 
 async function main() {
+  const releaseOnly = process.argv.includes("--release-only");
   const root = path.resolve(__dirname, "..");
   const extensionRoot = await fs.realpath(path.resolve(process.env.AZURE_NICETIES_EXTENSION || root));
   const profile = await fs.mkdtemp(path.join(os.tmpdir(), "azure-niceties-release-"));
@@ -15,6 +19,7 @@ async function main() {
   const extensionId = crypto.createHash("sha256").update(extensionRoot).digest("hex").slice(0, 32)
     .replace(/[0-9a-f]/g, (digit) => String.fromCharCode(97 + parseInt(digit, 16)));
   let context;
+  let originalClipboard;
   const close = async () => {
     if (!context) return;
     try {
@@ -37,6 +42,8 @@ async function main() {
     console.log(JSON.stringify({ browserVersion: context.browser().version() }));
     const page = context.pages()[0];
     await page.goto(`file://${path.join(root, "test/fixture.html")}`);
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    originalClipboard = await saveClipboard(page);
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${extensionId}/options/options.html`);
     await popup.locator("#data-consent").waitFor({ state: "visible" });
@@ -66,33 +73,95 @@ async function main() {
       await native.emulateMedia({ colorScheme: "dark" });
       await native.goto(nativeUrl, { waitUntil: "domcontentloaded" });
       const nativeTheme = async () => native.evaluate(() => new Promise((resolve) => {
-        if (typeof window.require !== "function") { resolve(null); return; }
-        window.require(["VSS/Platform/Context"], (module) => {
-          resolve(module.getService("IVssThemeService")?.getCurrentTheme()?.id);
-        }, () => resolve(null));
+        const timer = setTimeout(() => resolve(null), 3000);
+        const finish = (id) => { clearTimeout(timer); resolve(id); };
+        if (typeof window.require !== "function") { finish(null); return; }
+        const loaded = (module) => {
+          try { finish(module.getService("IVssThemeService")?.getCurrentTheme()?.id); }
+          catch (_) { finish(null); }
+        };
+        let registered;
+        try { registered = window.require("VSS/Platform/Context"); }
+        catch (_) {}
+        if (typeof registered?.getService === "function") loaded(registered);
+        else {
+          try { window.require(["VSS/Platform/Context"], loaded, () => finish(null)); }
+          catch (_) { finish(null); }
+        }
       }));
       const waitForTheme = async (expected) => {
         const deadline = Date.now() + 20000;
         while (Date.now() < deadline) {
-          if (await nativeTheme() === expected) return;
+          try {
+            const current = await nativeTheme();
+            if (current && (!expected || current === expected)) return current;
+          } catch (error) {
+            if (!/Execution context was destroyed|Cannot find context/.test(error.message)) throw error;
+          }
           await new Promise((resolve) => setTimeout(resolve, 200));
         }
-        throw new Error(`Native Azure DevOps theme did not reach ${expected}`);
+        const diagnosis = await native.evaluate(() => ({ host: location.hostname,
+          platformData: Boolean(document.getElementById("dataProviders")), loader: typeof window.require,
+          setting: document.documentElement.getAttribute("data-azure-niceties-theme-sync") }));
+        throw new Error(`Native Azure DevOps theme did not reach ${expected}: ${JSON.stringify(diagnosis)}`);
       };
-      await waitForTheme("ms.vss-web.vsts-theme-dark");
-      await native.emulateMedia({ colorScheme: "light" });
-      await waitForTheme("ms.vss-web.vsts-theme");
-      console.log(JSON.stringify({ nativeAzureTheme: "dark/light passed" }));
+      const nativeOptions = await context.newPage();
+      try {
+        await nativeOptions.goto(`chrome-extension://${extensionId}/options/options.html`);
+        await nativeOptions.waitForFunction(() => !document.querySelector("#sync-system-theme").disabled);
+        const setSync = async (enabled) => {
+          await nativeOptions.bringToFront();
+          await nativeOptions.locator("#sync-system-theme").selectOption(enabled ? "on" : "off");
+          await nativeOptions.waitForFunction(async (value) =>
+            (await chrome.storage.sync.get({ syncSystemTheme: "auto" })).syncSystemTheme === value, enabled);
+          await native.bringToFront();
+        };
+        assert.equal(await nativeOptions.locator("#sync-system-theme").inputValue(), "auto");
+        await waitForTheme("ms.vss-web.vsts-theme-dark");
+        await native.emulateMedia({ colorScheme: "light" });
+        await waitForTheme("ms.vss-web.vsts-theme");
+        await setSync(false);
+        await native.emulateMedia({ colorScheme: "dark" });
+        await native.waitForTimeout(1200);
+        assert.equal(await nativeTheme(), "ms.vss-web.vsts-theme", "live opt-out stops native theme changes");
+        await native.reload({ waitUntil: "domcontentloaded" });
+        await native.waitForFunction(() => document.documentElement.getAttribute("data-azure-niceties-theme-sync") === "false");
+        const baseline = await waitForTheme();
+        for (const colorScheme of ["light", "dark"]) {
+          await native.emulateMedia({ colorScheme });
+          await native.waitForTimeout(1200);
+          assert.equal(await nativeTheme(), baseline, "saved opt-out survives reload and system changes");
+        }
+        await setSync(true);
+        await waitForTheme("ms.vss-web.vsts-theme-dark");
+        console.log(JSON.stringify({ nativeAzureTheme: "automatic default dark/light, explicit overrides, saved opt-out passed" }));
+      } finally {
+        await nativeOptions.evaluate(async () => chrome.storage.sync.set({ syncSystemTheme: "auto" })).catch(() => {});
+        await nativeOptions.close();
+      }
       await native.close();
     }
-    await runBrowserSmoke(context.browser(), extensionId);
-    console.log(JSON.stringify({ browserSmoke: "passed", extensionId, assets }));
+    if (!releaseOnly) await runClipboardSmoke(context.browser(), extensionId);
+    await runReleaseListSmoke(context.browser(), extensionId);
+    if (!releaseOnly) await runBrowserSmoke(context.browser(), extensionId);
+    console.log(JSON.stringify({ browserSmoke: "passed", suite: releaseOnly ? "release-list" : "full", extensionId, assets }));
   } finally {
-    await close();
-    await fs.rm(profile, { recursive: true, force: true });
-    process.removeListener("SIGINT", interrupt);
-    process.removeListener("SIGTERM", terminate);
-    console.log(JSON.stringify({ disposableProfileRemoved: true, profile }));
+    try {
+      if (originalClipboard && context?.browser()?.isConnected()) {
+        const restore = await context.newPage();
+        try {
+          await restore.goto(`file://${path.join(root, "test/fixture.html")}`);
+          await restoreClipboard(restore, originalClipboard);
+          console.log(JSON.stringify({ originalClipboardRestored: true }));
+        } finally { await restore.close(); }
+      }
+    } finally {
+      await close();
+      await fs.rm(profile, { recursive: true, force: true });
+      process.removeListener("SIGINT", interrupt);
+      process.removeListener("SIGTERM", terminate);
+      console.log(JSON.stringify({ disposableProfileRemoved: true, profile }));
+    }
   }
 }
 

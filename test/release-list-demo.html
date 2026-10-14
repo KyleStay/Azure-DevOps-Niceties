@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Release stage work items — sample</title>
+<style>
+  body { font: 16px Arial; padding: 28px; }
+  [role='grid'] { border: 1px solid #bbb; }
+  [role='row'] { display: grid; grid-template-columns: 80px 170px 1fr 80px 90px; border-bottom: 1px solid #ddd; }
+  [role='gridcell'],[role='columnheader'] { padding: 10px; }
+  [role='columnheader'] { font-weight: bold; background: #f3f3f3; }
+  textarea { margin-top: 20px; width: 90%; height: 100px; }
+</style>
+<section role="dialog" aria-label="Stage work items">
+<h1>Release 50 · Production · Work items</h1>
+<p>Synthetic sample — work-item cells have no native links or copy buttons.</p>
+<div role="grid" id="items">
+  <div role="row"><div role="columnheader">ID</div><div role="columnheader">Type</div><div role="columnheader">Title</div><div role="columnheader">Effort</div><div role="columnheader">State</div></div>
+  <div role="row" aria-selected="false"><div role="gridcell">601</div><div role="gridcell">Product Backlog Item</div><div role="gridcell">Improve search results</div><div role="gridcell">5</div><div role="gridcell">Done</div></div>
+  <div role="row" aria-selected="false"><div role="gridcell">602</div><div role="gridcell">User Story</div><div role="gridcell">Save filters</div><div role="gridcell">3</div><div role="gridcell">Done</div></div>
+  <div role="row" aria-selected="false"><div role="gridcell">603</div><div role="gridcell">Bug</div><div role="gridcell">Fix empty results</div><div role="gridcell">2</div><div role="gridcell">Active</div></div>
+  <div role="row" aria-selected="false"><div role="gridcell">604</div><div role="gridcell">Task</div><div role="gridcell">Update deployment notes</div><div role="gridcell">1</div><div role="gridcell">Done</div></div>
+</div>
+<textarea aria-label="Plain destination"></textarea>
+<script>window.nativeRowClicks=0;document.querySelector("#items").addEventListener("click",()=>window.nativeRowClicks++);</script>
+</section>
+</html>

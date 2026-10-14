@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Native theme service timing fixture</title>
+<style>
+  body { background: var(--background-color); color: var(--text-color); font: 16px system-ui; padding: 32px; }
+</style>
+<script id="dataProviders" type="application/json">{}</script>
+<body>
+<h1>Theme syncing fixture</h1>
+<p>This synthetic page exercises the native theme-service contract and extension-world bridge.</p>
+<script>
+  const scenario = new URL(location.href).searchParams.get("scenario") || "normal";
+  const themes = {
+    light: { id: "ms.vss-web.vsts-theme", data: { "background-color": "#ffffff", "text-color": "#111111" } },
+    dark: { id: "ms.vss-web.vsts-theme-dark", data: { "background-color": "#111111", "text-color": "#ffffff" } },
+    contrast: { id: "ms.vss-web.vsts-theme-hc-dark", data: { "background-color": "#000000", "text-color": "#ffff00" } },
+  };
+  const state = window.themeFixture = { applied: [], moduleRequests: 0, providerRequests: 0 };
+  function display(theme) {
+    document.body.dataset.theme = theme.id;
+    for (const [name, value] of Object.entries(theme.data)) document.documentElement.style.setProperty(`--${name}`, value);
+  }
+  function createService(savedTheme) {
+    return {
+      current: savedTheme,
+      getCurrentTheme() { return this.current; },
+      getTheme(id) { return savedTheme.id === id ? savedTheme : undefined; },
+      applyTheme(theme) { this.current = theme; state.applied.push(theme.id); display(theme); },
+    };
+  }
+  const initialTheme = themes[new URL(location.href).searchParams.get("initial")] || themes.light;
+  let service = createService(initialTheme);
+  display(initialTheme);
+  state.reset = (name, notify = false) => {
+    service = createService(themes[name]);
+    display(themes[name]);
+    if (notify) document.body.dispatchEvent(new Event("fpsLoaded"));
+  };
+  const context = { getService(name) {
+    if (name === "IVssThemeService") return service;
+    if (name !== "IVssContributionService") throw new Error(`Unexpected service: ${name}`);
+    return { getDataAsync(id) {
+      if (id !== "ms.vss-tfs-web.available-themes-data-provider") throw new Error(`Unexpected provider: ${id}`);
+      state.providerRequests++;
+      if (scenario === "provider-fail" && state.providerRequests === 1) return Promise.reject(new Error("Transient provider failure"));
+      if (scenario === "provider-hang" && state.providerRequests === 1) {
+        return new Promise((resolve) => { state.finishProvider = () => resolve({ themes: Object.values(themes) }); });
+      }
+      return Promise.resolve({ themes: Object.values(themes) });
+    } };
+  } };
+  function register() {
+    window.require = (modules, callback) => {
+      if (scenario === "synchronous") {
+        if (modules !== "VSS/Platform/Context") throw new TypeError("Module name must be a string");
+        state.moduleRequests++;
+        return context;
+      }
+      if (modules.length !== 1 || modules[0] !== "VSS/Platform/Context") throw new Error("Unexpected native module");
+      state.moduleRequests++;
+      if (scenario === "module-hang" && state.moduleRequests === 1) {
+        state.finishModule = () => callback({ getService() { throw new Error("Stale context was used"); } });
+        return;
+      }
+      callback(context);
+    };
+  }
+  if (scenario === "delayed") setTimeout(register, 300);
+  else register();
+</script>
+</body>
+</html>
