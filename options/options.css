@@ -12,6 +12,7 @@ header p { margin: 1px 0 0; }
 label span { display: flex; flex-direction: column; }
 input[type="checkbox"] { width: 36px; height: 20px; accent-color: #0078d4; }
 input[type="text"] { width: 106px; padding: 6px 8px; border: 1px solid color-mix(in srgb, CanvasText 28%, transparent); border-radius: 4px; background: Canvas; color: CanvasText; }
+select { min-width: 106px; padding: 6px 8px; border: 1px solid color-mix(in srgb, CanvasText 28%, transparent); border-radius: 4px; background: Canvas; color: CanvasText; font: inherit; }
 section { margin-top: 10px; padding-top: 2px; border-top: 1px solid color-mix(in srgb, CanvasText 14%, transparent); }
 h2 { margin: 12px 0 6px; font-size: 13px; }
 dl { margin: 0; }

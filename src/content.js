@@ -16,6 +16,13 @@
   let clipboardWriteInProgress = false;
   let invokingExtensionClipboardWrite = false;
   let nativeCopyClickInProgress = false;
+  const releaseLists = new Map();
+  let releaseObserver;
+  let releaseTimer;
+  let releasePrompt;
+  const RELEASE_ROW = "[role='row'],tr,.grid-row,.bolt-table-row,[role='listitem'],li,.work-item-row,.workitem-row";
+  const RELEASE_SCOPE = "[role='grid'],[role='treegrid'],[role='table'],table,.grid,.bolt-table,.work-item-grid,.work-items-grid,.workitem-grid,.workitems-grid,.work-item-list,.workitems-list,.work-items-list,.release-work-items";
+  const RELEASE_ACTIONS = "[data-azure-niceties-release-actions]";
 
   const COPY_CONTROL_SELECTOR = [
     "button[aria-label*='copy' i]",
@@ -37,6 +44,10 @@
     ".board-card",
     "[class*='work-item-card']",
     "[role='row']",
+    "tr",
+    ".grid-row",
+    ".bolt-table-row",
+    "[data-azure-niceties-release-row]",
   ].join(",");
   const CONTAINER_SELECTOR = `${ITEM_CONTAINER_SELECTOR},${FORM_SELECTOR}`;
   const TITLE_FIELD_SELECTORS = [
@@ -158,21 +169,23 @@
     const escapedId = String(id).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     // A bare leading number can be part of the title. Only remove identifiable labels.
     const prefix = new RegExp(
-      `^(?:(?:Product Backlog Item|PBI|User Story|Bug|Task|Feature|Epic|Issue|Work Item)\\s+#?${escapedId}(?=\\s|:|-|$)\\s*(?::|-)?\\s*|#${escapedId}(?=\\s|:|-|$)\\s*(?::|-)?\\s*|${escapedId}\\s*(?::|-)\\s*)`,
+      `^(?:(?:Product Backlog Item|PBI|User Story|US|Test Case|TC|Test Plan|TP|Test Suite|TS|Bug|Task|Feature|Epic|Issue|Work Item)\\s+#?${escapedId}(?=\\s|:|-|$)\\s*(?::|-)?\\s*|#${escapedId}(?=\\s|:|-|$)\\s*(?::|-)?\\s*|${escapedId}\\s*(?::|-)\\s*)`,
       "i"
     );
     return core.normalizeWhitespace(normalized.replace(prefix, ""));
   }
 
-  function extractTitle(container, link, id) {
+  function extractTitle(container, link, id, fields = listFields(container)) {
     const field = firstMatch(container, TITLE_FIELD_SELECTORS);
     if (field) return elementValue(field);
+    const listedTitle = fields.title;
+    if (listedTitle) return listedTitle;
 
     const textElement = firstMatch(container, TITLE_TEXT_SELECTORS);
     if (textElement && textElement !== link) return elementValue(textElement);
 
     const candidates = [
-      link && link.textContent,
+      ...Array.from(container.querySelectorAll("a[href*='/_workitems/edit/']"), (candidate) => candidate.textContent),
       attributeValue(link, ["title"]),
       attributeValue(link, ["aria-label"]),
       textElement && textElement.textContent,
@@ -185,15 +198,16 @@
     return cleaned[0] || "";
   }
 
-  function extractType(container) {
+  function extractType(container, fields = listFields(container)) {
     const typeElement = firstMatch(container, TYPE_SELECTORS);
-    let raw = elementValue(typeElement)
-      || attributeValue(container, ["data-work-item-type", "data-item-type"]);
+    const clean = (value) => core.normalizeWhitespace(value).replace(/^Work item type\s*:?\s*/i, "");
+    let raw = [elementValue(typeElement), attributeValue(typeElement, ["title"]), typeElement?.textContent,
+      attributeValue(container, ["data-work-item-type", "data-item-type"]), fields.type].map(clean).find(Boolean);
 
     if (!raw) {
       const knownType = Array.from(container.querySelectorAll("[aria-label], [title]")).find((element) => {
         const value = core.normalizeWhitespace(attributeValue(element, ["aria-label", "title"]));
-        return /^(Product Backlog Item|User Story|Bug|Task|Feature|Epic|Issue)$/i.test(value);
+        return /^(Product Backlog Item|PBI|User Story|US|Test Case|TC|Test Plan|TP|Test Suite|TS|Bug|Task|Feature|Epic|Issue)$/i.test(value);
       });
       raw = attributeValue(knownType, ["aria-label", "title"]);
     }
@@ -203,14 +217,14 @@
       const linkLabel = core.normalizeWhitespace(
         (workItemLink && workItemLink.textContent) || attributeValue(workItemLink, ["aria-label", "title"])
       );
-      const match = linkLabel.match(/^(Product Backlog Item|PBI|User Story|Bug|Task|Feature|Epic|Issue|Work Item)\b/i);
+      const match = linkLabel.match(/^(Product Backlog Item|PBI|User Story|US|Test Case|TC|Test Plan|TP|Test Suite|TS|Bug|Task|Feature|Epic|Issue|Work Item)\b/i);
       raw = match && match[1];
     }
 
     return core.normalizeWhitespace(raw).replace(/^Work item type\s*:?\s*/i, "") || "Work item";
   }
 
-  function extractWorkItem(container) {
+  function extractWorkItem(container, fields = container ? listFields(container) : {}) {
     if (!container) return null;
     const currentUrl = core.safeWorkItemUrl(location.href);
     const link = container.querySelector("a[href*='/_workitems/edit/']");
@@ -226,10 +240,330 @@
     const explicitId = attributeValue(container, ["data-work-item-id", "data-item-id"]);
     if (!urlId || (explicitId && (!/^\d+$/.test(explicitId) || explicitId !== urlId))) return null;
     const id = urlId;
-    const title = extractTitle(container, link, id);
+    const title = extractTitle(container, link, id, fields);
 
     if (!id || !title) return null;
-    return { id, title, type: extractType(container), url };
+    return { id, title, type: extractType(container, fields), url };
+  }
+
+  function listFields(row, headerCache = new Map()) {
+    if (!row.matches(RELEASE_ROW)) return {};
+    const gridSelector = RELEASE_SCOPE;
+    const grid = row.closest(gridSelector);
+    if (!grid) return {};
+    const field = (name) => ({ title: "title", systemtitle: "title", type: "type", workitemtype: "type", systemworkitemtype: "type", id: "id", systemid: "id" })[
+      core.normalizeWhitespace(name).toLowerCase().replace(/[^a-z]/g, "")];
+    if (!headerCache.has(grid)) headerCache.set(grid, Array.from(grid.querySelectorAll("[role='columnheader'],th,.grid-header-column,.bolt-table-header-cell"))
+      .filter((header) => header.closest(gridSelector) === grid)
+      .map((header, index) => ({ index: header.getAttribute("aria-colindex") || String(index + 1),
+        field: field(attributeValue(header, ["data-field", "data-column-name", "data-column-key"]) || header.textContent) })));
+    const headers = headerCache.get(grid);
+    const fields = {};
+    Array.from(row.querySelectorAll("[role='gridcell'],[role='cell'],td,.grid-cell,.bolt-table-cell"))
+      .filter((cell) => cell.closest(RELEASE_ROW) === row).forEach((cell, index) => {
+        const name = field(attributeValue(cell, ["data-field", "data-column-name", "data-column-key"]))
+          || headers.find((header) => header.index === (cell.getAttribute("aria-colindex") || String(index + 1)))?.field;
+        if (name) {
+          const source = cell.querySelector(RELEASE_ACTIONS) ? cell.cloneNode(true) : cell;
+          source.querySelectorAll(RELEASE_ACTIONS).forEach((actions) => actions.remove());
+          fields[name] = core.normalizeWhitespace(source.querySelector("input:not([type='checkbox'])")?.value ?? source.textContent);
+          if (name === "title") fields.titleCell = cell;
+        }
+      });
+    return fields;
+  }
+
+  function isReleasePage() {
+    try {
+      const url = new URL(location.href);
+      return /\/_release(?:Progress)?(?:[/?#]|$)/i.test(url.pathname)
+        || /(?:^#|\/)\/?_release(?:Progress)?(?:[/?#]|$)/i.test(url.hash);
+    } catch (_) { return false; }
+  }
+
+  function releaseKey(item) {
+    return `${organization(item.url)}/${item.id}`;
+  }
+
+  function releaseRecords(scope) {
+    const rows = new Set(scope.querySelectorAll(RELEASE_ROW));
+    const headers = new Map();
+    for (const link of scope.querySelectorAll("a[href*='/_workitems/edit/']")) {
+      if (link.closest(RELEASE_ACTIONS)) continue;
+      const row = link.closest(RELEASE_ROW) || link.closest(ITEM_CONTAINER_SELECTOR) || link.parentElement;
+      if (row && scope.contains(row)) rows.add(row);
+    }
+    const records = [];
+    for (const row of rows) {
+      if (!isVisibleShortcutCandidate(row) || row.closest(FORM_SELECTOR) || isEditableTarget(row)) continue;
+      const owner = row.closest(RELEASE_SCOPE);
+      if (owner && owner !== scope) continue;
+      const links = Array.from(row.querySelectorAll("a[href*='/_workitems/edit/']"))
+        .filter((link) => !link.closest(RELEASE_ACTIONS));
+      const fields = listFields(row, headers);
+      const attributeId = attributeValue(row, ["data-work-item-id", "data-item-id"]);
+      if (attributeId && fields.id && attributeId !== fields.id) continue;
+      let item;
+      if (links.length) {
+        const urls = links.map((link) => core.safeWorkItemUrl(absoluteUrl(link.getAttribute("href"))));
+        if (urls.some((url) => !url)) continue;
+        const keys = new Set(urls.map((url) => releaseKey({ url, id: core.workItemIdFromUrl(url) })));
+        if (keys.size !== 1) continue;
+        const id = core.workItemIdFromUrl(urls[0]);
+        const explicitId = attributeId || fields.id;
+        if (explicitId && explicitId !== id) continue;
+        const title = extractTitle(row, links[0], id, fields);
+        if (!title || (title === id && !fields.title && !firstMatch(row, TITLE_TEXT_SELECTORS))) continue;
+        item = { id, title, type: extractType(row, fields), url: urls[0] };
+      } else {
+        // Release grids can render IDs/titles as clickable cells without anchors.
+        const id = attributeId || fields.id;
+        const type = fields.type || extractType(row, fields);
+        if (!/^\d+$/.test(id || "") || !fields.title || !type || type === "Work item") continue;
+        const current = new URL(location.href);
+        const prefix = current.pathname.split(/\/_[^/]*(?:\/|$)/)[0];
+        const url = core.safeWorkItemUrl(`${current.origin}${prefix}/_workitems/edit/${id}`);
+        if (!url) continue;
+        item = { id, title: fields.title, type, url };
+      }
+      records.push({ row, item, key: releaseKey(item), titleCell: fields.titleCell, linked: links.length > 0 });
+    }
+    return records;
+  }
+
+  function removeReleaseEntry(entry) {
+    entry.toolbar.remove();
+    for (const [row, controls] of entry.rows) {
+      controls.actions.remove();
+      row.removeAttribute("data-azure-niceties-release-row");
+      row.removeAttribute("data-azure-niceties-release-selected");
+    }
+    entry.rows.clear();
+    entry.selected.clear();
+  }
+
+  function clearReleaseLists() {
+    releaseObserver?.disconnect();
+    window.clearTimeout(releaseTimer);
+    releaseTimer = null;
+    for (const entry of releaseLists.values()) removeReleaseEntry(entry);
+    releaseLists.clear();
+    releasePrompt?.element.remove();
+    releasePrompt = null;
+  }
+
+  function showReleasePrompt() {
+    if (!document.body) return;
+    if (Array.from(document.querySelectorAll(FORM_SELECTOR)).some(isVisibleShortcutCandidate)) {
+      releasePrompt?.element.remove(); releasePrompt = null;
+      return;
+    }
+    const host = Array.from(document.querySelectorAll("[role='dialog'],.bolt-panel,.ms-Panel")).find(isVisibleShortcutCandidate) || document.body;
+    if (!releasePrompt) {
+      const element = document.createElement("aside");
+      element.dataset.azureNicetiesReleasePrompt = "true";
+      const heading = document.createElement("strong");
+      heading.textContent = "Release work-item copying";
+      const message = document.createElement("p");
+      const enable = document.createElement("button");
+      enable.type = "button";
+      enable.dataset.azureNicetiesEnableCopying = "true";
+      enable.textContent = "Enable copying";
+      element.append(heading, message, enable);
+      host.append(element);
+      releasePrompt = { element, message, enable };
+    }
+    if (releasePrompt.element.parentElement !== host) host.append(releasePrompt.element);
+    const message = enabled
+      ? "Open a release stage’s Work items list to select items, copy individual references, or copy the loaded list."
+      : "Enable copying to read work-item IDs, titles, types and links locally and copy references when requested. Optional parent context uses your signed-in Azure DevOps session. No work-item data is sent to the developer.";
+    if (releasePrompt.message.textContent !== message) releasePrompt.message.textContent = message;
+    releasePrompt.enable.hidden = enabled;
+  }
+
+  function releaseButton(label, kind) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    button.dataset.azureNicetiesReleaseCopy = kind;
+    button.title = "One linked reference per item. Shift: Markdown; Alt/Option: IDs; Ctrl/Command: URLs; Shift+Alt/Option: branch names.";
+    return button;
+  }
+
+  function createReleaseEntry(scope) {
+    const toolbar = document.createElement("div");
+    toolbar.dataset.azureNicetiesReleaseToolbar = "true";
+    toolbar.setAttribute("role", "group");
+    toolbar.setAttribute("aria-label", "Release work-item copying");
+    const label = document.createElement("label");
+    const all = document.createElement("input");
+    all.type = "checkbox";
+    all.setAttribute("aria-label", "Select all loaded work items");
+    label.append(all, document.createTextNode("Select loaded items"));
+    const selectedButton = releaseButton("Copy selected (0)", "selected");
+    const allButton = releaseButton("Copy all loaded", "all");
+    allButton.dataset.azureNicetiesCopyList = "true";
+    const clear = document.createElement("button");
+    clear.type = "button";
+    clear.textContent = "Clear selection";
+    const hint = document.createElement("small");
+    hint.textContent = "Selections stay while this list is open. Copy all covers loaded, visible rows.";
+    toolbar.append(label, selectedButton, allButton, clear, hint);
+    scope.before(toolbar);
+    return { scope, toolbar, all, selectedButton, allButton, clear, selected: new Map(), rows: new Map(), page: location.href };
+  }
+
+  function updateReleaseEntry(entry, records) {
+    const unique = new Map();
+    for (const record of records) if (!unique.has(record.key)) unique.set(record.key, record.item);
+    for (const [key, item] of unique) if (entry.selected.has(key)) entry.selected.set(key, item);
+    const current = new Set(records.map((record) => record.row));
+    for (const [row, controls] of entry.rows) {
+      if (!current.has(row)) {
+        controls.actions.remove();
+        row.removeAttribute("data-azure-niceties-release-row");
+        row.removeAttribute("data-azure-niceties-release-selected");
+        entry.rows.delete(row);
+      }
+    }
+    for (const record of records) {
+      const { row, item, key } = record;
+      let controls = entry.rows.get(row);
+      if (!controls || !row.contains(controls.actions) || controls.key !== key || controls.linked !== record.linked) {
+        controls?.actions.remove();
+        row.querySelectorAll(RELEASE_ACTIONS).forEach((cloned) => cloned.remove());
+        const actions = document.createElement("span");
+        actions.dataset.azureNicetiesReleaseActions = "true";
+        actions.setAttribute("role", "group");
+        actions.setAttribute("aria-label", "Work-item copying");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.dataset.azureNicetiesReleaseSelect = "true";
+        const copy = releaseButton("Copy", "item");
+        actions.append(checkbox, copy);
+        if (!record.linked) {
+          const open = document.createElement("a");
+          open.textContent = "Open";
+          open.target = "_blank";
+          open.rel = "noopener noreferrer";
+          actions.append(open);
+        }
+        (record.titleCell || row.querySelector("[role='gridcell'],[role='cell'],td") || row).prepend(actions);
+        controls = { actions, checkbox, copy, key, linked: record.linked };
+        entry.rows.set(row, controls);
+      }
+      const label = core.labelFor(item);
+      if (controls.checkbox.getAttribute("aria-label") !== `Select ${label}`) controls.checkbox.setAttribute("aria-label", `Select ${label}`);
+      if (controls.copy.getAttribute("aria-label") !== `Copy ${label}`) controls.copy.setAttribute("aria-label", `Copy ${label}`);
+      const open = controls.actions.querySelector("a");
+      if (open && open.getAttribute("href") !== item.url) open.href = item.url;
+      const selected = entry.selected.has(key);
+      controls.checkbox.checked = selected;
+      if (!row.hasAttribute("data-azure-niceties-release-row")) row.setAttribute("data-azure-niceties-release-row", "true");
+      if (row.getAttribute("data-azure-niceties-release-selected") !== String(selected)) row.setAttribute("data-azure-niceties-release-selected", String(selected));
+    }
+    const keys = new Set(records.map((record) => record.key));
+    const selectedLoaded = [...keys].filter((key) => entry.selected.has(key)).length;
+    entry.all.checked = keys.size > 0 && selectedLoaded === keys.size;
+    entry.all.indeterminate = selectedLoaded > 0 && selectedLoaded < keys.size;
+    const allLabel = `Copy all loaded (${keys.size})`;
+    const selectedLabel = `Copy selected (${entry.selected.size})`;
+    if (entry.allButton.textContent !== allLabel) entry.allButton.textContent = allLabel;
+    if (entry.selectedButton.textContent !== selectedLabel) entry.selectedButton.textContent = selectedLabel;
+    entry.selectedButton.disabled = entry.selected.size === 0;
+    entry.allButton.disabled = keys.size === 0;
+    entry.clear.disabled = entry.selected.size === 0;
+  }
+
+  function updateReleaseLists() {
+    releaseTimer = null;
+    if (!isReleasePage()) {
+      for (const entry of releaseLists.values()) removeReleaseEntry(entry);
+      releaseLists.clear();
+      releasePrompt?.element.remove();
+      releasePrompt = null;
+      return;
+    }
+    if (!enabled) { showReleasePrompt(); return; }
+    const scopes = new Set(document.querySelectorAll(RELEASE_SCOPE));
+    const ungrouped = Array.from(document.querySelectorAll("a[href*='/_workitems/edit/']"))
+      .filter((link) => !link.closest(`${RELEASE_SCOPE},${FORM_SELECTOR},${RELEASE_ACTIONS}`) && !isEditableTarget(link) && isVisibleShortcutCandidate(link));
+    if (ungrouped.length) {
+      let common = ungrouped[0].parentElement;
+      while (common && !ungrouped.every((link) => common.contains(link))) common = common.parentElement;
+      if (common && common !== document.body && common !== document.documentElement) scopes.add(common);
+    }
+    // A virtualized list can temporarily have no rows, while its container and
+    // the user's explicitly selected references still belong to this view.
+    for (const [scope, entry] of releaseLists) {
+      if (entry.page === location.href && scope.isConnected) scopes.add(scope);
+    }
+    for (const [scope, entry] of releaseLists) {
+      if (!scope.isConnected || !scopes.has(scope)) { removeReleaseEntry(entry); releaseLists.delete(scope); }
+    }
+    for (const scope of scopes) {
+      if (scope.closest(FORM_SELECTOR) || isEditableTarget(scope)) {
+        const entry = releaseLists.get(scope);
+        if (entry) { removeReleaseEntry(entry); releaseLists.delete(scope); }
+        continue;
+      }
+      if (!isVisibleShortcutCandidate(scope)) {
+        const entry = releaseLists.get(scope);
+        if (entry) {
+          if (entry.page !== location.href) { removeReleaseEntry(entry); releaseLists.delete(scope); }
+          else entry.toolbar.hidden = true;
+        }
+        continue;
+      }
+      const records = releaseRecords(scope);
+      let entry = releaseLists.get(scope);
+      if (!records.length && !entry) continue;
+      if (!entry) { entry = createReleaseEntry(scope); releaseLists.set(scope, entry); }
+      entry.toolbar.hidden = false;
+      if (entry.page !== location.href) { entry.selected.clear(); entry.page = location.href; }
+      updateReleaseEntry(entry, records);
+    }
+    if (releaseLists.size) { releasePrompt?.element.remove(); releasePrompt = null; }
+    else showReleasePrompt();
+  }
+
+  function scheduleReleaseLists() {
+    if (releaseTimer == null && (isReleasePage() || releaseLists.size || releasePrompt)) releaseTimer = window.setTimeout(updateReleaseLists, 100);
+  }
+
+  function observeReleaseLists() {
+    if (!document.documentElement || typeof MutationObserver !== "function") return;
+    releaseObserver ||= new MutationObserver((changes) => {
+      if (changes.some((change) => !(change.target instanceof Element ? change.target : change.target.parentElement)
+        ?.closest("[data-azure-niceties-release-toolbar],[data-azure-niceties-release-prompt],[data-azure-niceties-summary],[data-azure-niceties-release-actions]"))) scheduleReleaseLists();
+    });
+    releaseObserver.observe(document.documentElement, { childList: true, subtree: true, characterData: true,
+      attributes: true, attributeFilter: ["class", "style", "hidden", "aria-hidden", "href", "data-item-id", "data-work-item-id", "data-value"] });
+    scheduleReleaseLists();
+  }
+
+  function releaseEntryFor(target) {
+    if (!(target instanceof Element) || !isReleasePage()) return null;
+    return Array.from(releaseLists.values()).find((entry) => entry.page === location.href
+      && isVisibleShortcutCandidate(entry.scope)
+      && (entry.scope.contains(target) || entry.toolbar.contains(target))) || null;
+  }
+
+  async function copyReleaseItems(entry, mode, control, selectedOnly) {
+    const requestId = ++latestCopyRequest;
+    const page = location.href;
+    const records = releaseRecords(entry.scope);
+    const chosen = new Map();
+    for (const { key, item } of records) {
+      if (entry.selected.has(key) && !chosen.has(key)) chosen.set(key, item);
+    }
+    for (const [key, item] of chosen) entry.selected.set(key, item);
+    for (const [key, item] of entry.selected) if (!chosen.has(key)) chosen.set(key, item);
+    const items = selectedOnly ? [...chosen.values()] : records.map((record) => record.item);
+    const preferences = await settings();
+    if (location.href !== page || !entry.scope.isConnected) return;
+    const formatted = core.formatWorkItems(items, { mode, branchPrefix: preferences.branchPrefix });
+    if (formatted) await copyFormatted(formatted, control, requestId);
   }
 
   function selectedWorkItem() {
@@ -278,14 +612,20 @@
     latestCopyRequest += 1;
     for (const controller of activeParentLookups) controller.abort();
     parentCache.clear();
+    clearReleaseLists();
+    observeReleaseLists();
     if (globalThis.azureNicetiesTestSettings) {
       enabled = globalThis.azureNicetiesTestSettings.dataConsent === true;
+      observeReleaseLists();
       return;
     }
     try {
       if (typeof chrome !== "undefined" && chrome.storage?.local) {
         const stored = await chrome.storage.local.get({ dataConsent: false });
-        if (load === consentLoad) enabled = stored.dataConsent === true;
+        if (load === consentLoad) {
+          enabled = stored.dataConsent === true;
+          observeReleaseLists();
+        }
       }
     } catch (_error) {
       // Missing or unavailable consent keeps work-item processing disabled.
@@ -498,6 +838,10 @@
       parent,
       branchPrefix: preferences.branchPrefix,
     });
+    return copyFormatted(formatted, control, requestId);
+  }
+
+  async function copyFormatted(formatted, control, requestId) {
     if (!enabled || requestId !== latestCopyRequest) return;
 
     const write = clipboardWriteQueue.then(async () => {
@@ -553,10 +897,10 @@
 
   function isVisibleShortcutCandidate(container) {
     if (!(container instanceof Element) || !container.isConnected) return false;
+    if (container.closest("[hidden], [aria-hidden='true']")) return false;
     if (typeof container.checkVisibility === "function") {
       return container.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true });
     }
-    if (container.closest("[hidden], [aria-hidden='true']")) return false;
     const style = window.getComputedStyle(container);
     return style.display !== "none"
       && style.visibility !== "hidden"
@@ -601,6 +945,66 @@
   }, true);
 
   document.addEventListener("click", function (event) {
+    if (event.isTrusted && releasePrompt && event.target instanceof Element
+      && event.target.closest("[data-azure-niceties-enable-copying]") === releasePrompt.enable) {
+      event.preventDefault(); event.stopImmediatePropagation();
+      const prompt = releasePrompt;
+      prompt.enable.disabled = true;
+      chrome.storage.local.set({ dataConsent: true }).then(reloadConsent).catch(() => {
+        if (releasePrompt === prompt) {
+          prompt.enable.disabled = false;
+          prompt.message.textContent = "Could not enable copying. Open the extension menu and try again.";
+        }
+      });
+      return;
+    }
+
+    if (!enabled || !event.isTrusted) {
+      // Native fallback clicks must still reach Azure DevOps after a failed copy.
+      if (event.target instanceof Element) {
+        const fallback = event.target.closest(COPY_CONTROL_SELECTOR);
+        if (fallback && nativeFallbackControls.has(fallback)) nativeFallbackControls.delete(fallback);
+      }
+      return;
+    }
+    const entry = releaseEntryFor(event.target);
+    if (entry) {
+      const open = event.target.closest("a");
+      if (open && Array.from(entry.rows.values()).some((row) => row.actions.querySelector("a") === open)) {
+        event.stopImmediatePropagation();
+        return;
+      }
+      const checkbox = event.target.closest("input");
+      if (checkbox === entry.all || Array.from(entry.rows.values()).some((row) => row.checkbox === checkbox)) {
+        event.stopImmediatePropagation();
+        return;
+      }
+      const clicked = event.target.closest("button");
+      if (clicked === entry.clear) {
+        event.preventDefault(); event.stopImmediatePropagation();
+        entry.selected.clear();
+        updateReleaseEntry(entry, releaseRecords(entry.scope));
+        return;
+      }
+      if (clicked === entry.allButton || clicked === entry.selectedButton) {
+        event.preventDefault(); event.stopImmediatePropagation();
+        copyReleaseItems(entry, core.modeFromModifiers(event), clicked, clicked === entry.selectedButton).catch(() => {
+          const status = confirmationStatus();
+          if (status) status.textContent = "Could not copy work items. Try again.";
+        });
+        return;
+      }
+      const ownedRow = Array.from(entry.rows).find(([, controls]) => controls.copy === clicked);
+      if (ownedRow) {
+        event.preventDefault(); event.stopImmediatePropagation();
+        const record = releaseRecords(entry.scope).find(({ row }) => row === ownedRow[0]);
+        if (record) copyWorkItem(record.item, core.modeFromModifiers(event), clicked, ++latestCopyRequest).catch(() => {
+          const status = confirmationStatus();
+          if (status) status.textContent = "Could not copy this work item. Try again.";
+        });
+        return;
+      }
+    }
     const control = event.target instanceof Element && event.target.closest(COPY_CONTROL_SELECTOR);
     if (!control) return;
     if (nativeFallbackControls.has(control)) {
@@ -626,8 +1030,45 @@
     });
   }, true);
 
+  document.addEventListener("change", function (event) {
+    if (!enabled || !event.isTrusted || !isReleasePage()) return;
+    const entry = releaseEntryFor(event.target);
+    if (!entry) return;
+    const records = releaseRecords(entry.scope);
+    if (event.target === entry.all) {
+      event.stopImmediatePropagation();
+      for (const record of records) {
+        if (entry.all.checked) entry.selected.set(record.key, record.item);
+        else entry.selected.delete(record.key);
+      }
+    } else {
+      const ownedRow = Array.from(entry.rows).find(([, controls]) => controls.checkbox === event.target);
+      if (!ownedRow) return;
+      event.stopImmediatePropagation();
+      const record = records.find(({ row }) => row === ownedRow[0]);
+      if (!record) return;
+      if (event.target.checked) entry.selected.set(record.key, record.item);
+      else entry.selected.delete(record.key);
+    }
+    updateReleaseEntry(entry, records);
+  }, true);
+
   document.addEventListener("keydown", function (event) {
     if (!enabled || !event.isTrusted) return;
+    const focusedReleaseEntry = releaseEntryFor(event.target);
+    const ownSelection = focusedReleaseEntry && (event.target === focusedReleaseEntry.all
+      || Array.from(focusedReleaseEntry.rows.values()).some((controls) => controls.checkbox === event.target));
+    const extensionShortcut = event.code === "KeyC" && event.shiftKey && event.altKey;
+    const selectedShortcut = extensionShortcut || (event.code === "KeyC" && (event.ctrlKey || event.metaKey)
+      && !event.shiftKey && !event.altKey && (ownSelection || event.target === focusedReleaseEntry?.selectedButton));
+    const releaseEntry = focusedReleaseEntry || (extensionShortcut ? releaseEntryFor(hoveredContainer) : null);
+    if (releaseEntry?.selected.size && selectedShortcut && !event.isComposing
+      && !event.target.closest?.(FORM_SELECTOR)
+      && (!isEditableTarget(event.target) || ownSelection) && !window.getSelection?.().toString()) {
+      event.preventDefault(); event.stopImmediatePropagation();
+      copyReleaseItems(releaseEntry, "rich", releaseEntry.selectedButton, true).catch(() => {});
+      return;
+    }
     if (!event.shiftKey || !event.altKey || (event.code !== "KeyC" && event.code !== "KeyB")) return;
     if (event.isComposing || isEditableTarget(event.target)) return;
     const { container, workItem } = selectedWorkItem();
@@ -641,4 +1082,8 @@
       console.warn("Azure DevOps Niceties could not write to the clipboard.", error);
     });
   }, true);
+  document.addEventListener("DOMContentLoaded", observeReleaseLists);
+  document.addEventListener("readystatechange", observeReleaseLists);
+  window.addEventListener("popstate", scheduleReleaseLists);
+  window.addEventListener("hashchange", scheduleReleaseLists);
 })();

@@ -13,10 +13,11 @@
   const DEFAULT_SETTINGS = Object.freeze({
     includeParent: false,
     branchPrefix: "feature",
+    syncSystemTheme: "auto",
   });
 
   function normalizeWhitespace(value) {
-    return String(value || "").replace(/\s+/g, " ").trim();
+    return String(value ?? "").replace(/[\s\u0085]+/g, " ").trim();
   }
 
   function escapeHtml(value) {
@@ -54,14 +55,15 @@
 
   function shortType(typeName) {
     const normalized = normalizeWhitespace(typeName).toLowerCase();
-    if (normalized === "product backlog item" || normalized === "product backlog items") {
-      return "PBI";
-    }
+    const abbreviations = { "product backlog item": "PBI", "product backlog items": "PBI",
+      "user story": "US", "user stories": "US", "test case": "TC", "test cases": "TC",
+      "test plan": "TP", "test plans": "TP", "test suite": "TS", "test suites": "TS" };
+    if (Object.hasOwn(abbreviations, normalized)) return abbreviations[normalized];
     return normalizeWhitespace(typeName) || "Work item";
   }
 
   function labelFor(workItem) {
-    return `${shortType(workItem.type)} ${workItem.id}: ${normalizeWhitespace(workItem.title)}`;
+    return `${shortType(workItem.type)} ${normalizeWhitespace(workItem.id)}: ${normalizeWhitespace(workItem.title)}`;
   }
 
   function linkedHtml(workItem) {
@@ -117,7 +119,7 @@
         ? `${markdownLink(parent)} › ${markdownLink(workItem)}`
         : markdownLink(workItem);
     } else if (mode === "id") {
-      plainText = `#${workItem.id}`;
+      plainText = `#${normalizeWhitespace(workItem.id)}`;
     } else if (mode === "url") {
       plainText = safeWorkItemUrl(workItem.url);
     } else if (mode === "branch") {
@@ -132,7 +134,26 @@
         rich: true,
       };
     }
+    plainText = normalizeWhitespace(plainText);
     return { mode, label: plainText, plainText, html: escapeHtml(plainText), rich: false };
+  }
+
+  function formatWorkItems(items, options = {}) {
+    const unique = new Map();
+    for (const item of items) {
+      const url = safeWorkItemUrl(item.url);
+      const id = normalizeWhitespace(item.id);
+      if (!url || workItemIdFromUrl(url) !== id || !normalizeWhitespace(item.title)) continue;
+      const parsed = new URL(url);
+      const org = parsed.hostname === "dev.azure.com" ? parsed.pathname.split("/")[1].toLowerCase() : "";
+      const key = `${parsed.origin}/${org}/${id}`;
+      if (!unique.has(key)) unique.set(key, { ...item, id, url });
+    }
+    const formatted = [...unique.values()].map((item) => formatWorkItem(item, options));
+    if (!formatted.length) return null;
+    return { mode: options.mode || "rich", rich: formatted[0].rich, label: `${formatted.length} work items`,
+      count: formatted.length, plainText: formatted.map((item) => item.plainText).join("\n"),
+      html: formatted.map((item) => item.html).join("<br>") };
   }
 
   return {
@@ -140,6 +161,7 @@
     branchName,
     escapeHtml,
     formatWorkItem,
+    formatWorkItems,
     labelFor,
     modeFromModifiers,
     normalizeWhitespace,

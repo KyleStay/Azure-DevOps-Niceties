@@ -4,6 +4,7 @@ const path = require("node:path");
 const os = require("node:os");
 const crypto = require("node:crypto");
 const { chromium } = require("playwright");
+const { saveClipboard, restoreClipboard } = require("./clipboard-state.js");
 
 async function main() {
   const root = path.resolve(__dirname, "..");
@@ -11,6 +12,7 @@ async function main() {
   const release = path.join(root, "release", manifest.version);
   const profile = await fs.mkdtemp(path.join(os.tmpdir(), "azure-publisher-qa-"));
   let context;
+  let originalClipboard;
   try {
     context = await chromium.launchPersistentContext(profile, {
       executablePath: process.env.AZURE_NICETIES_CHROME || chromium.executablePath(),
@@ -23,6 +25,7 @@ async function main() {
     page.on("pageerror", error => errors.push(error.message));
     page.on("request", request => requests.push(request.url()));
     await page.goto(`file://${path.join(release, "publish.html")}`);
+    originalClipboard = await saveClipboard(page);
     await page.getByRole("heading", { name: "Start with the upload" }).waitFor();
     await page.waitForFunction(() => [...document.querySelectorAll(".asset-preview img")].every(image => image.complete && image.naturalWidth > 0));
     assert.ok(await page.locator(".asset-preview img").evaluateAll(images => images.every(image => {
@@ -41,6 +44,7 @@ async function main() {
     for (const [label, filename] of [
       ["Extension icon", "icon-128.png"], ["Small promotional tile", "promo-440x280.png"],
       ["Light settings screenshot", "settings-light-1280x800.png"], ["Dark settings screenshot", "settings-dark-1280x800.png"],
+      ["Release selection demo", "release-selection-demo-1280x800.png"],
     ]) {
       const [download] = await Promise.all([
         page.waitForEvent("download"), page.getByRole("button", { name: `Download ${label}`, exact: true }).click(),
@@ -97,14 +101,25 @@ async function main() {
     assert.equal(await page.locator("#reviewer-output").inputValue().then(value => value.includes(notes)), false);
     assert.ok(requests.every(url => url.startsWith("file:") || url.startsWith("data:")), "the helper never uploads private notes or makes network requests");
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ publisher: "passed", downloads: "ZIP + 4 PNGs match release bytes", clipboard: "native + fallback passed", mobile: "5 steps fit", privateNotes: "not persisted or transmitted" }));
+    console.log(JSON.stringify({ publisher: "passed", downloads: "ZIP + 5 PNGs match release bytes", clipboard: "native + fallback passed", mobile: "5 steps fit", privateNotes: "not persisted or transmitted" }));
   } finally {
-    if (context) {
-      try { await (await context.browser().newBrowserCDPSession()).send("Browser.close"); } catch (_) {}
-      await context.close().catch(() => {});
+    try {
+      if (originalClipboard && context?.browser()?.isConnected()) {
+        const restore = await context.newPage();
+        try {
+          await restore.goto(`file://${path.join(root, "test/fixture.html")}`);
+          await restoreClipboard(restore, originalClipboard);
+          console.log(JSON.stringify({ originalClipboardRestored: true }));
+        } finally { await restore.close(); }
+      }
+    } finally {
+      if (context) {
+        try { await (await context.browser().newBrowserCDPSession()).send("Browser.close"); } catch (_) {}
+        await context.close().catch(() => {});
+      }
+      await fs.rm(profile, { recursive: true, force: true });
+      console.log(JSON.stringify({ disposableProfileRemoved: true }));
     }
-    await fs.rm(profile, { recursive: true, force: true });
-    console.log(JSON.stringify({ disposableProfileRemoved: true }));
   }
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

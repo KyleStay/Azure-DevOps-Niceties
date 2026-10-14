@@ -2,9 +2,13 @@
 
 A dependency-free Manifest V3 extension that follows your system theme and improves work-item copying across Azure DevOps boards, backlogs, queries, pull requests, and work-item forms.
 
-## Automatic theme
+## Optional system theme
 
-Azure DevOps automatically uses its native dark theme when your system is in dark mode and its native light theme otherwise. It switches on page load and whenever your system appearance changes, including while a page is open. No page reload is needed, and your saved Azure DevOps account theme preference is unchanged.
+**Automatic** is the default theme setting. When Azure DevOps starts with its standard light/default theme, the extension follows your system's light or dark appearance. Selected dark and high-contrast themes are preserved. The extension remembers its own theme changes so applying dark mode does not stop subsequent system syncing. Native theme changes and recreated services are rechecked.
+
+Choose **On** in **Sync theme with system** to explicitly follow system appearance, or **Off** to stop automatic changes. Choose **Automatic** to restore the default behavior. Existing saved On/Off choices are preserved. Changes apply to open tabs, and your saved Azure DevOps account theme preference is unchanged.
+
+Startup waits for the saved setting and the native theme service. Visible tabs are checked periodically to recover from delayed scripts, transient failures, and navigation that resets the theme. Loads time out after five seconds, failures retry with backoff, and periodic checks stop when syncing is off or the tab is hidden.
 
 High-contrast themes and forced-colors accessibility settings are preserved. Requires Chrome 111 or later. The integration uses Azure DevOps's native page service, which Microsoft may change.
 
@@ -27,16 +31,37 @@ Keyboard shortcuts operate on the focused, selected, or most recently hovered wo
 - `Shift+Alt+C`: copy the rich linked title
 - `Shift+Alt+B`: copy the branch name
 
-`Product Backlog Item` is shortened to `PBI`; other work-item types keep their normal name.
+`Product Backlog Item`, `User Story`, `Test Case`, `Test Plan`, and `Test Suite` shorten to `PBI`, `US`, `TC`, `TP`, and `TS`. Short types such as Bug, Task, Feature, and Epic keep their names.
+
+Individual references trim surrounding whitespace and collapse embedded newlines, tabs, and repeated spaces to one line. Rich copies contain inline links without font styling or paragraph wrappers, so the destination controls the font.
+
+## Release-stage work-item lists
+
+Open a release → stage → Work items. If copying is disabled, a visible **Enable copying** card explains the local data use and enables the feature without leaving the page. After approval, the list gains row checkboxes and a **Copy** button for each item. Linkless rows also gain a safe **Open** link.
+
+Above the list, use **Select loaded items**, **Copy selected (N)**, **Copy all loaded (N)**, and **Clear selection**. Selected references remain available while that list is open, including temporarily unloaded rows; closing/replacing the list or changing views clears them. Filtering or updating visible rows refreshes their references. Duplicate representations of one item select and copy once.
+
+Use Ctrl/Command+C while focused on the extension's selection controls, or Shift+Alt+C inside the list, to copy selected references. Normal text editing and native copy handlers remain available elsewhere. Click modifiers select Markdown, IDs, URLs, or branch names. List copies omit parent context; individual Copy buttons follow the normal parent-context preference.
+
+References use one clean linked `TYPE ID: Title` per line with no extra blank lines or font styles. Copy all covers currently loaded, visible rows. The Effort summary follows selected loaded rows, and appears in the stage sheet when the list is in a panel. No extra metadata requests or saved work-item data are required.
 
 ## Settings
 
 Select the extension's toolbar button or its extension options to:
 
+- Choose Automatic, On, or Off for system theme syncing
 - Include linked parent context: `Feature 900: Parent › PBI 1234: Title`
 - Customize the branch prefix (default: `feature`)
 
 Parent information is requested only for rich or Markdown copying when the option is enabled, using the user's existing signed-in session and the same Azure DevOps organization. Requests time out after three seconds; missing or inaccessible parent information never prevents the work item itself from being copied. Parent results have a 30-second freshness window in page memory. Withdrawing enhanced-copying approval cancels pending parent requests and clears cached parent details. No work-item data is saved in Chrome storage or sent to the publisher.
+
+## Selection summary
+
+Selection summaries are on by default. Select work items in queries, backlogs, or other work-item lists. A collapsible panel at the bottom right shows selected item count; separate totals for displayed **Effort**, **Story Points**, and **Size** fields; counts by type and state; and unassigned count when assignments are displayed. Turn off **Enable selection summary** in the extension's toolbar menu to opt out; that choice is saved on this device. The switch is independent of enhanced copying.
+
+Add estimate columns to the list to see their totals. Blank or invalid estimates are marked missing, rather than counted as zero; zero is a valid estimate. Duplicate rows for the same item count once. The panel updates as selection or displayed fields change and disappears when selection is cleared.
+
+The summary covers selected rows currently loaded in the page. Hidden rows and rows unloaded by virtual scrolling are excluded. It reads displayed data locally, makes no additional requests, and saves no work-item data. Effort, Story Points, and Size stay separate because they can use different units.
 
 ## Install locally
 
@@ -58,13 +83,13 @@ npm run test:browser
 
 The repository pins its test dependency in `package.json`; no machine-specific runtime paths are required.
 
-Browser verification loads the extension into a disposable headless Chromium profile, checks routed sample work-item fixtures, captures extension-options screenshots, then closes the browser and removes its profile. Set `AZURE_NICETIES_CHROME` to use another Chrome for Testing executable. Optionally set `AZURE_NICETIES_TEST_URL` locally to verify native themes on a real Azure DevOps test page; never commit the URL, credentials, or organization screenshots. Authenticated organization checks are described in [reviewer instructions](store/REVIEWER-TESTS.md). All committed work-item examples use synthetic organizations, projects, titles, and IDs.
+Browser verification loads the extension into a disposable headless Chromium profile, checks routed sample work-item and native theme-service fixtures (including delayed and hung loads, live setting changes, opt-out on startup, and navigation resets), captures extension-options screenshots, then closes the browser and removes its profile. Set `AZURE_NICETIES_CHROME` to use another Chrome for Testing executable. Optionally set `AZURE_NICETIES_TEST_URL` locally to verify native themes on a real Azure DevOps test page; never commit the URL, credentials, or organization screenshots. Authenticated organization checks are described in [reviewer instructions](store/REVIEWER-TESTS.md). All committed work-item examples use synthetic organizations, projects, titles, and IDs.
 
 ## Prepare a Web Store release
 
-After verification, run `npm run package`. It creates an allowlisted runtime ZIP and a complete submission kit under `release/0.4.0/`, with checksums. The listing, privacy policy, image assets, release evidence, and dashboard steps live in [store/SUBMISSION.md](store/SUBMISSION.md).
+After verification, run `npm run package`. It creates an allowlisted runtime ZIP and a complete submission kit under `release/0.6.0/`, with checksums. The listing, privacy policy, image assets, release evidence, and dashboard steps live in [store/SUBMISSION.md](store/SUBMISSION.md).
 
-Open `release/0.4.0/publish.html` or the [publishing helper](https://kylestay.github.io/Azure-DevOps-Niceties/publish.html) for copy-and-paste fields and one-click ZIP/image downloads. This standalone file is generated from the reviewed documents and works offline. Run `npm run test:publisher` to verify its clipboard actions, downloads, private-note handling, and mobile layout in disposable Chromium.
+Open `release/0.6.0/publish.html` or the [publishing helper](https://kylestay.github.io/Azure-DevOps-Niceties/publish.html) for copy-and-paste fields and one-click ZIP/image downloads. This standalone file is generated from the reviewed documents and works offline. Run `npm run test:publisher` to verify its clipboard actions, downloads, private-note handling, and mobile layout in disposable Chromium.
 
 The public [privacy policy](https://kylestay.github.io/Azure-DevOps-Niceties/privacy.html) is hosted with GitHub Pages from `docs/` on `main`. When updating `store/privacy.html`, run `npm run privacy:sync` to update the published copy. Keep its Markdown version consistent. Run `npm run check:public` before publishing changes; only synthetic Azure instance URLs belong in this repository.
 

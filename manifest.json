@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Azure DevOps Niceties",
-  "version": "0.4.0",
-  "description": "Follow your system theme in Azure DevOps and copy work items as rich links, Markdown, IDs, URLs, or branch names.",
+  "version": "0.6.0",
+  "description": "Follow your system theme, copy work-item references, and summarize selected work-item estimates in Azure DevOps.",
   "permissions": [
     "clipboardWrite",
     "storage"
@@ -33,7 +33,9 @@
       ],
       "js": [
         "src/work-item.js",
-        "src/content.js"
+        "src/theme-settings.js",
+        "src/content.js",
+        "src/selection-summary.js"
       ],
       "css": [
         "src/content.css"

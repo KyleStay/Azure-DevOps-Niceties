@@ -86,7 +86,7 @@ function harness({ approved = true, fetch = async () => { throw Error("Unexpecte
         return true;
       },
     },
-    window: { setTimeout: (fn, ms) => setTimeout(fn, ms === 3000 ? timeout : ms), clearTimeout,
+    window: { addEventListener() {}, setTimeout: (fn, ms) => setTimeout(fn, ms === 3000 ? timeout : ms), clearTimeout,
       requestAnimationFrame: fn => fn(), getComputedStyle: () => ({}) }, fetch,
   };
   if (localGet) context.chrome = { storage: { local: { get: localGet }, onChanged: { addListener(fn) { storageListener = fn; } } } };
@@ -112,6 +112,24 @@ function row({ id = "12", url = "https://dev.azure.com/example/project/_workitem
 const child = { id: "12", title: "Child", type: "Bug", url: "https://dev.azure.com/example/project/_workitems/edit/12" };
 const api = "https://dev.azure.com/example/_apis/wit/workitems/900";
 const response = value => ({ ok: true, async json() { return value; } });
+
+test("explicit Title columns retain text resembling a work-item display prefix", () => {
+  const h = harness();
+  const { container } = row({ title: "12" });
+  const grid = new FakeElement();
+  const headers = ["ID", "Work Item Type", "Title"].map(label => new FakeElement({}, label));
+  headers.forEach(header => { header.closest = () => grid; });
+  grid.querySelectorAll = () => headers;
+  container.closest = () => grid;
+  const cells = ["12", "User Story", ""].map(label => new FakeElement({}, label));
+  cells.forEach(cell => { cell.closest = () => container; });
+  const originalQuery = container.querySelectorAll.bind(container);
+  container.querySelectorAll = selector => selector.startsWith("[role='gridcell']") ? cells : originalQuery(selector);
+  for (const title of ["US 12 accessibility requirement", "12: Title starts with a number", "Bug 12: Migration notes"]) {
+    cells[2].textContent = `  ${title}\n `;
+    assert.equal(h.extractWorkItem(container).title, title);
+  }
+});
 
 test("numeric titles retain their text while explicit work-item prefixes are removed", () => {
   const h = harness();
