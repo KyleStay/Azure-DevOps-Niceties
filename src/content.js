@@ -23,6 +23,7 @@
   const RELEASE_ROW = "[role='row'],tr,.grid-row,.bolt-table-row,[role='listitem'],li,.work-item-row,.workitem-row";
   const RELEASE_SCOPE = "[role='grid'],[role='treegrid'],[role='table'],table,.grid,.bolt-table,.work-item-grid,.work-items-grid,.workitem-grid,.workitems-grid,.work-item-list,.workitems-list,.work-items-list,.release-work-items";
   const RELEASE_ACTIONS = "[data-azure-niceties-release-actions]";
+  const RELEASE_COLUMN = "[data-azure-niceties-release-column]";
 
   const COPY_CONTROL_SELECTOR = [
     "button[aria-label*='copy' i]",
@@ -254,13 +255,13 @@
     const field = (name) => ({ title: "title", systemtitle: "title", type: "type", workitemtype: "type", systemworkitemtype: "type", id: "id", systemid: "id" })[
       core.normalizeWhitespace(name).toLowerCase().replace(/[^a-z]/g, "")];
     if (!headerCache.has(grid)) headerCache.set(grid, Array.from(grid.querySelectorAll("[role='columnheader'],th,.grid-header-column,.bolt-table-header-cell"))
-      .filter((header) => header.closest(gridSelector) === grid)
+      .filter((header) => header.closest(gridSelector) === grid && !header.matches(RELEASE_COLUMN))
       .map((header, index) => ({ index: header.getAttribute("aria-colindex") || String(index + 1),
         field: field(attributeValue(header, ["data-field", "data-column-name", "data-column-key"]) || header.textContent) })));
     const headers = headerCache.get(grid);
     const fields = {};
     Array.from(row.querySelectorAll("[role='gridcell'],[role='cell'],td,.grid-cell,.bolt-table-cell"))
-      .filter((cell) => cell.closest(RELEASE_ROW) === row).forEach((cell, index) => {
+      .filter((cell) => cell.closest(RELEASE_ROW) === row && !cell.matches(RELEASE_COLUMN)).forEach((cell, index) => {
         const name = field(attributeValue(cell, ["data-field", "data-column-name", "data-column-key"]))
           || headers.find((header) => header.index === (cell.getAttribute("aria-colindex") || String(index + 1)))?.field;
         if (name) {
@@ -335,11 +336,76 @@
     entry.toolbar.remove();
     for (const [row, controls] of entry.rows) {
       controls.actions.remove();
+      controls.checkbox.remove();
       row.removeAttribute("data-azure-niceties-release-row");
       row.removeAttribute("data-azure-niceties-release-selected");
     }
     entry.rows.clear();
+    for (const row of entry.columns.keys()) removeReleaseColumn(entry, row);
+    entry.header?.remove();
+    entry.col?.remove();
     entry.selected.clear();
+  }
+
+  function removeReleaseColumn(entry, row) {
+    entry.columns.get(row)?.remove();
+    row.removeAttribute("data-azure-niceties-release-column-layout");
+    row.removeAttribute("data-azure-niceties-release-column-relative");
+    row.style.removeProperty("--azure-niceties-native-padding");
+    entry.columns.delete(row);
+  }
+
+  function updateReleaseColumns(entry, records) {
+    const rows = new Set(Array.from(entry.scope.querySelectorAll(RELEASE_ROW)).filter((row) =>
+      row.closest(RELEASE_SCOPE) === entry.scope && !row.closest(`${FORM_SELECTOR},[data-azure-niceties-release-header]`)));
+    for (const { row } of records) rows.add(row);
+    const headerCell = Array.from(entry.scope.querySelectorAll("[role='columnheader'],th,.grid-header-column,.bolt-table-header-cell"))
+      .find((cell) => cell.closest(RELEASE_SCOPE) === entry.scope && !cell.matches(RELEASE_COLUMN));
+    let header = headerCell && (headerCell.closest(RELEASE_ROW) || headerCell.parentElement);
+    if (header === entry.scope) header = null;
+    if (header && entry.header) { entry.header.remove(); entry.header = null; }
+    if (!header) {
+      if (!entry.header?.isConnected) {
+        entry.header = document.createElement(entry.scope.matches("table") ? "thead" : "div");
+        entry.header.dataset.azureNicetiesReleaseHeader = "true";
+        header = document.createElement(entry.scope.matches("table") ? "tr" : "div");
+        header.setAttribute("role", "row");
+        entry.header.append(header);
+        entry.scope.prepend(entry.header);
+      } else header = entry.header.firstElementChild;
+    }
+    rows.add(header);
+    for (const row of entry.columns.keys()) if (!rows.has(row)) removeReleaseColumn(entry, row);
+    for (const row of rows) {
+      let cell = entry.columns.get(row);
+      if (!cell || cell.parentElement !== row) {
+        cell?.remove();
+        row.querySelectorAll(`:scope > ${RELEASE_COLUMN}`).forEach((cloned) => cloned.remove());
+        const tableRow = row.tagName === "TR";
+        cell = document.createElement(tableRow ? row === header ? "th" : "td" : "span");
+        cell.dataset.azureNicetiesReleaseColumn = "true";
+        cell.setAttribute("role", row === header ? "columnheader" : tableRow ? "cell" : "gridcell");
+        if (row === header && tableRow) cell.scope = "col";
+        if (!tableRow) {
+          row.removeAttribute("data-azure-niceties-release-column-layout");
+          row.removeAttribute("data-azure-niceties-release-column-relative");
+          const layout = getComputedStyle(row);
+          row.style.setProperty("--azure-niceties-native-padding", layout.paddingInlineStart);
+          row.dataset.azureNicetiesReleaseColumnLayout = "overlay";
+          if (layout.position === "static") row.dataset.azureNicetiesReleaseColumnRelative = "true";
+        }
+        row.prepend(cell);
+        entry.columns.set(row, cell);
+      }
+      if (row === header && !cell.contains(entry.all)) cell.append(entry.all);
+    }
+    const colgroup = entry.scope.matches("table") && entry.scope.querySelector(":scope > colgroup");
+    if (colgroup && entry.col?.parentElement !== colgroup) {
+      entry.col?.remove();
+      entry.col = document.createElement("col");
+      entry.col.dataset.azureNicetiesReleaseColumn = "true";
+      colgroup.prepend(entry.col);
+    }
   }
 
   function clearReleaseLists() {
@@ -395,11 +461,10 @@
     toolbar.dataset.azureNicetiesReleaseToolbar = "true";
     toolbar.setAttribute("role", "group");
     toolbar.setAttribute("aria-label", "Release work-item copying");
-    const label = document.createElement("label");
     const all = document.createElement("input");
     all.type = "checkbox";
     all.setAttribute("aria-label", "Select all loaded work items");
-    label.append(all, document.createTextNode("Select loaded items"));
+    all.title = "Select all loaded work items";
     const selectedButton = releaseButton("Copy selected (0)", "selected");
     const allButton = releaseButton("Copy all loaded", "all");
     allButton.dataset.azureNicetiesCopyList = "true";
@@ -408,12 +473,13 @@
     clear.textContent = "Clear selection";
     const hint = document.createElement("small");
     hint.textContent = "Selections stay while this list is open. Copy all covers loaded, visible rows.";
-    toolbar.append(label, selectedButton, allButton, clear, hint);
+    toolbar.append(selectedButton, allButton, clear, hint);
     scope.before(toolbar);
-    return { scope, toolbar, all, selectedButton, allButton, clear, selected: new Map(), rows: new Map(), page: location.href };
+    return { scope, toolbar, all, selectedButton, allButton, clear, selected: new Map(), rows: new Map(), columns: new Map(), page: location.href };
   }
 
   function updateReleaseEntry(entry, records) {
+    updateReleaseColumns(entry, records);
     const unique = new Map();
     for (const record of records) if (!unique.has(record.key)) unique.set(record.key, record.item);
     for (const [key, item] of unique) if (entry.selected.has(key)) entry.selected.set(key, item);
@@ -421,6 +487,7 @@
     for (const [row, controls] of entry.rows) {
       if (!current.has(row)) {
         controls.actions.remove();
+        controls.checkbox.remove();
         row.removeAttribute("data-azure-niceties-release-row");
         row.removeAttribute("data-azure-niceties-release-selected");
         entry.rows.delete(row);
@@ -429,8 +496,10 @@
     for (const record of records) {
       const { row, item, key } = record;
       let controls = entry.rows.get(row);
-      if (!controls || !row.contains(controls.actions) || controls.key !== key || controls.linked !== record.linked) {
+      if (!controls || !row.contains(controls.actions) || !entry.columns.get(row)?.contains(controls.checkbox)
+        || controls.key !== key || controls.linked !== record.linked) {
         controls?.actions.remove();
+        controls?.checkbox.remove();
         row.querySelectorAll(RELEASE_ACTIONS).forEach((cloned) => cloned.remove());
         const actions = document.createElement("span");
         actions.dataset.azureNicetiesReleaseActions = "true";
@@ -440,7 +509,8 @@
         checkbox.type = "checkbox";
         checkbox.dataset.azureNicetiesReleaseSelect = "true";
         const copy = releaseButton("Copy", "item");
-        actions.append(checkbox, copy);
+        actions.append(copy);
+        entry.columns.get(row).append(checkbox);
         if (!record.linked) {
           const open = document.createElement("a");
           open.textContent = "Open";
@@ -466,6 +536,7 @@
     const selectedLoaded = [...keys].filter((key) => entry.selected.has(key)).length;
     entry.all.checked = keys.size > 0 && selectedLoaded === keys.size;
     entry.all.indeterminate = selectedLoaded > 0 && selectedLoaded < keys.size;
+    entry.all.disabled = keys.size === 0;
     const allLabel = `Copy all loaded (${keys.size})`;
     const selectedLabel = `Copy selected (${entry.selected.size})`;
     if (entry.allButton.textContent !== allLabel) entry.allButton.textContent = allLabel;
@@ -535,7 +606,7 @@
     if (!document.documentElement || typeof MutationObserver !== "function") return;
     releaseObserver ||= new MutationObserver((changes) => {
       if (changes.some((change) => !(change.target instanceof Element ? change.target : change.target.parentElement)
-        ?.closest("[data-azure-niceties-release-toolbar],[data-azure-niceties-release-prompt],[data-azure-niceties-summary],[data-azure-niceties-release-actions]"))) scheduleReleaseLists();
+        ?.closest("[data-azure-niceties-release-toolbar],[data-azure-niceties-release-prompt],[data-azure-niceties-summary],[data-azure-niceties-release-actions],[data-azure-niceties-release-column]"))) scheduleReleaseLists();
     });
     releaseObserver.observe(document.documentElement, { childList: true, subtree: true, characterData: true,
       attributes: true, attributeFilter: ["class", "style", "hidden", "aria-hidden", "href", "data-item-id", "data-work-item-id", "data-value"] });
@@ -615,20 +686,20 @@
     clearReleaseLists();
     observeReleaseLists();
     if (globalThis.azureNicetiesTestSettings) {
-      enabled = globalThis.azureNicetiesTestSettings.dataConsent === true;
+      enabled = globalThis.azureNicetiesTestSettings.dataConsent !== false;
       observeReleaseLists();
       return;
     }
     try {
       if (typeof chrome !== "undefined" && chrome.storage?.local) {
-        const stored = await chrome.storage.local.get({ dataConsent: false });
+        const stored = await chrome.storage.local.get({ dataConsent: true });
         if (load === consentLoad) {
-          enabled = stored.dataConsent === true;
+          enabled = stored.dataConsent !== false;
           observeReleaseLists();
         }
       }
     } catch (_error) {
-      // Missing or unavailable consent keeps work-item processing disabled.
+      // Storage failures keep processing off until preferences can be loaded.
     }
   }
 

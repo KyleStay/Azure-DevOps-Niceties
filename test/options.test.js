@@ -11,7 +11,7 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
 function fixture(initial, { consent = false, selectionSummary, localSaveError = null, syncSaveWait = null, syncSaveError = null } = {}) {
   initial = { ...core.DEFAULT_SETTINGS, ...initial };
   const stored = { ...initial };
-  const localStored = { dataConsent: consent };
+  const localStored = consent === null ? {} : { dataConsent: consent };
   if (selectionSummary !== undefined) localStored.selectionSummary = selectionSummary;
   const inputs = {
     "#include-parent": field({ checked: false }),
@@ -79,6 +79,18 @@ test("data consent restores from local storage and changes without altering sync
   await page.inputs["#data-consent"].change({ checked: false });
   assert.deepEqual(page.localStored, { dataConsent: false });
   assert.deepEqual(page.stored, preferences);
+});
+
+test("enhanced copying defaults on without a saved preference and respects an explicit opt-out", async () => {
+  const fresh = fixture({}, { consent: null });
+  await fresh.load();
+  assert.equal(fresh.inputs["#data-consent"].checked, true);
+  assert.equal(Object.hasOwn(fresh.localStored, "dataConsent"), false);
+  await fresh.inputs["#data-consent"].change({ checked: false });
+  assert.equal(fresh.localStored.dataConsent, false);
+  const optedOut = fixture({}, { consent: false });
+  await optedOut.load();
+  assert.equal(optedOut.inputs["#data-consent"].checked, false);
 });
 
 test("failed consent saves restore the prior consent state and report the failure", async () => {

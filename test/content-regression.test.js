@@ -180,7 +180,7 @@ test("synthetic copy clicks and shortcuts cannot inspect work-item metadata", ()
   assert.equal(h.nativeFallbackControls.has(control), false);
 });
 
-test("work-item processing remains off until local consent loads and turns off on revoke", async () => {
+test("work-item processing waits for the local preference and turns off on revoke", async () => {
   let resolveConsent;
   let approved = true;
   const h = harness({ localGet: () => new Promise(resolve => { resolveConsent = () => resolve({ dataConsent: approved }); }) });
@@ -198,6 +198,16 @@ test("work-item processing remains off until local consent loads and turns off o
   resolveConsent();
   await Promise.resolve();
   assert.equal(h.enabled(), false);
+});
+
+test("enhanced copying starts on with no saved preference, preserves off, and fails closed on storage errors", async () => {
+  const fresh = harness({ localGet: async defaults => ({ ...defaults }) });
+  const optedOut = harness({ localGet: async defaults => ({ ...defaults, dataConsent: false }) });
+  const failed = harness({ localGet: async () => { throw Error("Storage unavailable"); } });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(fresh.enabled(), true);
+  assert.equal(optedOut.enabled(), false);
+  assert.equal(failed.enabled(), false);
 });
 
 for (const stage of ["child-fetch", "child-json", "parent-fetch", "parent-json"]) {

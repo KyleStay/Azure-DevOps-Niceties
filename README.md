@@ -16,7 +16,7 @@ High-contrast themes and forced-colors accessibility settings are preserved. Req
 
 Use Azure DevOps's hover-copy control on a work item:
 
-First open the extension's toolbar menu, read the data disclosure, and turn on **Enable enhanced copying**. This approval stays on the current device. Automatic theme matching works immediately.
+Enhanced copying and selection summaries start enabled. Turn either feature off in the extension menu to opt out; your saved choices stay on this device. Automatic theme matching preserves selected native dark and high-contrast themes.
 
 | Gesture | Clipboard output |
 | --- | --- |
@@ -37,9 +37,9 @@ Individual references trim surrounding whitespace and collapse embedded newlines
 
 ## Release-stage work-item lists
 
-Open a release → stage → Work items. If copying is disabled, a visible **Enable copying** card explains the local data use and enables the feature without leaving the page. After approval, the list gains row checkboxes and a **Copy** button for each item. Linkless rows also gain a safe **Open** link.
+Open a release → stage → Work items. If copying is disabled, a visible **Enable copying** card explains the local data use and enables the feature without leaving the page. The list gains a dedicated first checkbox column and a **Copy** button for each item. Linkless rows also gain a safe **Open** link.
 
-Above the list, use **Select loaded items**, **Copy selected (N)**, **Copy all loaded (N)**, and **Clear selection**. Selected references remain available while that list is open, including temporarily unloaded rows; closing/replacing the list or changing views clears them. Filtering or updating visible rows refreshes their references. Duplicate representations of one item select and copy once.
+Use the select-all checkbox at the top of the first column to select loaded items. Above the list, use **Copy selected (N)**, **Copy all loaded (N)**, and **Clear selection**. Selected references remain available while that list is open, including temporarily unloaded rows; closing/replacing the list or changing views clears them. Filtering or updating visible rows refreshes their references. Duplicate representations of one item select and copy once.
 
 Use Ctrl/Command+C while focused on the extension's selection controls, or Shift+Alt+C inside the list, to copy selected references. Normal text editing and native copy handlers remain available elsewhere. Click modifiers select Markdown, IDs, URLs, or branch names. List copies omit parent context; individual Copy buttons follow the normal parent-context preference.
 
@@ -53,7 +53,7 @@ Select the extension's toolbar button or its extension options to:
 - Include linked parent context: `Feature 900: Parent › PBI 1234: Title`
 - Customize the branch prefix (default: `feature`)
 
-Parent information is requested only for rich or Markdown copying when the option is enabled, using the user's existing signed-in session and the same Azure DevOps organization. Requests time out after three seconds; missing or inaccessible parent information never prevents the work item itself from being copied. Parent results have a 30-second freshness window in page memory. Withdrawing enhanced-copying approval cancels pending parent requests and clears cached parent details. No work-item data is saved in Chrome storage or sent to the publisher.
+Parent information is requested only for rich or Markdown copying when the option is enabled, using the user's existing signed-in session and the same Azure DevOps organization. Requests time out after three seconds; missing or inaccessible parent information never prevents the work item itself from being copied. Parent results have a 30-second freshness window in page memory. Turning enhanced copying off cancels pending parent requests and clears cached parent details. No work-item data is saved in Chrome storage or sent to the publisher.
 
 ## Selection summary
 
@@ -87,9 +87,9 @@ Browser verification loads the extension into a disposable headless Chromium pro
 
 ## Prepare a Web Store release
 
-After verification, run `npm run package`. It creates an allowlisted runtime ZIP and a complete submission kit under `release/0.6.0/`, with checksums. The listing, privacy policy, image assets, release evidence, and dashboard steps live in [store/SUBMISSION.md](store/SUBMISSION.md).
+After verification, run `npm run package`. It creates an allowlisted runtime ZIP and a complete submission kit under `release/0.6.1/`, with checksums. The listing, privacy policy, image assets, release evidence, and dashboard steps live in [store/SUBMISSION.md](store/SUBMISSION.md).
 
-Open `release/0.6.0/publish.html` or the [publishing helper](https://kylestay.github.io/Azure-DevOps-Niceties/publish.html) for copy-and-paste fields and one-click ZIP/image downloads. This standalone file is generated from the reviewed documents and works offline. Run `npm run test:publisher` to verify its clipboard actions, downloads, private-note handling, and mobile layout in disposable Chromium.
+Open `release/0.6.1/publish.html` or the [publishing helper](https://kylestay.github.io/Azure-DevOps-Niceties/publish.html) for copy-and-paste fields and one-click ZIP/image downloads. This standalone file is generated from the reviewed documents and works offline. Run `npm run test:publisher` to verify its clipboard actions, downloads, private-note handling, and mobile layout in disposable Chromium.
 
 The public [privacy policy](https://kylestay.github.io/Azure-DevOps-Niceties/privacy.html) is hosted with GitHub Pages from `docs/` on `main`. When updating `store/privacy.html`, run `npm run privacy:sync` to update the published copy. Keep its Markdown version consistent. Run `npm run check:public` before publishing changes; only synthetic Azure instance URLs belong in this repository.
 
