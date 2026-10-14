@@ -1,4 +1,4 @@
-# Release verification — 0.6.1
+# Release verification — 0.6.2
 
 Verified October 14, 2026, on macOS with disposable Chrome for Testing 151.0.7922.34.
 
@@ -22,7 +22,7 @@ Verified October 14, 2026, on macOS with disposable Chrome for Testing 151.0.792
 Tested upload ZIP SHA-256:
 
 ```text
-db333647a42fba1d319398dc35cef8f7ba6a2f42f7723efea941c3a751782374
+a9e4761c282e7262b04b8250cf3a09d97ecc9a128fc70ea5938d0bd1894a2d95
 ```
 
 The ZIP is reproducible. Regenerating the submission kit to refresh screenshots or this report must preserve that runtime hash. Any later runtime edit requires a new package and browser verification.
@@ -33,7 +33,7 @@ Selection summaries now start enabled when no preference is saved, independently
 
 ## Default-on copying and checkbox column — October 14, 2026
 
-New unit regressions verify copying with no saved preference, preservation of explicit off choices, and failure recovery. Browser scenarios verify immediate release controls, opt-out persistence after reload, a header select-all checkbox, aligned first-column checkboxes in ARIA grids, native table colgroup restoration, and unchanged clipboard output and estimate totals. The optional parent-context setting remains off by default; theme Automatic continues preserving native dark/high-contrast choices.
+New unit regressions verify copying with no saved preference, preservation of explicit off choices, and failure recovery. Browser scenarios verify immediate release controls, opt-out persistence after reload, a header select-all checkbox, aligned first-column checkboxes and final Copy columns in tables and ARIA grids, native table colgroup restoration, and unchanged clipboard output and estimate totals. The optional parent-context setting remains off by default; theme Automatic continues preserving native dark/high-contrast choices.
 
 ## Automatic theme default — October 14, 2026
 
@@ -43,9 +43,9 @@ Per-service state distinguishes extension-applied dark/light changes from observ
 
 ## Release-stage interaction — October 14, 2026
 
-Release copying starts enabled when no local preference exists, and preserves explicit opt-outs. Each list has a dedicated first selection column with a header select-all checkbox, individual Copy, safe Open links for linkless typed grids, Copy selected, Copy all loaded and Clear selection. Turning copying off removes the injected column and restores native table colgroups; a visible Enable copying card can re-enable it. Copy selected retains explicit reference snapshots while a mounted list is open, including temporarily unloaded rows; closing/replacing the list, changing views or turning copying off clears them. Summary totals remain limited to selected loaded rows.
+Release copying starts enabled when no local preference exists, and preserves explicit opt-outs. Each list has a dedicated first selection column with a header select-all checkbox, a final Copy column with individual buttons, safe Open links for linkless typed grids, Copy selected, Copy all loaded and Clear selection. Turning copying off removes the injected column and restores native table colgroups; a visible Enable copying card can re-enable it. Copy selected retains explicit reference snapshots while a mounted list is open, including temporarily unloaded rows; closing/replacing the list, changing views or turning copying off clears them. Summary totals remain limited to selected loaded rows.
 
-Controlled browser tests cover linked tables, linkless ARIA grids, Type/Work Item Type headers, stage-dialog summary placement, duplicate/unsafe/mismatched references, per-row and selected clipboard output, text/keyboard interaction and opt-out cleanup. These are actual manifest-loaded controls with real clipboard reads/paste, using synthetic page fixtures. No signed-in release tab was available in the connected browser, so compatibility with the user's exact stage view is not established. The version is raised to 0.6.1 so the new package is distinct from prior 0.6.0 artifacts.
+Controlled browser tests cover linked tables, linkless ARIA grids, Type/Work Item Type headers, stage-dialog summary placement, duplicate/unsafe/mismatched references, per-row and selected clipboard output, text/keyboard interaction and opt-out cleanup. These are actual manifest-loaded controls with real clipboard reads/paste, using synthetic page fixtures. No signed-in release tab was available in the connected browser, so compatibility with the user's exact stage view is not established. The version is raised to 0.6.2 so the new package is distinct from prior 0.6.1 artifacts.
 
 A focused independent review found selection-lifetime wording, recycled Open-link controls, overly broad Ctrl/Command+C interception and missing test-type icon recognition. The changes now preserve selections while a mounted scope collapses or loses rows, state their view lifetime, rebuild widgets when a row or link mode changes, reserve ordinary copy interception for the extension's own selection controls, and recognize test types in summaries. Regression scenarios cover these fixes.
 
