@@ -57,6 +57,13 @@
 [data-azure-niceties-release-toolbar][hidden] { display: none !important; }
 [data-azure-niceties-release-toolbar] label { display: inline-flex; align-items: center; gap: 6px; }
 [data-azure-niceties-release-toolbar] small { flex-basis: 100%; opacity: 0.8; }
+[data-azure-niceties-release-types] { display: flex; flex-wrap: wrap; gap: 8px 16px; flex-basis: 100%; margin: 0; padding: 8px 12px; border: 1px solid var(--palette-neutral-20, GrayText); border-radius: 4px; }
+[data-azure-niceties-release-types][hidden] { display: none; }
+[data-azure-niceties-release-types] legend { padding: 0 4px; font-size: 12px; }
+[data-azure-niceties-release-types] label, [data-azure-niceties-release-types] input { cursor: pointer; }
+[data-azure-niceties-release-types] input { margin: 0; accent-color: Highlight; }
+[data-azure-niceties-release-types] label:has(input:disabled) { opacity: 0.5; cursor: default; }
+[data-azure-niceties-release-types] input:disabled { cursor: default; }
 [data-azure-niceties-release-actions] { display: inline-flex; vertical-align: middle; align-items: center; gap: 6px; margin-right: 12px; }
 [data-azure-niceties-release-actions]:empty { display: none; }
 [data-azure-niceties-release-column] { box-sizing: border-box; width: 40px; min-width: 40px; text-align: center; border-inline-end: 1px solid var(--palette-neutral-20, #ddd); }

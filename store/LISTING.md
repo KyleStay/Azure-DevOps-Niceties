@@ -42,6 +42,8 @@ Individual references are trimmed to one line. Rich copies use clickable links w
 
 In a release’s stage Work items view, a dedicated first checkbox column and a final Copy column with individual buttons let you choose and copy references. Use the select-all checkbox in the first column header to select loaded items, then Copy selected (N), Copy all loaded (N), or Clear selection above the list. Linkless rows gain Open links. If copying is disabled, the release-page Enable copying card explains the data use and enables these controls.
 
+Use Select by type to choose Bug, PBI, or any other displayed type while leaving Tasks unselected. Check a type to select its loaded items; uncheck it to remove its selected references, including temporarily unloaded ones. Type checkboxes reflect individual row selections and support partial selection, standard abbreviations, and custom types. Counts show selected/available references. Copy selected follows your choices; Copy all loaded still includes every type.
+
 Copy selected keeps references chosen while that list is open, including rows temporarily unloaded or filtered. Closing/replacing the list or changing views clears selections. Copy all covers visible loaded rows. Duplicate items count once. Ctrl/Command+C on the extension’s selection controls or Shift+Alt+C inside the list copies the selection; native copying and text editing elsewhere retain their behavior. The same click modifiers select Markdown, IDs, URLs, or branch names. List copying omits parent context; individual Copy follows the parent-context preference.
 
 SUMMARIZE SELECTED WORK ITEMS
