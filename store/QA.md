@@ -17,7 +17,7 @@ Verified October 14, 2026, on macOS with disposable Chrome for Testing 151.0.792
 | Selection summaries | Separate estimates, zero/missing values, localized digits/grouping, document-start restoration, duplicate/legacy/checkbox selections, live edits, collapse, clearing and independent opt-out |
 | Theme recovery | Current synchronous and legacy AMD loaders; delayed readiness, failed/hung providers, stale callbacks, navigation resets, visible-tab recovery, high contrast and forced colors |
 | Existing copy behavior | Modifiers, shortcuts, optional parent lookup/cache, request cancellation, editable/hidden guards, native fallback and clipboard ordering passed |
-| Publishing helper | Exact ZIP and five PNG downloads match release bytes; native/fallback copy, private-note handling and all five mobile steps passed |
+| Publishing helper | Exact ZIP, submission guide and five PNG downloads match release bytes; native/fallback copy, private-note handling and all five mobile steps passed |
 
 Tested upload ZIP SHA-256:
 
@@ -69,7 +69,7 @@ List copying is explicitly limited to visible loaded rows and omits parent conte
 
 Controlled Azure-domain fixtures exercise the actual manifest-loaded extension, with real system clipboard reads and keyboard paste. Other browser scenarios simulate parent API responses and failure conditions. Native theme checks use a public anonymous Azure DevOps page. No private organization, authenticated parent API, live release-stage page, legacy host, Windows/Linux, or Chrome 111 was available for service-specific verification. The user requested direct clipboard-format verification rather than an Excel web workbook test; Excel itself was not exercised. Microsoft service/markup changes may affect compatibility.
 
-The 0.6.0 public policy was verified after publication. This release updates the policy to describe default-on copying and saved opt-outs; publish and verify the matching `docs/privacy.html` before store submission. Listing, local policy and dashboard explanations now disclose selection summaries, release lists, sync preferences and displayed assignments. The store's remote-code review note explicitly describes the native page-owned theme service; store acceptance has not been established.
+The public privacy policy matching 0.6.3 was verified byte-for-byte against `docs/privacy.html` on October 14, 2026. It describes default-on copying and saved opt-outs. Listing, local policy and dashboard explanations now disclose selection summaries, release lists, sync preferences and displayed assignments. The store's remote-code review note explicitly describes the native page-owned theme service; store acceptance has not been established.
 
 Provide dedicated, non-sensitive reviewer access and complete the authenticated procedure in `REVIEWER-TESTS.md` where available. Publisher account fields and Google review remain external steps. No Web Store upload or publication was performed.
 

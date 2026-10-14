@@ -41,6 +41,8 @@ data = {
     "zipName": upload.name,
     "zipSha": hashlib.sha256(upload.read_bytes()).hexdigest(),
     "zipData": base64.b64encode(upload.read_bytes()).decode(),
+    "guideName": f"azure-devops-niceties-{version}-submission-guide.md",
+    "guideData": base64.b64encode((root / "store/SUBMISSION.md").read_bytes()).decode(),
     "listing": [
         field("name", "Name", block("Name")),
         field("short", "Short description", block("Short description"), "132 characters maximum"),

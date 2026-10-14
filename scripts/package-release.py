@@ -62,6 +62,8 @@ with zipfile.ZipFile(upload) as archive:
     assert json.loads(archive.read("manifest.json")) == manifest
 
 publisher = destination / "publish.html"
+guide = destination / f"azure-devops-niceties-{version}-submission-guide.md"
+guide.write_bytes((ROOT / "store/SUBMISSION.md").read_bytes())
 subprocess.run([sys.executable, str(ROOT / "scripts/build-publisher.py"), str(upload),
                 str(publisher), str(ROOT / "docs/publish.html")], check=True)
 
@@ -69,7 +71,7 @@ store_copy = destination / "store"
 if store_copy.exists():
     shutil.rmtree(store_copy)
 shutil.copytree(ROOT / "store", store_copy)
-kit_entries = [(upload.name, upload), (publisher.name, publisher)]
+kit_entries = [(upload.name, upload), (publisher.name, publisher), (guide.name, guide)]
 kit_entries += [(str(file.relative_to(destination)), file) for file in sorted(store_copy.rglob("*")) if file.is_file()]
 checksums = destination / "SHA256SUMS.txt"
 checksums.write_text("".join(f"{hashlib.sha256(source.read_bytes()).hexdigest()}  {name}\n" for name, source in kit_entries))
@@ -78,4 +80,4 @@ kit = destination / f"azure-devops-niceties-{version}-submission-kit.zip"
 write_zip(kit, kit_entries)
 print(json.dumps({"version": version, "runtimeFiles": len(files), "upload": str(upload),
                   "sha256": hashlib.sha256(upload.read_bytes()).hexdigest(),
-                  "submissionKit": str(kit), "publisher": str(publisher), "checksums": str(checksums)}, indent=2))
+                  "submissionKit": str(kit), "publisher": str(publisher), "guide": str(guide), "checksums": str(checksums)}, indent=2))
