@@ -475,6 +475,50 @@
     return button;
   }
 
+  function releaseType(item) {
+    return core.shortType(item.type).toLowerCase();
+  }
+
+  function updateReleaseTypes(entry, loaded) {
+    const available = new Map(entry.selected);
+    for (const [key, item] of loaded) available.set(key, item);
+    const groups = new Map();
+    for (const [key, item] of available) {
+      const type = releaseType(item);
+      if (!groups.has(type)) groups.set(type, { label: core.shortType(item.type), total: 0, selected: 0 });
+      const group = groups.get(type);
+      group.total++;
+      if (entry.selected.has(key)) group.selected++;
+    }
+    for (const [type, control] of entry.types) {
+      if (!groups.has(type)) groups.set(type, { label: control.name, total: 0, selected: 0 });
+    }
+    let index = 1; // The legend is the first child.
+    for (const [type, group] of [...groups].sort((a, b) => a[1].label.localeCompare(b[1].label))) {
+      let control = entry.types.get(type);
+      if (!control) {
+        const label = document.createElement("label");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        const caption = document.createElement("span");
+        label.append(checkbox, caption);
+        control = { label, checkbox, caption, name: group.label };
+        entry.types.set(type, control);
+      }
+      if (entry.typeChoices.children[index] !== control.label) entry.typeChoices.insertBefore(control.label, entry.typeChoices.children[index] || null);
+      index++;
+      const caption = `${group.label} (${group.selected}/${group.total})`;
+      control.name = group.label;
+      if (control.caption.textContent !== caption) control.caption.textContent = caption;
+      const name = `Select ${group.label} work items`;
+      if (control.checkbox.getAttribute("aria-label") !== name) control.checkbox.setAttribute("aria-label", name);
+      control.checkbox.checked = group.total > 0 && group.selected === group.total;
+      control.checkbox.indeterminate = group.selected > 0 && group.selected < group.total;
+      control.checkbox.disabled = group.total === 0;
+    }
+    entry.typeChoices.hidden = groups.size === 0;
+  }
+
   function createReleaseEntry(scope) {
     const toolbar = document.createElement("div");
     toolbar.dataset.azureNicetiesReleaseToolbar = "true";
@@ -491,10 +535,15 @@
     clear.type = "button";
     clear.textContent = "Clear selection";
     const hint = document.createElement("small");
-    hint.textContent = "Selections stay while this list is open. Copy all covers loaded, visible rows.";
-    toolbar.append(selectedButton, allButton, clear, hint);
+    hint.textContent = "Choose types or rows, then Copy selected. Selections stay while this list is open. Copy all includes every loaded, visible row.";
+    const typeChoices = document.createElement("fieldset");
+    typeChoices.dataset.azureNicetiesReleaseTypes = "true";
+    const legend = document.createElement("legend");
+    legend.textContent = "Select by type (selected/available)";
+    typeChoices.append(legend);
+    toolbar.append(selectedButton, allButton, clear, typeChoices, hint);
     scope.before(toolbar);
-    return { scope, toolbar, all, selectedButton, allButton, clear, selected: new Map(), rows: new Map(), columns: new Map(), copyColumns: new Map(), page: location.href };
+    return { scope, toolbar, all, selectedButton, allButton, clear, typeChoices, types: new Map(), selected: new Map(), rows: new Map(), columns: new Map(), copyColumns: new Map(), page: location.href };
   }
 
   function updateReleaseEntry(entry, records) {
@@ -502,6 +551,7 @@
     const unique = new Map();
     for (const record of records) if (!unique.has(record.key)) unique.set(record.key, record.item);
     for (const [key, item] of unique) if (entry.selected.has(key)) entry.selected.set(key, item);
+    updateReleaseTypes(entry, unique);
     const current = new Set(records.map((record) => record.row));
     for (const [row, controls] of entry.rows) {
       if (!current.has(row)) {
@@ -613,7 +663,12 @@
       if (!records.length && !entry) continue;
       if (!entry) { entry = createReleaseEntry(scope); releaseLists.set(scope, entry); }
       entry.toolbar.hidden = false;
-      if (entry.page !== location.href) { entry.selected.clear(); entry.page = location.href; }
+      if (entry.page !== location.href) {
+        entry.selected.clear();
+        for (const control of entry.types.values()) control.label.remove();
+        entry.types.clear();
+        entry.page = location.href;
+      }
       updateReleaseEntry(entry, records);
     }
     if (releaseLists.size) { releasePrompt?.element.remove(); releasePrompt = null; }
@@ -1068,7 +1123,8 @@
         return;
       }
       const checkbox = event.target.closest("input");
-      if (checkbox === entry.all || Array.from(entry.rows.values()).some((row) => row.checkbox === checkbox)) {
+      if (checkbox === entry.all || Array.from(entry.rows.values()).some((row) => row.checkbox === checkbox)
+        || Array.from(entry.types.values()).some((type) => type.checkbox === checkbox)) {
         event.stopImmediatePropagation();
         return;
       }
@@ -1128,7 +1184,21 @@
     const entry = releaseEntryFor(event.target);
     if (!entry) return;
     const records = releaseRecords(entry.scope);
-    if (event.target === entry.all) {
+    const selectedType = Array.from(entry.types).find(([, control]) => control.checkbox === event.target);
+    if (selectedType) {
+      event.stopImmediatePropagation();
+      const type = selectedType[0];
+      if (event.target.checked) {
+        const visited = new Set();
+        for (const record of records) {
+          if (visited.has(record.key)) continue;
+          visited.add(record.key);
+          if (releaseType(record.item) === type) entry.selected.set(record.key, record.item);
+        }
+      } else {
+        for (const [key, item] of entry.selected) if (releaseType(item) === type) entry.selected.delete(key);
+      }
+    } else if (event.target === entry.all) {
       event.stopImmediatePropagation();
       for (const record of records) {
         if (entry.all.checked) entry.selected.set(record.key, record.item);
@@ -1150,7 +1220,8 @@
     if (!enabled || !event.isTrusted) return;
     const focusedReleaseEntry = releaseEntryFor(event.target);
     const ownSelection = focusedReleaseEntry && (event.target === focusedReleaseEntry.all
-      || Array.from(focusedReleaseEntry.rows.values()).some((controls) => controls.checkbox === event.target));
+      || Array.from(focusedReleaseEntry.rows.values()).some((controls) => controls.checkbox === event.target)
+      || Array.from(focusedReleaseEntry.types.values()).some((controls) => controls.checkbox === event.target));
     const extensionShortcut = event.code === "KeyC" && event.shiftKey && event.altKey;
     const selectedShortcut = extensionShortcut || (event.code === "KeyC" && (event.ctrlKey || event.metaKey)
       && !event.shiftKey && !event.altKey && (ownSelection || event.target === focusedReleaseEntry?.selectedButton));

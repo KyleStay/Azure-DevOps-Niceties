@@ -41,6 +41,8 @@ Open a release → stage → Work items. If copying is disabled, a visible **Ena
 
 Use the select-all checkbox at the top of the first column to select loaded items. Above the list, use **Copy selected (N)**, **Copy all loaded (N)**, and **Clear selection**. Selected references remain available while that list is open, including temporarily unloaded rows; closing/replacing the list or changing views clears them. Filtering or updating visible rows refreshes their references. Duplicate representations of one item select and copy once.
 
+**Select by type** lets you select Bugs and PBIs while leaving Tasks unselected, or choose any other displayed type. Type checkboxes update when you select individual rows and show partial selections. Counts show selected/available references, including selections retained while rows are unloaded. Checking a type selects its loaded items; unchecking removes its selected references, including unloaded ones. Use **Copy selected** for your choices; **Copy all loaded** still includes every type. Standard long names and abbreviations share a choice, and custom work-item types are supported.
+
 Use Ctrl/Command+C while focused on the extension's selection controls, or Shift+Alt+C inside the list, to copy selected references. Normal text editing and native copy handlers remain available elsewhere. Click modifiers select Markdown, IDs, URLs, or branch names. List copies omit parent context; individual Copy buttons follow the normal parent-context preference.
 
 References use one clean linked `TYPE ID: Title` per line with no extra blank lines or font styles. Copy all covers currently loaded, visible rows. The Effort summary follows selected loaded rows, and appears in the stage sheet when the list is in a panel. No extra metadata requests or saved work-item data are required.
@@ -87,9 +89,9 @@ Browser verification loads the extension into a disposable headless Chromium pro
 
 ## Prepare a Web Store release
 
-After verification, run `npm run package`. It creates an allowlisted runtime ZIP and a complete submission kit under `release/0.6.2/`, with checksums. The listing, privacy policy, image assets, release evidence, and dashboard steps live in [store/SUBMISSION.md](store/SUBMISSION.md).
+After verification, run `npm run package`. It creates an allowlisted runtime ZIP and a complete submission kit under `release/0.6.3/`, with checksums. The listing, privacy policy, image assets, release evidence, and dashboard steps live in [store/SUBMISSION.md](store/SUBMISSION.md).
 
-Open `release/0.6.2/publish.html` or the [publishing helper](https://kylestay.github.io/Azure-DevOps-Niceties/publish.html) for copy-and-paste fields and one-click ZIP/image downloads. This standalone file is generated from the reviewed documents and works offline. Run `npm run test:publisher` to verify its clipboard actions, downloads, private-note handling, and mobile layout in disposable Chromium.
+Open `release/0.6.3/publish.html` or the [publishing helper](https://kylestay.github.io/Azure-DevOps-Niceties/publish.html) for copy-and-paste fields and one-click ZIP/image downloads. This standalone file is generated from the reviewed documents and works offline. Run `npm run test:publisher` to verify its clipboard actions, downloads, private-note handling, and mobile layout in disposable Chromium.
 
 The public [privacy policy](https://kylestay.github.io/Azure-DevOps-Niceties/privacy.html) is hosted with GitHub Pages from `docs/` on `main`. When updating `store/privacy.html`, run `npm run privacy:sync` to update the published copy. Keep its Markdown version consistent. Run `npm run check:public` before publishing changes; only synthetic Azure instance URLs belong in this repository.
 
