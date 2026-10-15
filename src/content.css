@@ -119,6 +119,7 @@ table[data-azure-niceties-release-list] > colgroup { display: none; }
   width: auto !important;
   max-width: 100% !important;
 }
+[data-azure-niceties-release-field='title'] [data-azure-niceties-release-content] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 [data-azure-niceties-release-column-layout] a { font: inherit !important; }
 [data-azure-niceties-release-list] :is(th,[role='columnheader'],.grid-header-column) { font-weight: 600; color: var(--text-secondary-color, #5c6570); }
 @container (max-width: 440px) {
