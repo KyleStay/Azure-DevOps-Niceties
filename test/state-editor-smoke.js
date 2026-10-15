@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const os = require("node:os");
 
 async function runStateEditorSmoke(browser, extensionId) {
   const context = browser.contexts()[0];
@@ -68,7 +69,7 @@ async function runStateEditorSmoke(browser, extensionId) {
     await page.locator(popup).getByRole("option", { name: "Active", exact: true }).waitFor();
     assert.equal(await page.locator(popup).getByRole("option", { name: "Closed", exact: true }).count(), 0, "states without a valid workflow transition are excluded");
     assert.equal(patches.length, 0, "opening does not save");
-    await page.screenshot({ path: "/private/tmp/azure-inline-state-menu.png" });
+    await page.screenshot({ path: path.join(os.tmpdir(), "azure-inline-state-menu.png") });
     await page.keyboard.press("Escape");
     await page.locator(popup).waitFor({ state: "detached" });
     assert.equal(patches.length, 0, "cancelling does not save");

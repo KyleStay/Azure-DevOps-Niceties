@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const os = require("node:os");
 
 async function runReleaseListSmoke(browser, extensionId) {
   const context = browser.contexts()[0];
@@ -62,7 +63,7 @@ async function runReleaseListSmoke(browser, extensionId) {
     await options.waitForFunction(() => !document.querySelector("#data-consent").disabled);
     await options.locator("#include-parent").uncheck();
     await page.getByRole("button", { name: "Copy all loaded (4)", exact: true }).waitFor();
-    await page.screenshot({ path: "/private/tmp/azure-release-list.png" });
+    await page.screenshot({ path: path.join(os.tmpdir(), "azure-release-list.png") });
     await page.bringToFront();
     const quickCopies = [
       ["bugs-and-backlog", "Copy all bugs + backlog items (3)", "#501\n#502\n#503"],
@@ -190,7 +191,7 @@ async function runReleaseListSmoke(browser, extensionId) {
         assert.equal(layout.overflow, false, "legacy virtual canvases do not create horizontal scrolling");
         assert.ok(layout.columns.every(column => column.typeHidden && column.titleVisible && column.titleWidth > 40 && Math.abs(column.titleStart - column.stateEnd) < 2), "Title remains visible after State despite decorations and native flex rules");
         assert.ok(layout.columns.every(column => Math.abs(column.titleStart - layout.columns[0].titleStart) < 2), "legacy header and body columns align");
-        if (width === 836) await page.screenshot({ path: "/private/tmp/azure-release-legacy-layout.png" });
+        if (width === 836) await page.screenshot({ path: path.join(os.tmpdir(), "azure-release-legacy-layout.png") });
       }
       await page.setViewportSize(originalViewport || { width: 1280, height: 800 });
       await options.locator("#data-consent").uncheck();
@@ -249,7 +250,7 @@ async function runReleaseListSmoke(browser, extensionId) {
       assert.equal(await page.locator("[data-azure-niceties-summary]").evaluate(panel => panel.closest("[role='dialog']")?.getAttribute("aria-label")), "Stage work items", "summary stays in the release stage sheet stacking context");
       assert.equal(await page.evaluate(() => window.nativeRowClicks), 0, "owned selection controls do not activate native row clicks");
       await page.locator("textarea").evaluate(textarea => { textarea.hidden = true; });
-      await page.screenshot({ path: "/private/tmp/azure-release-selection-demo.png" });
+      await page.screenshot({ path: path.join(os.tmpdir(), "azure-release-selection-demo.png") });
       await page.getByRole("button", { name: "Copy selected (2)", exact: true }).click();
       await page.waitForFunction(() => document.querySelector("[data-azure-niceties-release-copy='selected']").dataset.azureNicetiesCopied === "true");
       assert.equal(await page.evaluate(() => navigator.clipboard.readText()), "PBI 601: Improve search results\nBug 603: Fix empty results");
