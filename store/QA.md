@@ -1,3 +1,9 @@
+# Update package — 0.6.4
+
+Prepared October 15, 2026. The runtime is the reviewed work-item-controls implementation below with manifest/package versions raised from 0.6.3 to 0.6.4. The runtime ZIP contains 16 allowlisted files and passed ZIP integrity, manifest-reference, and version checks. Its SHA-256 is `4abd89d2cde91be2985547ee8b410135a9f1f01126d98c66eede58c69cf94178`. The public privacy policy matched `docs/privacy.html` byte-for-byte on October 15, 2026.
+
+The release CI workflow runs the full browser suite from source, builds the package, extracts the exact ZIP to a separate directory, reruns the full manifest-loaded suite against that extracted extension, and verifies the publishing helper. Use the release handoff's CI result for the final package's execution evidence. Authenticated Azure DevOps checks remain manual, as described below.
+
 # Work-item controls verification — October 15, 2026
 
 [Isolated Ubuntu verification](https://github.com/KyleStay/Azure-DevOps-Niceties/actions/runs/38764196198) passed with Chrome for Testing 151.0.7922.34: all 172 Node tests, syntax/public-content checks, the full manifest-loaded browser suite, allowlisted packaging, and the publishing-helper suite.

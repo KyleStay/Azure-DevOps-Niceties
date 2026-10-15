@@ -22,6 +22,21 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
       - run: npm run package
+      - name: Verify exact upload ZIP
+        run: |
+          python3 - <<'PYTHON'
+          import json, os, pathlib, shutil, subprocess, tempfile, zipfile
+          root = pathlib.Path.cwd()
+          version = json.loads((root / "manifest.json").read_text())["version"]
+          extracted = tempfile.mkdtemp(prefix="azure-packaged-extension-")
+          try:
+              with zipfile.ZipFile(root / "release" / version / f"azure-devops-niceties-{version}.zip") as archive:
+                  archive.extractall(extracted)
+              subprocess.run(["npm", "run", "test:browser"], check=True,
+                             env={**os.environ, "AZURE_NICETIES_EXTENSION": extracted})
+          finally:
+              shutil.rmtree(extracted)
+          PYTHON
       - run: npm run test:publisher
       - uses: actions/upload-artifact@v4
         if: always()

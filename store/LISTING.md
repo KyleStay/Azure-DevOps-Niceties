@@ -11,15 +11,15 @@ Azure DevOps Niceties
 ## Short description
 
 ```text
-Copy clean Azure DevOps work-item links and release-stage lists, total selected estimates, and follow your system theme.
+Copy Azure DevOps work items, edit states inline, summarize selected estimates, and follow your system theme.
 ```
 
-This description is 120 characters, within Chrome's 132-character limit.
+This description is 109 characters, within Chrome's 132-character limit.
 
 ## Detailed description
 
 ```text
-Make Azure DevOps more comfortable to use, with clean work-item copying, selection totals, and automatic system light/dark mode.
+Make Azure DevOps more comfortable to use, with clean work-item copying, inline state editing, selection totals, and automatic system light/dark mode.
 
 FOLLOW YOUR SYSTEM THEME
 Automatic is the default setting. If Azure DevOps starts with its standard light/default theme, it follows your operating system's appearance using native light and dark themes. Selected dark and high-contrast themes are preserved. The extension menu offers Automatic, On, and Off; saved On/Off choices override the automatic choice. Theme changes follow system appearance while the page is open and after navigation, without changing your saved Azure DevOps account theme preference. High-contrast themes and forced-colors accessibility settings are always preserved.
@@ -61,7 +61,7 @@ WORKS WHERE YOU WORK
 Designed for work-item copy controls across Azure DevOps boards, backlogs, queries, pull requests, and work-item forms on dev.azure.com and Azure DevOps's legacy visualstudio.com addresses. Requires access to an Azure DevOps organization. Azure DevOps page changes can affect compatibility; unrecognized copy controls keep their normal behavior.
 
 DATA AND PRIVACY
-Enhanced copying and selection summaries default on and respect saved opt-outs on each device. Work-item titles, types, IDs, and URLs are processed while copying is enabled on your device and written to the clipboard only when you copy. With parent context enabled, the extension requests parent details from Azure DevOps using your existing signed-in session. Selection summaries separately read displayed estimates, types, states, and assignments on your device. System-theme, parent-context, and branch-prefix preferences use Chrome sync storage and may sync through your Google account; the copying and summary switches stay on this device. Work-item content is not saved in Chrome storage. Automatic theme matching works independently. The extension has no analytics, advertising, or developer-operated data collection server.
+Enhanced copying and selection summaries default on and respect saved opt-outs on each device. Work-item titles, types, IDs, and URLs are processed while copying is enabled on your device and written to the clipboard only when you copy. With parent context enabled, the extension requests parent details from Azure DevOps using your existing signed-in session. Selection summaries separately read displayed estimates, types, states, and assignments on your device. System-theme, parent-context, and branch-prefix preferences use Chrome sync storage and may sync through your Google account; the copying, summary, and inline-state-editing switches stay on this device. Opening a state picker requests the item’s current state, type, project, revision and workflow metadata from the same Azure DevOps organization. Choosing a state sends that state and revision back to Azure DevOps using normal permissions and rules. Release-list shortcuts request project type categories. These features send no work-item information to the developer. Work-item content is not saved in Chrome storage. Automatic theme matching works independently. The extension has no analytics, advertising, or developer-operated data collection server.
 
 This is an independent extension and is not affiliated with or endorsed by Microsoft.
 ```
@@ -81,7 +81,7 @@ This is an independent extension and is not affiliated with or endorsed by Micro
 ## Single purpose
 
 ```text
-Improve the Azure DevOps work-item workflow with useful reference copying, selected-item summaries, and native themes that follow system appearance.
+Improve the Azure DevOps work-item workflow with useful reference copying, inline state updates, selected-item summaries, and native themes that follow system appearance.
 ```
 
 ## Permissions justifications
@@ -95,13 +95,13 @@ Writes an Azure DevOps work-item reference or a release-stage list of references
 ### storage
 
 ```text
-Stores the user's system-theme-sync preference, include-parent preference, and branch-name prefix using chrome.storage.sync so those settings persist and can follow the user's Chrome profile across devices. Stores the default-on enhanced-copying and selection-summary preferences only in chrome.storage.local. Both features start enabled unless the user saves a local opt-out. Work-item data is not saved in Chrome storage.
+Stores the user's system-theme-sync preference, include-parent preference, and branch-name prefix using chrome.storage.sync so those settings persist and can follow the user's Chrome profile across devices. Stores the default-on enhanced-copying, selection-summary, and inline-state-editing preferences only in chrome.storage.local. These features start enabled unless the user saves a local opt-out. Work-item data is not saved in Chrome storage.
 ```
 
 ### Website access / content-script matches
 
 ```text
-Runs on https://dev.azure.com/* and https://*.visualstudio.com/* to use Azure DevOps's native theme service and, when enhanced copying is enabled, to find work-item IDs, titles, types, links, native copy controls, and loaded release-stage lists, including typed grid cells without native item links. Default-on selection summaries read displayed selected rows, estimates, types, states, and assignments locally without additional requests. The visualstudio.com wildcard covers organization-specific legacy Azure DevOps hosts and may also match other Microsoft subdomains; copying requires a recognized Azure work-item control and theme matching requires Azure DevOps's platform service. When parent context is enabled and a rich or Markdown copy is requested, the extension fetches child relations and parent details from the same Azure DevOps organization using the user's existing session.
+Runs on https://dev.azure.com/* and https://*.visualstudio.com/* to use Azure DevOps's native theme service and, when enhanced copying is enabled, to find work-item IDs, titles, types, links, native copy controls, and loaded release-stage lists, including typed grid cells without native item links. Default-on selection summaries read displayed selected rows, estimates, types, states, and assignments locally without additional requests. The visualstudio.com wildcard covers organization-specific legacy Azure DevOps hosts and may also match other Microsoft subdomains; copying requires a recognized Azure work-item control and theme matching requires Azure DevOps's platform service. Release-list shortcuts read project work-item categories. When a state picker is opened, state editing reads the current work-item revision and workflow metadata; an explicit choice sends a revision-checked System.State update. These requests use the existing signed-in session, normal permissions and workflow rules, and stay within the current Azure DevOps organization. When parent context is enabled and a rich or Markdown copy is requested, the extension fetches child relations and parent details from that organization.
 ```
 
 The manifest grants these sites through content-script match patterns; it does not request `<all_urls>`, `tabs`, `history`, `cookies`, or `clipboardRead`.
