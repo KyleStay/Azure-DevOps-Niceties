@@ -2,6 +2,41 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const core = require("../src/work-item.js");
 
+function categories(backlog, bugs = ["Bug"]) {
+  return core.releaseCategories({ value: [
+    { referenceName: "Microsoft.RequirementCategory", workItemTypes: backlog.map(name => ({ name })) },
+    { referenceName: "Microsoft.BugCategory", workItemTypes: bugs.map(name => ({ name })) },
+  ] });
+}
+
+for (const [process, type] of [["Scrum", "Product Backlog Item"], ["Agile", "User Story"], ["Basic", "Issue"], ["CMMI", "Requirement"]]) {
+  test(`quick copying follows ${process} backlog categories and excludes Tasks and other types`, () => {
+    const items = [
+      { id: "1", type }, { id: "2", type: "Bug" }, { id: "3", type: "Task" },
+      { id: "4", type: process === "Basic" ? "Requirement" : "Issue" }, { id: "5", type: "Feature" },
+    ];
+    const processCategories = categories([type], process === "Basic" ? [] : ["Bug"]);
+    assert.deepEqual(core.filterReleaseItems(items, "backlog", processCategories).map(item => item.id), ["1"]);
+    assert.deepEqual(core.filterReleaseItems(items, "bugs-and-backlog", processCategories).map(item => item.id), process === "Basic" ? ["1"] : ["1", "2"]);
+    assert.deepEqual(core.filterReleaseItems(items, "all", processCategories), items);
+  });
+}
+
+test("quick copying supports custom category members, aliases, case, and loaded order", () => {
+  const processCategories = categories(["Product Backlog Item", "Customer Request"], ["Defect"]);
+  const items = ["PBI", "Defect", "Task", " customer request ", "PRODUCT BACKLOG ITEM", "Bug"].map((type, id) => ({ id, type }));
+  assert.deepEqual(core.filterReleaseItems(items, "backlog", processCategories).map(item => item.id), [0, 3, 4]);
+  assert.deepEqual(core.filterReleaseItems(items, "bugs-and-backlog", processCategories).map(item => item.id), [0, 1, 3, 4]);
+});
+
+test("missing or malformed categories never guess which items belong to a backlog", () => {
+  for (const payload of [null, {}, { value: [] }, { value: {} }, { value: [{ referenceName: "Microsoft.RequirementCategory", workItemTypes: [null, {}, { name: 12 }] }] }]) {
+    assert.equal(core.releaseCategories(payload), null);
+  }
+  assert.deepEqual(core.filterReleaseItems([{ type: "Issue" }], "backlog", null), []);
+  assert.deepEqual(core.filterReleaseItems([{ type: "Issue" }], "bugs-and-backlog", null), []);
+});
+
 test("rich copy keeps punctuation literal in text and safely escapes both parent and child HTML", () => {
   const child = { id: "12", type: "Bug", title: `Fix "quotes" & <tags> 'today'`, url: `https://dev.azure.com/o/p/_workitems/edit/12?filter="x"&label='y'` };
   const parent = { id: "1", type: "Feature", title: "<Parent> & roadmap", url: "" };

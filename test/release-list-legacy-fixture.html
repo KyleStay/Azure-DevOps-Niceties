@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Release work items — legacy virtual grid fixture</title>
+<style>
+  body { margin: 0; padding: 16px; font: 14px Arial; }
+  [role='dialog'] { width: 100%; }
+  .release-group { display: inline-block; width: 360px; max-width: 360px; }
+  .grid { width: 360px; }
+  .grid-header, .grid-content, .grid-canvas { width: 360px; }
+  .grid-header-canvas { width: 500px; height: 36px; position: relative; }
+  .grid-canvas { position: relative; height: 144px; }
+  .grid-row { position: absolute; height: 36px; width: 500px; }
+  .grid-header-column, .grid-cell { position: absolute; box-sizing: border-box; padding: 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .grid .grid-row .grid-cell, .grid .grid-header-canvas .grid-header-column { flex: 0 0 auto; }
+  [hidden] { display: none !important; }
+</style>
+<section role="dialog" aria-label="Stage work items">
+  <div class="release-group">
+    <h2>Release work items</h2>
+    <div class="grid" id="legacy-items">
+      <div class="grid-header"><div class="grid-header-canvas">
+        <span hidden aria-hidden="true">Native header decoration</span>
+        <div class="grid-header-column" style="left: 0; width: 80px">Id</div>
+        <div class="grid-header-column" style="left: 80px; width: 80px">Type</div>
+        <div class="grid-header-column" style="left: 160px; width: 160px">Title</div>
+        <div class="grid-header-column" style="left: 320px; width: 180px">State</div>
+      </div></div>
+      <div class="grid-content"><div class="grid-canvas">
+        <div class="grid-row" style="top: 0">
+          <span hidden aria-hidden="true">Native row decoration</span>
+          <div class="grid-cell" style="left: 0; width: 80px"><a href="/example/project/_workitems/edit/701">701</a></div>
+          <div class="grid-cell" style="left: 80px; width: 80px">Product Backlog Item</div>
+          <div class="grid-cell" style="left: 160px; width: 160px">Keep release work-item titles visible across the entire overlay</div>
+          <div class="grid-cell" style="left: 320px; width: 180px">Done</div>
+        </div>
+        <div class="grid-row" style="top: 36px">
+          <span hidden aria-hidden="true">Native row decoration</span>
+          <div class="grid-cell" style="left: 0; width: 80px"><a href="/example/project/_workitems/edit/702">702</a></div>
+          <div class="grid-cell" style="left: 80px; width: 80px">Bug</div>
+          <div class="grid-cell" style="left: 160px; width: 160px">Fix narrow legacy grids</div>
+          <div class="grid-cell" style="left: 320px; width: 180px">Active</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</section>
+</html>

@@ -6,10 +6,12 @@
   const status = document.querySelector("#status");
   const dataConsent = document.querySelector("#data-consent");
   const selectionSummary = document.querySelector("#selection-summary");
+  const stateEditing = document.querySelector("#inline-state-editing");
   const syncSystemTheme = document.querySelector("#sync-system-theme");
-  const controls = [includeParent, branchPrefix, dataConsent, selectionSummary, syncSystemTheme];
+  const controls = [includeParent, branchPrefix, dataConsent, selectionSummary, stateEditing, syncSystemTheme];
   let approved = false;
   let summaryEnabled = false;
+  let stateEditingEnabled = false;
   let savedSystemTheme = "auto";
   let latestPreferenceSave = 0;
   let saveQueue = Promise.resolve();
@@ -21,7 +23,7 @@
   async function restore() {
     const [values, local] = await Promise.all([
       chrome.storage.sync.get(core.DEFAULT_SETTINGS),
-      chrome.storage.local.get({ dataConsent: true, selectionSummary: true }),
+      chrome.storage.local.get({ dataConsent: true, selectionSummary: true, inlineStateEditing: true }),
     ]);
     includeParent.checked = values.includeParent;
     branchPrefix.value = values.branchPrefix;
@@ -31,6 +33,8 @@
     dataConsent.checked = approved;
     summaryEnabled = local.selectionSummary !== false;
     selectionSummary.checked = summaryEnabled;
+    stateEditingEnabled = local.inlineStateEditing !== false;
+    stateEditing.checked = stateEditingEnabled;
     controls.forEach((control) => { control.disabled = false; });
   }
 
@@ -94,6 +98,20 @@
     } finally {
       selectionSummary.disabled = false;
     }
+  });
+  stateEditing.addEventListener("change", async () => {
+    stateEditing.disabled = true;
+    window.clearTimeout(statusTimer);
+    const request = ++latestStatus;
+    status.textContent = "";
+    try {
+      await chrome.storage.local.set({ inlineStateEditing: stateEditing.checked });
+      stateEditingEnabled = stateEditing.checked;
+      if (request === latestStatus) status.textContent = stateEditingEnabled ? "Inline state editing enabled" : "Inline state editing disabled";
+    } catch (error) {
+      stateEditing.checked = stateEditingEnabled;
+      if (request === latestStatus) status.textContent = `Could not save settings: ${error.message}`;
+    } finally { stateEditing.disabled = false; }
   });
   restore().catch((error) => { status.textContent = `Could not load settings: ${error.message}`; });
 })();

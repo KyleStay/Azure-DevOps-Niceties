@@ -15,8 +15,10 @@ Verified runtime ZIP SHA-256:
 ## Included in this release
 
 - Enhanced copying and selected-item summaries start enabled, while saved opt-outs are preserved. Automatic theme matching preserves selected native dark and high-contrast themes.
-- Release lists have a first selection column with header select-all, a final Copy column, and Select by type controls. Choose Bug and PBI, leave Task unchecked, then Copy selected. Custom types and partial selections are supported; Copy all loaded still includes all types.
+- Release lists have copy icons in the first column, selection checkboxes in the second, State before Title, a hidden Type column, and Select by type controls. Choose Bug and PBI, leave Task unchecked, then Copy selected. Custom types and partial selections are supported; Copy all loaded still includes all types.
 - Selected loaded rows show Effort and other displayed estimate totals. Copies use clean, clickable references such as `PBI 601: Improve search results`, one line per item, without extra blank lines or font styling.
+
+- Displayed State values in identifiable work-item lists open a workflow picker. Explicit choices save immediately using normal Azure DevOps permissions and a revision check. Inline state editing has an independent local opt-out. Browser write scenarios use controlled fixtures.
 
 ## Files to use
 

@@ -37,15 +37,25 @@ Individual references trim surrounding whitespace and collapse embedded newlines
 
 ## Release-stage work-item lists
 
-Open a release → stage → Work items. If copying is disabled, a visible **Enable copying** card explains the local data use and enables the feature without leaving the page. The list gains a dedicated first checkbox column and a final **Copy** column with a button for each item. Linkless rows also gain a safe **Open** link.
+Open a release → stage → Work items. If copying is disabled, a visible **Enable copying** card explains the local data use and enables the feature without leaving the page. The list fills the panel with compact copy icons in the first column, checkboxes in the second, and State before a flexible Title column. The Type column is hidden; its values remain available for filtering and copied references. Linkless rows also gain a safe **Open** link.
 
-Use the select-all checkbox at the top of the first column to select loaded items. Above the list, use **Copy selected (N)**, **Copy all loaded (N)**, and **Clear selection**. Selected references remain available while that list is open, including temporarily unloaded rows; closing/replacing the list or changing views clears them. Filtering or updating visible rows refreshes their references. Duplicate representations of one item select and copy once.
+Use the select-all checkbox in the selection column header to select loaded items. Above the list, use **Copy selected (N)**, **Copy all loaded (N)**, and **Clear selection**. Selected references remain available while that list is open, including temporarily unloaded rows; closing/replacing the list or changing views clears them. Filtering or updating visible rows refreshes their references. Duplicate representations of one item select and copy once.
+
+**Copy all bugs + PBIs** and **Copy all PBIs** copy matching loaded, visible items without changing your selection. Names and membership follow the project’s Azure DevOps work-item categories: Scrum PBIs, Agile stories, Basic issues, CMMI requirements, and custom backlog or bug types. Tasks and unrelated categories are excluded. The extension reads project category names from the same signed-in Azure DevOps organization when the list opens. If categories cannot load, use the type checkboxes instead.
 
 **Select by type** lets you select Bugs and PBIs while leaving Tasks unselected, or choose any other displayed type. Type checkboxes update when you select individual rows and show partial selections. Counts show selected/available references, including selections retained while rows are unloaded. Checking a type selects its loaded items; unchecking removes its selected references, including unloaded ones. Use **Copy selected** for your choices; **Copy all loaded** still includes every type. Standard long names and abbreviations share a choice, and custom work-item types are supported.
 
 Use Ctrl/Command+C while focused on the extension's selection controls, or Shift+Alt+C inside the list, to copy selected references. Normal text editing and native copy handlers remain available elsewhere. Click modifiers select Markdown, IDs, URLs, or branch names. List copies omit parent context; individual Copy buttons follow the normal parent-context preference.
 
-References use one clean linked `TYPE ID: Title` per line with no extra blank lines or font styles. Copy all covers currently loaded, visible rows. The Effort summary follows selected loaded rows, and appears in the stage sheet when the list is in a panel. No extra metadata requests or saved work-item data are required.
+References use one clean linked `TYPE ID: Title` per line with no extra blank lines or font styles. Copy all covers currently loaded, visible rows. The Effort summary follows selected loaded rows, and appears in the stage sheet when the list is in a panel. Project category names stay in page memory while the list is open; work-item data is not saved.
+
+## Change a work-item state from a list
+
+Click a displayed **State** in a table, query, backlog, release list, or work-item card to open its state picker. Choosing a different state saves it immediately to Azure DevOps using your signed-in session. Workflow choices come from the item’s actual project and type, including custom processes. Opening the picker, moving keyboard focus, or pressing Escape makes no changes.
+
+The extension checks the work-item revision before saving and respects Azure DevOps permissions and workflow rules. Conflicting edits require reopening the picker; transitions needing additional fields show an error and an **Open work item** link. An unconfirmed save is never retried automatically. Confirmed changes update other displayed copies of that item. Existing native state editors, ambiguous rows, and rows with unsaved input are left alone. Lists must expose an identifiable work-item ID and a readable state field; no work-item API calls occur until a picker is opened.
+
+**Enable inline state editing** starts on and can be turned off independently in the extension menu. This removes the added controls and restores plain state text.
 
 ## Settings
 
