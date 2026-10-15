@@ -9,7 +9,7 @@ Upload **`azure-devops-niceties-0.6.5.zip`** to Chrome Web Store. For an existin
 Runtime ZIP SHA-256 (integrity verified during packaging):
 
 ```text
-cf9b38ac4d5c890df660c048c6fba6c3b102bad3b27e21364ff3b354742d6663
+879f6764bdd156594bfc925e38a20384102bb0a3c30a76140275bfa281f68333
 ```
 
 ## Included in this release

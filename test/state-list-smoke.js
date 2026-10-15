@@ -15,7 +15,7 @@ async function runStateListSmoke(browser, extensionId) {
   const fixture = route => route.fulfill({ contentType: "text/html", body: fs.readFileSync(path.join(__dirname, "state-list-fixture.html"), "utf8") });
   const itemPattern = "https://dev.azure.com/example/_apis/wit/workitems/**";
   const typePattern = "https://dev.azure.com/example/project/_apis/wit/workitemtypes/**";
-  const items = new Map([720, 721, 722].map(id => [id, { state: "New", rev: 4 }]));
+  const items = new Map([720, 721, 722, 725].map(id => [id, { state: "New", rev: 4 }]));
   const patches = [];
   let reads = 0;
   const itemRoute = route => {
@@ -43,7 +43,7 @@ async function runStateListSmoke(browser, extensionId) {
       for (const item of items.values()) item.state = "New";
       const beforeReads = reads;
       await page.goto(url);
-      await page.waitForFunction(() => document.querySelectorAll("[data-azure-niceties-state-trigger]").length === 2);
+      await page.waitForFunction(() => document.querySelectorAll("[data-azure-niceties-state-trigger]").length === 3);
       assert.equal(reads, beforeReads, `${name}: discovery does not fetch work-item data`);
       assert.equal(await page.locator("#unsaved-row [data-azure-niceties-state-trigger]").count(), 0);
       const menu = page.locator("[data-azure-niceties-state-menu]");
@@ -56,6 +56,9 @@ async function runStateListSmoke(browser, extensionId) {
       assert.equal(patches.length, writes + 1);
       assert.equal(patches.at(-1), 720, `${name}: explicit choice updates the linked item, not the nested metadata element`);
       await page.getByRole("button", { name: "Change state of work item 721, currently New", exact: true }).click();
+      await menu.getByRole("option", { name: "Active", exact: true }).waitFor();
+      await page.keyboard.press("Escape");
+      await page.getByRole("button", { name: "Change state of work item 725, currently New", exact: true }).click();
       await menu.getByRole("option", { name: "Active", exact: true }).waitFor();
       await page.keyboard.press("Escape");
       await page.locator("#late-list").evaluate(list => { list.style.display = "block"; });

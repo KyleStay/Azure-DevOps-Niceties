@@ -7,8 +7,8 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function (core, stateApi) {
   "use strict";
 
-  const STRUCTURAL_ROW = "[role='row'],tr,.grid-row,.bolt-table-row,.wit-card,.board-card,.work-item-card,.workitem-card,.work-item-row,.workitem-row";
-  const ROW = `${STRUCTURAL_ROW},[data-work-item-id],[data-item-id],[role='listitem'],li`;
+  const STRUCTURAL_ROW = "[role='row'],[role='listitem'],tr,li,.grid-row,.bolt-table-row,.wit-card,.board-card,.work-item-card,.workitem-card,.work-item-row,.workitem-row";
+  const ROW = `${STRUCTURAL_ROW},[data-work-item-id],[data-item-id]`;
   const GRID = "[role='grid'],[role='treegrid'],[role='table'],.grid,.bolt-table,.work-item-grid,.work-items-grid,.workitem-grid,.workitems-grid,.work-item-list,.workitems-list,.work-items-list,.release-work-items";
   const CELL = "[role='gridcell'],[role='cell'],td,.grid-cell,.bolt-table-cell";
   const HEADER = "[role='columnheader'],th,.grid-header-column,.bolt-table-header-cell";

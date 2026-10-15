@@ -2,9 +2,9 @@
 
 Prepared October 15, 2026. The State editor now keeps nested item metadata within its structural work-item row, resolves split presentation-table headers, recognizes field-reference metadata and decorated column labels, ignores hidden native editors, and rescans style-only visibility changes. Separate native tables retain independent header mappings. Visible unsaved inputs and ambiguous or conflicting item identities remain protected.
 
-All 185 Node tests pass, including 13 new compatibility regressions. Eleven of the initial compatibility cases failed against 0.6.4 before the fixes; all pass with the revised discovery code. Browser coverage adds controlled release-work-item, sprint-backlog, and product-backlog routes, each verifying picker opening, explicit revision-checked saving, cancellation and late-visible lists. The workflow repeats the full suite against the extracted upload ZIP. Final execution evidence is recorded in the release handoff. These fixtures do not establish the markup of the user's unavailable authenticated tab.
+All 187 Node tests pass, including 15 new compatibility regressions. Thirteen of those compatibility cases fail when run against the original 0.6.4 source in an isolated test directory; all 15 pass with the revised discovery code. Browser coverage adds controlled release-work-item, sprint-backlog, and product-backlog routes, each verifying picker opening, explicit revision-checked saving, cancellation and late-visible lists. The workflow repeats the full suite against the extracted upload ZIP. Final execution evidence is recorded in the release handoff. These fixtures do not establish the markup of the user's unavailable authenticated tab.
 
-The 16-file runtime ZIP SHA-256 is `cf9b38ac4d5c890df660c048c6fba6c3b102bad3b27e21364ff3b354742d6663`.
+The 16-file runtime ZIP SHA-256 is `879f6764bdd156594bfc925e38a20384102bb0a3c30a76140275bfa281f68333`.
 
 # Update package — 0.6.4
 

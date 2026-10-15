@@ -85,3 +85,15 @@ test("separate native tables keep their own header order inside a work-item list
   assert.ok(page.cells[2].querySelector(trigger));
   assert.ok(state.querySelector(trigger));
 });
+for (const tag of ["li", "div"]) {
+  test(`generic ${tag} list items keep their nested work-item link and State together`, async () => {
+    const page = fixture();
+    page.document.body.querySelector("table").remove();
+    const row = element(page, tag, { role: "listitem" });
+    const state = element(page, "span", { "data-field-name": "System.State" }, "New");
+    row.append(element(page, "a", { "data-item-id": "701", href: "/example/project/_workitems/edit/701" }, "Fix search"), state);
+    page.document.body.append(row);
+    await page.ready();
+    assert.ok(state.querySelector(trigger));
+  });
+}
