@@ -255,6 +255,26 @@
       core.normalizeWhitespace(name).toLowerCase().replace(/[^a-z]/g, "")] || "";
   }
 
+  function releaseFieldAttribute(cell) {
+    return ["data-field", "data-field-name", "data-field-reference-name", "data-column-name", "data-column-key", "data-column-id"]
+      .map(name => releaseField(cell.getAttribute(name))).find(Boolean) || "";
+  }
+
+  function releaseHeaderField(cell) {
+    const explicit = releaseFieldAttribute(cell) || releaseField(cell.getAttribute("aria-label")) || releaseField(cell.getAttribute("title"));
+    if (explicit) return explicit;
+    const names = new Set();
+    function visit(node) {
+      if (node.nodeType === 3) { const name = releaseField(node.nodeValue); if (name) names.add(name); return; }
+      if (node !== cell && node.matches?.("svg,[hidden],[aria-hidden='true']")) return;
+      for (const child of node.childNodes || []) visit(child);
+    }
+    const whole = releaseField(cell.textContent);
+    if (whole) return whole;
+    visit(cell);
+    return names.size === 1 ? [...names][0] : "";
+  }
+
   function releaseHeaders(scope) {
     return Array.from(scope.querySelectorAll(RELEASE_HEADER_CELL))
       .filter((cell) => cell.closest(RELEASE_SCOPE) === scope && !cell.matches(RELEASE_COLUMN));
@@ -272,11 +292,11 @@
     if (!grid) return {};
     if (!headerCache.has(grid)) headerCache.set(grid, releaseHeaders(grid)
       .map((header, index) => ({ index: header.getAttribute("aria-colindex") || String(index + 1),
-        field: releaseField(attributeValue(header, ["data-field", "data-column-name", "data-column-key"]) || header.textContent) })));
+        field: releaseHeaderField(header) })));
     const headers = headerCache.get(grid);
     const fields = {};
     releaseCells(row).forEach((cell, index) => {
-        const name = releaseField(attributeValue(cell, ["data-field", "data-column-name", "data-column-key"]))
+        const name = releaseFieldAttribute(cell)
           || headers.find((header) => header.index === (cell.getAttribute("aria-colindex") || String(index + 1)))?.field;
         if (name) {
           const source = cell.querySelector(RELEASE_ACTIONS) ? cell.cloneNode(true) : cell;
@@ -371,6 +391,7 @@
     entry.copyColumns.get(row)?.remove();
     row.removeAttribute("data-azure-niceties-release-column-layout");
     for (const cell of row.querySelectorAll("[data-azure-niceties-release-field]")) cell.removeAttribute("data-azure-niceties-release-field");
+    for (const element of row.querySelectorAll("[data-azure-niceties-release-content]")) element.removeAttribute("data-azure-niceties-release-content");
     entry.columns.delete(row);
     entry.copyColumns.delete(row);
   }
@@ -407,7 +428,7 @@
     const headerCells = releaseHeaders(entry.scope);
     const headerCell = headerCells[0];
     const fields = headerCells.map((cell, index) => ({ index: cell.getAttribute("aria-colindex") || String(index + 1),
-      field: releaseField(attributeValue(cell, ["data-field", "data-column-name", "data-column-key"]) || cell.textContent) }));
+      field: releaseHeaderField(cell) }));
     let header = headerCell && (headerCell.closest(RELEASE_ROW) || headerCell.parentElement);
     if (header === entry.scope) header = null;
     if (header && entry.header) { entry.header.remove(); entry.header = null; }
@@ -428,8 +449,16 @@
       // summaries still use the original field indices. CSS changes their order.
       const nativeCells = row === header ? headerCells : releaseCells(row);
       nativeCells.forEach((child, index) => {
-        child.dataset.azureNicetiesReleaseField = releaseField(attributeValue(child, ["data-field", "data-column-name", "data-column-key"]))
+        child.dataset.azureNicetiesReleaseField = releaseFieldAttribute(child)
           || fields.find((field) => field.index === (child.getAttribute("aria-colindex") || String(index + 1)))?.field || "other";
+        if (row !== header && ["id", "title", "state"].includes(child.dataset.azureNicetiesReleaseField)) {
+          // Native cell wrappers can retain the old column width even after
+          // their containing row stretches to fill a release overlay.
+          for (const element of child.querySelectorAll("div,span,a")) {
+            if (element.closest(`${RELEASE_ACTIONS},[data-azure-niceties-state-trigger]`) || element.matches("[aria-hidden='true'],[role='img'],.fabric-icon,.bowtie-icon,.work-item-state-circle,.state-circle,.state-indicator")) continue;
+            element.dataset.azureNicetiesReleaseContent = "true";
+          }
+        }
       });
       row.dataset.azureNicetiesReleaseColumnLayout = "compact";
       let cell = entry.columns.get(row);
@@ -609,7 +638,7 @@
     for (const [type, control] of entry.types) {
       if (!groups.has(type)) groups.set(type, { label: control.name, total: 0, selected: 0 });
     }
-    let index = 1; // The legend is the first child.
+    let index = 1; // The type caption is the first child.
     for (const [type, group] of [...groups].sort((a, b) => a[1].label.localeCompare(b[1].label))) {
       let control = entry.types.get(type);
       if (!control) {
@@ -655,13 +684,21 @@
     clear.type = "button";
     clear.textContent = "Clear selection";
     const hint = document.createElement("small");
-    hint.textContent = "Choose types or rows, then Copy selected. Selections stay while this list is open. Copy all includes every loaded, visible row.";
-    const typeChoices = document.createElement("fieldset");
+    hint.textContent = "Copy all uses loaded items. Selections stay while this list is open.";
+    const typeChoices = document.createElement("div");
     typeChoices.dataset.azureNicetiesReleaseTypes = "true";
-    const legend = document.createElement("legend");
-    legend.textContent = "Select by type (selected/available)";
+    typeChoices.setAttribute("role", "group");
+    typeChoices.setAttribute("aria-label", "Select by type (selected/available)");
+    typeChoices.title = "Counts show selected / available items.";
+    const legend = document.createElement("span");
+    legend.dataset.azureNicetiesReleaseTypeCaption = "true";
+    legend.textContent = "Select by type";
     typeChoices.append(legend);
-    toolbar.append(selectedButton, allButton, bugsBacklogButton, backlogButton, clear, typeChoices, hint);
+    const commands = document.createElement("div");
+    commands.dataset.azureNicetiesReleaseCommands = "true";
+    clear.dataset.azureNicetiesReleaseClear = "true";
+    commands.append(selectedButton, allButton, bugsBacklogButton, backlogButton, clear);
+    toolbar.append(commands, typeChoices, hint);
     scope.before(toolbar);
     const entry = { scope, toolbar, all, selectedButton, allButton, bugsBacklogButton, backlogButton, clear, typeChoices,
       types: new Map(), selected: new Map(), rows: new Map(), columns: new Map(), copyColumns: new Map(), page: location.href };

@@ -43,3 +43,6 @@ For compact State controls, verify there is no persistent dropdown arrow or rese
 
 
 After an inline State save, open the same item in its native form. On hosts exposing WorkItemFormService, a matching older form without unsaved edits should refresh automatically. Edit a separate title field before a second inline save and confirm the native form and unsaved title remain untouched. Resolve that edit yourself and verify the form refreshes if still older. Check opt-out, opening a different item, and unsupported native APIs; the extension must not save fields or reload the page. If the native service is unavailable, verify the form's own Refresh command still loads the saved State.
+
+
+For release layout, check full-width overlay use and aligned Copy, selection, ID, State, and Title cells with a flexible Title. Resize below 440px: standalone IDs should hide while State and Title remain readable, with no horizontal scrollbar. Copy output must retain IDs. Test a native sorted header and a long title in a nested wrapper; neither Title nor State may disappear or retain the previous narrow column width. Turn copying off to verify native widths and wrappers are restored.

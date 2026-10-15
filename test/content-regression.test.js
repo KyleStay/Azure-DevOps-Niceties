@@ -6,7 +6,7 @@ const core = require("../src/work-item.js");
 const source = fs.readFileSync(require.resolve("../src/content.js"), "utf8").replace(/\}\)\(\);\s*$/, `globalThis.contentHelpers = {
   titleWithoutWorkItemPrefix, extractWorkItem, isWorkItemCopyControl, fetchParent,
   parentApiUrl, parentCache, activeParentLookups, nativeFallbackControls, reloadConsent, writeClipboard, showConfirmation,
-  loadReleaseCategories,
+  loadReleaseCategories, releaseHeaderField, releaseFieldAttribute,
   updateReleaseWidthHosts, setReleaseWidthHosts, releaseLists, updateReleaseColumns,
   copyForTest: workItem => copyWorkItem(workItem, "rich", null, ++latestCopyRequest), enabled: () => enabled
 }; })();`);
@@ -121,6 +121,29 @@ const categoryPayload = { value: [
 ] };
 const releaseUrl = "https://dev.azure.com/example/project/_releaseProgress?releaseId=50";
 const releaseEntry = (page = releaseUrl) => ({ scope: new FakeElement(), page });
+
+test("release headers retain their fields when native sort labels decorate the text", () => {
+  const { releaseHeaderField } = harness();
+  for (const label of ["Title", "State", "Work Item Type", "ID"]) {
+    const header = new FakeElement({}, `${label} Sorted ascending`);
+    header.childNodes = [{ nodeType: 3, nodeValue: label }, { nodeType: 1,
+      matches: () => false, childNodes: [{ nodeType: 3, nodeValue: "Sorted ascending" }] }];
+    assert.equal(releaseHeaderField(header), ({ Title: "title", State: "state", "Work Item Type": "type", ID: "id" })[label]);
+  }
+});
+
+test("release field metadata and accessible names take precedence over decorative header text", () => {
+  const { releaseHeaderField, releaseFieldAttribute } = harness();
+  for (const attribute of ["data-field-name", "data-field-reference-name", "data-column-id"]) {
+    const cell = new FakeElement({ [attribute]: "System.Title" }, "Sort column");
+    assert.equal(releaseFieldAttribute(cell), "title");
+    assert.equal(releaseHeaderField(cell), "title");
+  }
+  assert.equal(releaseHeaderField(new FakeElement({ "aria-label": "State" }, "Workflow")), "state");
+  const ambiguous = new FakeElement({}, "Title State");
+  ambiguous.childNodes = [{ nodeType: 3, nodeValue: "Title" }, { nodeType: 3, nodeValue: "State" }];
+  assert.equal(releaseHeaderField(ambiguous), "");
+});
 
 function widthHost(parentElement) {
   return { parentElement, dataset: {}, removeAttribute(name) {

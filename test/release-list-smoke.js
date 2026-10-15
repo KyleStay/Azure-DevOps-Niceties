@@ -183,6 +183,7 @@ async function runReleaseListSmoke(browser, extensionId) {
                 stateEnd: cell("state").getBoundingClientRect().right,
                 typeHidden: getComputedStyle(cell("type")).display === "none",
                 titleVisible: getComputedStyle(cell("title")).display !== "none",
+                contentWidth: cell("title").querySelector(".native-cell-value")?.getBoundingClientRect().width,
               };
             }),
           };
@@ -191,7 +192,39 @@ async function runReleaseListSmoke(browser, extensionId) {
         assert.equal(layout.overflow, false, "legacy virtual canvases do not create horizontal scrolling");
         assert.ok(layout.columns.every(column => column.typeHidden && column.titleVisible && column.titleWidth > 40 && Math.abs(column.titleStart - column.stateEnd) < 2), "Title remains visible after State despite decorations and native flex rules");
         assert.ok(layout.columns.every(column => Math.abs(column.titleStart - layout.columns[0].titleStart) < 2), "legacy header and body columns align");
+        assert.ok(layout.columns.filter(column => column.contentWidth != null).every(column => column.contentWidth >= column.titleWidth - 18), "nested title text fills the actual column instead of retaining a stale native width");
+        if (width >= 836) assert.ok(layout.columns.every(column => column.titleWidth > layout.panelWidth * 0.55), "Title receives most of the overlay width");
         if (width === 836) await page.screenshot({ path: path.join(os.tmpdir(), "azure-release-legacy-layout.png") });
+      }
+      await page.locator("#legacy-items .grid-canvas").evaluate(canvas => {
+        const titles = ["Preserve pending changes when a release approval is retried", "Add keyboard navigation to deployment checks", "Improve release audit details", "Fix deployment status when an environment is reopened", "Keep branch references readable in release notes", "Show approval history for completed stages", "Update rollback instructions", "Handle a delayed deployment notification", "Improve accessibility of release controls", "Keep selected work items after filtering", "Fix release summary counts", "Verify the production rollout"];
+        for (const [index, title] of titles.entries()) {
+          const id = 703 + index;
+          const row = document.createElement("div"); row.className = "grid-row"; row.style.top = `${(index + 2) * 36}px`;
+          for (const [column, text] of [String(id), index % 3 === 0 ? "Bug" : "Product Backlog Item", title, index % 4 === 0 ? "Active" : "Done"].entries()) {
+            const cell = document.createElement("div"); cell.className = "grid-cell";
+            if (column === 0 || column === 2) {
+              const link = document.createElement("a"); link.href = `/example/project/_workitems/edit/${id}/`; link.textContent = text;
+              const wrapper = document.createElement("div"); wrapper.className = "native-cell-value"; wrapper.style.width = "36px"; wrapper.style.overflow = "hidden"; wrapper.append(link); cell.append(wrapper);
+            } else cell.textContent = text;
+            row.append(cell);
+          }
+          canvas.append(row);
+        }
+        canvas.style.height = "504px";
+      });
+      await page.getByRole("button", { name: "Copy all loaded (14)", exact: true }).waitFor();
+      for (const width of [360, 836]) {
+        await page.setViewportSize({ width, height: 940 });
+        const layout = await page.locator("#legacy-items").evaluate(grid => ({
+          overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth || grid.scrollWidth > grid.clientWidth,
+          ids: [...grid.querySelectorAll("[data-azure-niceties-release-field='id']")].map(cell => getComputedStyle(cell).display),
+          titles: [...grid.querySelectorAll(".grid-row [data-azure-niceties-release-field='title']")].map(cell => cell.getBoundingClientRect().width),
+        }));
+        assert.equal(layout.overflow, false, "populated release overlays fit without a bottom scrollbar");
+        assert.ok(layout.titles.every(width => width > 120), "populated rows keep useful title space");
+        assert.ok(layout.ids.every(display => width <= 440 ? display === "none" : display !== "none"), "compact overlays reserve space for titles by hiding the standalone ID");
+        await page.screenshot({ path: path.join(os.tmpdir(), `azure-release-layout-${width}.png`) });
       }
       await page.setViewportSize(originalViewport || { width: 1280, height: 800 });
       await options.locator("#data-consent").uncheck();
@@ -251,6 +284,7 @@ async function runReleaseListSmoke(browser, extensionId) {
       assert.equal(await page.evaluate(() => window.nativeRowClicks), 0, "owned selection controls do not activate native row clicks");
       await page.locator("textarea").evaluate(textarea => { textarea.hidden = true; });
       await page.screenshot({ path: path.join(os.tmpdir(), "azure-release-selection-demo.png") });
+      fs.copyFileSync(path.join(os.tmpdir(), "azure-release-selection-demo.png"), path.resolve(__dirname, "../store/assets/release-selection-demo-1280x800.png"));
       await page.getByRole("button", { name: "Copy selected (2)", exact: true }).click();
       await page.waitForFunction(() => document.querySelector("[data-azure-niceties-release-copy='selected']").dataset.azureNicetiesCopied === "true");
       assert.equal(await page.evaluate(() => navigator.clipboard.readText()), "PBI 601: Improve search results\nBug 603: Fix empty results");

@@ -1,3 +1,11 @@
+# Release list layout — 0.6.8
+
+Release header parsing now recognizes native field metadata and labels split from sort descriptions. The prior parser treated decorated Title/State headers as unknown fields, allocating generic widths. A nested native title wrapper could also retain its old narrow width after the row stretched. Both are addressed without replacing native rows or changing their DOM order.
+
+The compact layout gives Title the remaining width after copy, selection, ID, and State. Header/body spacing aligns, nested ID/Title/State wrappers use their column width, and copy icons use compact borderless buttons. Container queries hide the standalone ID below 440px to retain useful State/Title space. IDs stay in copying and selection data. The toolbar groups copy actions, clear, type choices, and a shorter selection-lifetime note. Opt-out removes the added wrapper markers and restores native widths.
+
+All 213 Node tests pass, including decorated and ambiguous header cases and alternate metadata attributes. Browser regressions use native-style absolute virtual rows, sorted headers, deliberately 36px-wide nested title wrappers, populated 14-row lists, and 360/836/1280px views. They check overlay width, header/body alignment, useful title space, hidden Type, responsive ID visibility, no horizontal overflow, copy/selection behavior, and opt-out restoration. New captures show wide and narrow populated release lists. Browser source and exact-ZIP evidence is recorded in the release handoff. These are controlled fixtures; the authenticated release overlay is unavailable at the user's direction.
+
 # Compact State controls, workflow order, and form refresh — 0.6.7
 
 State controls use the available text width without a persistent arrow or its reserved spacing. Hover and an open picker show a highlight, and keyboard focus retains a visible outline. Browser regressions verify the supplied Bolt-row reproduction has no arrow, reserves no indicator width, fits Committed, and keeps its width on hover.

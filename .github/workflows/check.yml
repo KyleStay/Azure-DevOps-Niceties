@@ -53,6 +53,8 @@ jobs:
             /tmp/azure-state-form-refresh.png
             /tmp/azure-release-list.png
             /tmp/azure-release-legacy-layout.png
+            /tmp/azure-release-layout-360.png
+            /tmp/azure-release-layout-836.png
             /tmp/azure-release-selection-demo.png
             /tmp/azure-publisher-package.png
             store/assets/settings-*-1280x800.png

@@ -37,7 +37,7 @@ Individual references trim surrounding whitespace and collapse embedded newlines
 
 ## Release-stage work-item lists
 
-Open a release → stage → Work items. If copying is disabled, a visible **Enable copying** card explains the local data use and enables the feature without leaving the page. The list fills the panel with compact copy icons in the first column, checkboxes in the second, and State before a flexible Title column. The Type column is hidden; its values remain available for filtering and copied references. Linkless rows also gain a safe **Open** link.
+Open a release → stage → Work items. If copying is disabled, a visible **Enable copying** card explains the local data use and enables the feature without leaving the page. The list fills the panel with compact copy icons in the first column, checkboxes in the second, and State before a flexible Title column. The Type column is hidden; its values remain available for filtering and copied references. Narrow lists also hide the standalone ID column to preserve State and Title space; copied references still include IDs. Native title wrappers stretch with the column, and decorated headers retain their field mapping. Linkless rows also gain a safe **Open** link.
 
 Use the select-all checkbox in the selection column header to select loaded items. Above the list, use **Copy selected (N)**, **Copy all loaded (N)**, and **Clear selection**. Selected references remain available while that list is open, including temporarily unloaded rows; closing/replacing the list or changing views clears them. Filtering or updating visible rows refreshes their references. Duplicate representations of one item select and copy once.
 
@@ -99,9 +99,9 @@ Browser verification loads the extension into a disposable headless Chromium pro
 
 ## Prepare a Web Store release
 
-After verification, run `npm run package`. It creates an allowlisted runtime ZIP and a complete submission kit under `release/0.6.7/`, with checksums and a standalone submission guide. The listing, privacy policy, image assets, release evidence, and dashboard steps live in [store/SUBMISSION.md](store/SUBMISSION.md).
+After verification, run `npm run package`. It creates an allowlisted runtime ZIP and a complete submission kit under `release/0.6.8/`, with checksums and a standalone submission guide. The listing, privacy policy, image assets, release evidence, and dashboard steps live in [store/SUBMISSION.md](store/SUBMISSION.md).
 
-Open `release/0.6.7/publish.html` or the [publishing helper](https://kylestay.github.io/Azure-DevOps-Niceties/publish.html) for copy-and-paste fields and one-click ZIP, submission-guide, and image downloads. This standalone file is generated from the reviewed documents and works offline. Run `npm run test:publisher` to verify its clipboard actions, downloads, private-note handling, and mobile layout in disposable Chromium.
+Open `release/0.6.8/publish.html` or the [publishing helper](https://kylestay.github.io/Azure-DevOps-Niceties/publish.html) for copy-and-paste fields and one-click ZIP, submission-guide, and image downloads. This standalone file is generated from the reviewed documents and works offline. Run `npm run test:publisher` to verify its clipboard actions, downloads, private-note handling, and mobile layout in disposable Chromium.
 
 The public [privacy policy](https://kylestay.github.io/Azure-DevOps-Niceties/privacy.html) is hosted with GitHub Pages from `docs/` on `main`. When updating `store/privacy.html`, run `npm run privacy:sync` to update the published copy. Keep its Markdown version consistent. Run `npm run check:public` before publishing changes; only synthetic Azure instance URLs belong in this repository.
 

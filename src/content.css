@@ -53,7 +53,7 @@
   [data-azure-niceties-summary] { border-color: CanvasText; }
 }
 
-[data-azure-niceties-release-list] { box-sizing: border-box; width: 100% !important; max-width: 100% !important; min-width: 0 !important; }
+[data-azure-niceties-release-list] { box-sizing: border-box; width: 100% !important; max-width: 100% !important; min-width: 0 !important; container-type: inline-size; }
 [data-azure-niceties-release-width] {
   box-sizing: border-box !important;
   width: 100% !important;
@@ -65,13 +65,15 @@ table[data-azure-niceties-release-list],
 table[data-azure-niceties-release-list] > :is(thead, tbody, tfoot) { display: block; }
 table[data-azure-niceties-release-list] > :is(thead, tbody, tfoot)[hidden] { display: none !important; }
 table[data-azure-niceties-release-list] > colgroup { display: none; }
-[data-azure-niceties-release-toolbar] { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; box-sizing: border-box; min-width: 0; max-width: 100%; }
+[data-azure-niceties-release-toolbar] { display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 0 12px; box-sizing: border-box; min-width: 0; max-width: 100%; font: 12px/1.4 system-ui, sans-serif; }
 [data-azure-niceties-release-toolbar][hidden] { display: none !important; }
+[data-azure-niceties-release-commands] { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+[data-azure-niceties-release-clear] { margin-inline-start: auto; }
 [data-azure-niceties-release-toolbar] label { display: inline-flex; align-items: center; gap: 6px; }
-[data-azure-niceties-release-toolbar] small { flex-basis: 100%; opacity: 0.8; }
-[data-azure-niceties-release-types] { display: flex; flex-wrap: wrap; gap: 8px 16px; flex-basis: 100%; min-width: 0; margin: 0; padding: 8px 12px; border: 1px solid var(--palette-neutral-20, GrayText); border-radius: 4px; }
+[data-azure-niceties-release-toolbar] small { font-size: 11px; opacity: 0.7; }
+[data-azure-niceties-release-types] { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; min-width: 0; margin: 0; padding: 0; border: 0; }
 [data-azure-niceties-release-types][hidden] { display: none; }
-[data-azure-niceties-release-types] legend { padding: 0 4px; font-size: 12px; }
+[data-azure-niceties-release-type-caption] { color: var(--text-secondary-color, GrayText); }
 [data-azure-niceties-release-types] label, [data-azure-niceties-release-types] input { cursor: pointer; }
 [data-azure-niceties-release-types] label { min-width: 0; max-width: 100%; }
 [data-azure-niceties-release-types] label span { overflow-wrap: anywhere; }
@@ -89,6 +91,7 @@ table[data-azure-niceties-release-list] > colgroup { display: none; }
   padding-inline: 0 !important;
   flex-direction: row !important;
   align-items: stretch;
+  border-bottom: 1px solid var(--palette-neutral-20, #e5e7eb);
 }
 [data-azure-niceties-release-column-layout='compact'][hidden] { display: none !important; }
 [data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field] {
@@ -101,10 +104,28 @@ table[data-azure-niceties-release-list] > colgroup { display: none; }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding: 6px 8px !important;
+  line-height: 20px;
 }
+[data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='id'] { flex: 0 0 4rem !important; }
 [data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='type'] { display: none !important; }
 [data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='state'] { order: 1; flex-basis: 7rem !important; }
-[data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='title'] { order: 2; flex: 1 1 0 !important; }
+[data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='title'] { order: 2; flex: 1 1 12rem !important; }
+[data-azure-niceties-release-field='title'] [data-azure-niceties-release-content],
+[data-azure-niceties-release-field='id'] [data-azure-niceties-release-content],
+[data-azure-niceties-release-field='state'] [data-azure-niceties-release-content] {
+  position: static !important;
+  min-width: 0 !important;
+  width: auto !important;
+  max-width: 100% !important;
+}
+[data-azure-niceties-release-column-layout] a { font: inherit !important; }
+[data-azure-niceties-release-list] :is(th,[role='columnheader'],.grid-header-column) { font-weight: 600; color: var(--text-secondary-color, #5c6570); }
+@container (max-width: 440px) {
+  [data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='id'] { display: none !important; }
+}
+[data-azure-niceties-release-row]:hover { background: color-mix(in srgb, Highlight 5%, transparent); }
+[data-azure-niceties-release-row][data-azure-niceties-release-selected='true'] { background: color-mix(in srgb, Highlight 9%, transparent); }
 [data-azure-niceties-release-column] {
   box-sizing: border-box;
   display: flex;
@@ -114,7 +135,7 @@ table[data-azure-niceties-release-list] > colgroup { display: none; }
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 4px !important;
+  padding: 2px !important;
 }
 [data-azure-niceties-release-column='copy'] { order: -2; }
 [data-azure-niceties-release-column='select'] { order: -1; }
@@ -133,9 +154,10 @@ table[data-azure-niceties-release-list] > colgroup { display: none; }
   padding: 6px 12px;
   cursor: pointer;
 }
-[data-azure-niceties-release-column] button { display: inline-flex; align-items: center; justify-content: center; padding: 3px; }
+[data-azure-niceties-release-column] button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 4px; border: 0; background: transparent; }
+[data-azure-niceties-release-column] button:hover { background: color-mix(in srgb, Highlight 12%, transparent); }
 [data-azure-niceties-release-toolbar] button:disabled { opacity: 0.5; cursor: default; }
-[data-azure-niceties-release-toolbar] button { max-width: 100%; white-space: normal; }
+[data-azure-niceties-release-toolbar] button { max-width: 100%; white-space: normal; padding: 5px 8px; min-height: 30px; }
 [data-azure-niceties-release-selected='true'] { outline: 1px solid Highlight; outline-offset: -1px; }
 [data-azure-niceties-release-toolbar] button:focus-visible,
 [data-azure-niceties-release-column] button:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
