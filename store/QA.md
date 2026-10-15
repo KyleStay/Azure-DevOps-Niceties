@@ -1,3 +1,11 @@
+# Release list simplification — 0.6.9
+
+The user's 0.6.8 screenshot invalidated the earlier layout assumptions: the toolbar and table were still constrained to a narrow strip. The earlier fixtures had a recognized dialog boundary and did not cover nested unnamed width constraints or headers outside a presentation table. Passing those tests did not establish the user's actual release layout.
+
+The width walk now expands all intermediate wrappers up to the available-width boundary and retains that boundary across scans. Presentation/headerless row tables share the surrounding grid's headers. Inline-size containment is removed. The visible columns are Copy, selection, State, and flexible Title; standalone IDs and Type remain in extraction/copying data. Extra category-copy actions and type choices sit in native details menus. Clear selection appears only when needed, and the persistent instruction paragraph is removed.
+
+Regression coverage adds a 35-row nested release page with three 280px-wide unnamed wrappers, separate grid headers, a presentation table, state dots, and deliberately 24px-wide inner text wrappers. At 360/836/1280px it checks table and toolbar width, all State/Title mappings, aligned useful title space, compact toolbar height, no horizontal overflow, menu access and Escape, hidden-ID copying, and complete opt-out restoration. Existing copy/selection/virtual-row checks remain. Browser evidence and exact-package results are recorded in the release verification receipt. These fixtures approximate the screenshot; authenticated Azure DevOps markup remains unavailable at the user's direction.
+
 # Release list layout — 0.6.8
 
 Release header parsing now recognizes native field metadata and labels split from sort descriptions. The prior parser treated decorated Title/State headers as unknown fields, allocating generic widths. A nested native title wrapper could also retain its old narrow width after the row stretched. Both are addressed without replacing native rows or changing their DOM order.

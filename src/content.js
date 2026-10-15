@@ -275,9 +275,16 @@
     return names.size === 1 ? [...names][0] : "";
   }
 
+  function releaseScopeOwner(element) {
+    const scope = element.closest(RELEASE_SCOPE);
+    if (!scope?.matches("table")) return scope;
+    const outer = scope.parentElement?.closest(RELEASE_SCOPE);
+    return outer && (scope.matches("[role='presentation'],[role='none']") || !scope.querySelector(RELEASE_HEADER_CELL)) ? outer : scope;
+  }
+
   function releaseHeaders(scope) {
     return Array.from(scope.querySelectorAll(RELEASE_HEADER_CELL))
-      .filter((cell) => cell.closest(RELEASE_SCOPE) === scope && !cell.matches(RELEASE_COLUMN));
+      .filter((cell) => releaseScopeOwner(cell) === scope && !cell.matches(RELEASE_COLUMN));
   }
 
   function releaseCells(row) {
@@ -287,8 +294,7 @@
 
   function listFields(row, headerCache = new Map()) {
     if (!row.matches(RELEASE_ROW)) return {};
-    const gridSelector = RELEASE_SCOPE;
-    const grid = row.closest(gridSelector);
+    const grid = releaseScopeOwner(row);
     if (!grid) return {};
     if (!headerCache.has(grid)) headerCache.set(grid, releaseHeaders(grid)
       .map((header, index) => ({ index: header.getAttribute("aria-colindex") || String(index + 1),
@@ -331,7 +337,7 @@
     const records = [];
     for (const row of rows) {
       if (!isVisibleShortcutCandidate(row) || row.closest(FORM_SELECTOR) || isEditableTarget(row)) continue;
-      const owner = row.closest(RELEASE_SCOPE);
+      const owner = releaseScopeOwner(row);
       if (owner && owner !== scope) continue;
       const links = Array.from(row.querySelectorAll("a[href*='/_workitems/edit/']"))
         .filter((link) => !link.closest(RELEASE_ACTIONS));
@@ -413,17 +419,29 @@
     for (const row of entry.columns.keys()) {
       for (let host = row.parentElement; host && host !== entry.scope; host = host.parentElement) hosts.add(host);
     }
-    const panel = entry.scope.closest("[role='dialog'],.bolt-panel,.ms-Panel,.ui-dialog");
-    for (let host = entry.scope.parentElement; host && host !== panel && host !== document.body; host = host.parentElement) {
-      hosts.add(host);
-      if (!panel) break;
+    // Release pages also use unnamed nested wrappers outside any dialog. Find
+    // the available-width boundary before changing those wrappers, then retain
+    // it so our own resize does not change the next scan's decision.
+    if (!entry.widthBoundary?.contains(entry.scope)) {
+      entry.widthBoundary = entry.scope.closest("[role='dialog'],.bolt-panel,.ms-Panel,.ui-dialog,[role='tabpanel'],main,[role='main']");
+      if (!entry.widthBoundary) {
+        const target = Math.max(480, (entry.scope.getBoundingClientRect?.().width || 0) + 64);
+        let widest = entry.scope.parentElement;
+        for (let host = entry.scope.parentElement; host && host !== document.body; host = host.parentElement) {
+          const width = host.getBoundingClientRect?.().width || 0;
+          if (width > (widest?.getBoundingClientRect?.().width || 0)) widest = host;
+          if (width >= target) { widest = host; break; }
+        }
+        entry.widthBoundary = widest;
+      }
     }
+    for (let host = entry.scope.parentElement; host && host !== entry.widthBoundary && host !== document.body; host = host.parentElement) hosts.add(host);
     setReleaseWidthHosts(entry, hosts);
   }
 
   function updateReleaseColumns(entry, records) {
     const rows = new Set(Array.from(entry.scope.querySelectorAll(RELEASE_ROW)).filter((row) =>
-      row.closest(RELEASE_SCOPE) === entry.scope && !row.closest(`${FORM_SELECTOR},[data-azure-niceties-release-header]`)));
+      releaseScopeOwner(row) === entry.scope && !row.closest(`${FORM_SELECTOR},[data-azure-niceties-release-header]`)));
     for (const { row } of records) rows.add(row);
     const headerCells = releaseHeaders(entry.scope);
     const headerCell = headerCells[0];
@@ -697,8 +715,22 @@
     const commands = document.createElement("div");
     commands.dataset.azureNicetiesReleaseCommands = "true";
     clear.dataset.azureNicetiesReleaseClear = "true";
-    commands.append(selectedButton, allButton, bugsBacklogButton, backlogButton, clear);
-    toolbar.append(commands, typeChoices, hint);
+    function menu(label, name, ...contents) {
+      const details = document.createElement("details");
+      details.dataset.azureNicetiesReleaseMenu = name;
+      const summary = document.createElement("summary");
+      summary.textContent = label;
+      const panel = document.createElement("div");
+      panel.dataset.azureNicetiesReleaseMenuPanel = "true";
+      panel.append(...contents);
+      details.append(summary, panel);
+      return details;
+    }
+    const more = menu("More copy options", "copy", bugsBacklogButton, backlogButton);
+    const types = menu("Select by type", "types", typeChoices);
+    commands.append(selectedButton, allButton, more, types, clear);
+    toolbar.title = hint.textContent;
+    toolbar.append(commands);
     scope.before(toolbar);
     const entry = { scope, toolbar, all, selectedButton, allButton, bugsBacklogButton, backlogButton, clear, typeChoices,
       types: new Map(), selected: new Map(), rows: new Map(), columns: new Map(), copyColumns: new Map(), page: location.href };
@@ -1280,6 +1312,9 @@
       return;
     }
     const entry = releaseEntryFor(event.target);
+    for (const list of releaseLists.values()) {
+      for (const menu of list.toolbar.querySelectorAll("details[open]")) if (!menu.contains(event.target)) menu.open = false;
+    }
     if (entry) {
       const open = event.target.closest("a");
       if (open && Array.from(entry.rows.values()).some((row) => row.actions.querySelector("a") === open)) {
@@ -1302,6 +1337,8 @@
       if ([entry.allButton, entry.selectedButton, entry.bugsBacklogButton, entry.backlogButton].includes(clicked)) {
         event.preventDefault(); event.stopImmediatePropagation();
         if (clicked.disabled) return;
+        const menu = clicked.closest("details");
+        if (menu) { menu.open = false; menu.querySelector("summary").focus(); }
         copyReleaseItems(entry, core.modeFromModifiers(event), clicked, clicked.dataset.azureNicetiesReleaseCopy).catch(() => {
           const status = confirmationStatus();
           if (status) status.textContent = "Could not copy work items. Try again.";
@@ -1384,6 +1421,14 @@
   document.addEventListener("keydown", function (event) {
     if (!enabled || !event.isTrusted) return;
     const focusedReleaseEntry = releaseEntryFor(event.target);
+    if (event.key === "Escape" && focusedReleaseEntry) {
+      const menu = focusedReleaseEntry.toolbar.querySelector("details[open]");
+      if (menu) {
+        event.preventDefault(); event.stopImmediatePropagation();
+        menu.open = false; menu.querySelector("summary").focus();
+        return;
+      }
+    }
     const ownSelection = focusedReleaseEntry && (event.target === focusedReleaseEntry.all
       || Array.from(focusedReleaseEntry.rows.values()).some((controls) => controls.checkbox === event.target)
       || Array.from(focusedReleaseEntry.types.values()).some((controls) => controls.checkbox === event.target));

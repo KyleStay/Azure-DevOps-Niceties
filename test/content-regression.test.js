@@ -6,7 +6,7 @@ const core = require("../src/work-item.js");
 const source = fs.readFileSync(require.resolve("../src/content.js"), "utf8").replace(/\}\)\(\);\s*$/, `globalThis.contentHelpers = {
   titleWithoutWorkItemPrefix, extractWorkItem, isWorkItemCopyControl, fetchParent,
   parentApiUrl, parentCache, activeParentLookups, nativeFallbackControls, reloadConsent, writeClipboard, showConfirmation,
-  loadReleaseCategories, releaseHeaderField, releaseFieldAttribute,
+  loadReleaseCategories, releaseHeaderField, releaseFieldAttribute, releaseScopeOwner,
   updateReleaseWidthHosts, setReleaseWidthHosts, releaseLists, updateReleaseColumns,
   copyForTest: workItem => copyWorkItem(workItem, "rich", null, ++latestCopyRequest), enabled: () => enabled
 }; })();`);
@@ -145,8 +145,22 @@ test("release field metadata and accessible names take precedence over decorativ
   assert.equal(releaseHeaderField(ambiguous), "");
 });
 
-function widthHost(parentElement) {
-  return { parentElement, dataset: {}, removeAttribute(name) {
+test("presentation and headerless row tables use the surrounding release grid headers", () => {
+  const { releaseScopeOwner } = harness();
+  const grid = { matches: () => false };
+  for (const [presentation, hasHeaders, expected] of [[true, false, grid], [false, false, grid], [false, true, null]]) {
+    const table = { matches: selector => selector === "table" || presentation,
+      parentElement: { closest: () => grid }, querySelector: () => hasHeaders ? {} : null };
+    const row = { closest: () => table };
+    assert.equal(releaseScopeOwner(row), expected || table);
+  }
+});
+
+function widthHost(parentElement, width = 0) {
+  return { parentElement, dataset: {}, getBoundingClientRect: () => ({ width }), contains(element) {
+    for (let node = element; node; node = node.parentElement) if (node === this) return true;
+    return false;
+  }, removeAttribute(name) {
     if (name === "data-azure-niceties-release-width") delete this.dataset.azureNicetiesReleaseWidth;
   } };
 }
@@ -203,6 +217,25 @@ test("release column layout maps native cells rather than decorative row childre
   assert.ok(decorations.every(node => node.dataset.azureNicetiesReleaseField === undefined));
   assert.equal(row.children[0].dataset.azureNicetiesReleaseColumn, "copy");
   assert.equal(row.children[1].dataset.azureNicetiesReleaseColumn, "select");
+});
+
+test("unnamed release wrappers expand through every narrow ancestor and retain a stable boundary", () => {
+  const h = harness();
+  const available = widthHost(h.context.document.body, 1000);
+  const outer = widthHost(available, 280);
+  const middle = widthHost(outer, 280);
+  const inner = widthHost(middle, 280);
+  const scope = widthHost(inner, 280);
+  scope.closest = () => null;
+  const entry = { scope, columns: new Map() };
+  h.updateReleaseWidthHosts(entry);
+  assert.equal(entry.widthBoundary, available);
+  for (const node of [inner, middle, outer]) assert.equal(node.dataset.azureNicetiesReleaseWidth, "true");
+  assert.equal(available.dataset.azureNicetiesReleaseWidth, undefined);
+  for (const node of [scope, inner, middle, outer]) node.getBoundingClientRect = () => ({ width: 1000 });
+  h.updateReleaseWidthHosts(entry);
+  assert.equal(entry.widthBoundary, available, "our own expanded widths do not oscillate the boundary");
+  for (const node of [inner, middle, outer]) assert.equal(node.dataset.azureNicetiesReleaseWidth, "true");
 });
 
 test("release width follows legacy header and virtual canvases through shrink-wrapped panel groups", () => {

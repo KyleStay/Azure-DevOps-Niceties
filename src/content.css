@@ -53,7 +53,7 @@
   [data-azure-niceties-summary] { border-color: CanvasText; }
 }
 
-[data-azure-niceties-release-list] { box-sizing: border-box; width: 100% !important; max-width: 100% !important; min-width: 0 !important; container-type: inline-size; }
+[data-azure-niceties-release-list] { box-sizing: border-box; width: 100% !important; max-width: 100% !important; min-width: 0 !important; }
 [data-azure-niceties-release-width] {
   box-sizing: border-box !important;
   width: 100% !important;
@@ -62,16 +62,24 @@
   align-self: stretch !important;
 }
 table[data-azure-niceties-release-list],
-table[data-azure-niceties-release-list] > :is(thead, tbody, tfoot) { display: block; }
+table[data-azure-niceties-release-list] > :is(thead, tbody, tfoot),
+table[data-azure-niceties-release-width],
+table[data-azure-niceties-release-width] > :is(thead, tbody, tfoot) { display: block; }
 table[data-azure-niceties-release-list] > :is(thead, tbody, tfoot)[hidden] { display: none !important; }
 table[data-azure-niceties-release-list] > colgroup { display: none; }
-[data-azure-niceties-release-toolbar] { display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 0 12px; box-sizing: border-box; min-width: 0; max-width: 100%; font: 12px/1.4 system-ui, sans-serif; }
+[data-azure-niceties-release-toolbar] { display: block; padding: 8px 0; box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; font: 12px/1.4 system-ui, sans-serif; }
 [data-azure-niceties-release-toolbar][hidden] { display: none !important; }
-[data-azure-niceties-release-commands] { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+[data-azure-niceties-release-commands] { position: relative; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
 [data-azure-niceties-release-clear] { margin-inline-start: auto; }
+[data-azure-niceties-release-clear]:disabled { display: none; }
+[data-azure-niceties-release-menu] { min-width: 0; }
+[data-azure-niceties-release-menu] > summary { padding: 5px 2px; cursor: pointer; white-space: nowrap; }
+[data-azure-niceties-release-menu] > summary:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+[data-azure-niceties-release-menu-panel] { position: absolute; inset: 100% auto auto 0; z-index: 1001; box-sizing: border-box; width: max-content; max-width: min(320px, 100%); padding: 8px; border: 1px solid GrayText; border-radius: 4px; color: var(--text-primary-color, CanvasText); background: var(--background-color, Canvas); box-shadow: 0 2px 8px #0002; }
+[data-azure-niceties-release-menu-panel] > button { display: block; width: 100%; text-align: left; }
 [data-azure-niceties-release-toolbar] label { display: inline-flex; align-items: center; gap: 6px; }
 [data-azure-niceties-release-toolbar] small { font-size: 11px; opacity: 0.7; }
-[data-azure-niceties-release-types] { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; min-width: 0; margin: 0; padding: 0; border: 0; }
+[data-azure-niceties-release-types] { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
 [data-azure-niceties-release-types][hidden] { display: none; }
 [data-azure-niceties-release-type-caption] { color: var(--text-secondary-color, GrayText); }
 [data-azure-niceties-release-types] label, [data-azure-niceties-release-types] input { cursor: pointer; }
@@ -107,9 +115,9 @@ table[data-azure-niceties-release-list] > colgroup { display: none; }
   padding: 6px 8px !important;
   line-height: 20px;
 }
-[data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='id'] { flex: 0 0 4rem !important; }
+[data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='id'],
 [data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='type'] { display: none !important; }
-[data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='state'] { order: 1; flex-basis: 7rem !important; }
+[data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='state'] { order: 1; flex: 0 0 7rem !important; }
 [data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='title'] { order: 2; flex: 1 1 12rem !important; }
 [data-azure-niceties-release-field='title'] [data-azure-niceties-release-content],
 [data-azure-niceties-release-field='id'] [data-azure-niceties-release-content],
@@ -122,9 +130,6 @@ table[data-azure-niceties-release-list] > colgroup { display: none; }
 [data-azure-niceties-release-field='title'] [data-azure-niceties-release-content] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 [data-azure-niceties-release-column-layout] a { font: inherit !important; }
 [data-azure-niceties-release-list] :is(th,[role='columnheader'],.grid-header-column) { font-weight: 600; color: var(--text-secondary-color, #5c6570); }
-@container (max-width: 440px) {
-  [data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='id'] { display: none !important; }
-}
 [data-azure-niceties-release-row]:hover { background: color-mix(in srgb, Highlight 5%, transparent); }
 [data-azure-niceties-release-row][data-azure-niceties-release-selected='true'] { background: color-mix(in srgb, Highlight 9%, transparent); }
 [data-azure-niceties-release-column] {
@@ -158,7 +163,8 @@ table[data-azure-niceties-release-list] > colgroup { display: none; }
 [data-azure-niceties-release-column] button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 4px; border: 0; background: transparent; }
 [data-azure-niceties-release-column] button:hover { background: color-mix(in srgb, Highlight 12%, transparent); }
 [data-azure-niceties-release-toolbar] button:disabled { opacity: 0.5; cursor: default; }
-[data-azure-niceties-release-toolbar] button { max-width: 100%; white-space: normal; padding: 5px 8px; min-height: 30px; }
+[data-azure-niceties-release-toolbar] button { max-width: 100%; white-space: normal; padding: 4px 6px; min-height: 28px; border: 0; background: transparent; }
+[data-azure-niceties-release-toolbar] button:hover:not(:disabled) { background: color-mix(in srgb, Highlight 8%, transparent); }
 [data-azure-niceties-release-selected='true'] { outline: 1px solid Highlight; outline-offset: -1px; }
 [data-azure-niceties-release-toolbar] button:focus-visible,
 [data-azure-niceties-release-column] button:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
