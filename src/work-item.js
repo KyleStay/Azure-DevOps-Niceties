@@ -156,16 +156,38 @@
       html: formatted.map((item) => item.html).join("<br>") };
   }
 
+  function releaseCategories(payload) {
+    if (!Array.isArray(payload?.value)) return null;
+    const names = (referenceName) => {
+      const category = payload.value.find((category) => category?.referenceName === referenceName);
+      return Array.isArray(category?.workItemTypes)
+        ? category.workItemTypes.map((type) => typeof type?.name === "string" ? normalizeWhitespace(type.name) : "").filter(Boolean)
+        : [];
+    };
+    const backlog = names("Microsoft.RequirementCategory");
+    return backlog.length ? { backlog, bugs: names("Microsoft.BugCategory") } : null;
+  }
+
+  function filterReleaseItems(items, kind, categories) {
+    if (kind !== "backlog" && kind !== "bugs-and-backlog") return items;
+    if (!categories) return [];
+    const types = new Set([...categories.backlog, ...(kind === "bugs-and-backlog" ? categories.bugs : [])]
+      .map((type) => shortType(type).toLowerCase()));
+    return items.filter((item) => types.has(shortType(item.type).toLowerCase()));
+  }
+
   return {
     DEFAULT_SETTINGS,
     branchName,
     escapeHtml,
     formatWorkItem,
     formatWorkItems,
+    filterReleaseItems,
     labelFor,
     modeFromModifiers,
     normalizeWhitespace,
     safeWorkItemUrl,
+    releaseCategories,
     shortType,
     slugify,
     workItemIdFromUrl,

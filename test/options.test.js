@@ -8,17 +8,19 @@ const core = require("../src/work-item.js");
 const source = fs.readFileSync(path.join(__dirname, "../options/options.js"), "utf8");
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 
-function fixture(initial, { consent = false, selectionSummary, localSaveError = null, syncSaveWait = null, syncSaveError = null } = {}) {
+function fixture(initial, { consent = false, selectionSummary, inlineStateEditing, localSaveError = null, syncSaveWait = null, syncSaveError = null } = {}) {
   initial = { ...core.DEFAULT_SETTINGS, ...initial };
   const stored = { ...initial };
   const localStored = consent === null ? {} : { dataConsent: consent };
   if (selectionSummary !== undefined) localStored.selectionSummary = selectionSummary;
+  if (inlineStateEditing !== undefined) localStored.inlineStateEditing = inlineStateEditing;
   const inputs = {
     "#include-parent": field({ checked: false }),
     "#branch-prefix": field({ value: "" }),
     "#status": { textContent: "" },
     "#data-consent": field({ checked: false, textContent: "" }),
     "#selection-summary": field({ checked: false }),
+    "#inline-state-editing": field({ checked: false }),
     "#sync-system-theme": field({ value: "auto" }),
   };
   let finishLoad;
@@ -69,6 +71,29 @@ test("a loaded options edit saves a sanitized prefix with the selected parent se
   assert.deepEqual(page.stored, { includeParent: true, branchPrefix: "feature-work-api", syncSystemTheme: "auto" });
   assert.equal(page.inputs["#branch-prefix"].value, "feature-work-api");
   assert.equal(page.inputs["#status"].textContent, "Saved");
+});
+
+test("inline state editing defaults on, saves an independent local opt-out, and restores it", async () => {
+  const page = fixture({}, { consent: false });
+  await page.load();
+  assert.equal(page.inputs["#inline-state-editing"].checked, true);
+  await page.inputs["#inline-state-editing"].change({ checked: false });
+  assert.deepEqual(page.localStored, { dataConsent: false, inlineStateEditing: false });
+  const off = fixture({}, { inlineStateEditing: false });
+  await off.load();
+  assert.equal(off.inputs["#inline-state-editing"].checked, false);
+  await off.inputs["#inline-state-editing"].change({ checked: true });
+  assert.equal(off.localStored.inlineStateEditing, true);
+  assert.equal(off.inputs["#status"].textContent, "Inline state editing enabled");
+});
+
+test("a failed state-editing preference save restores its previous value", async () => {
+  const page = fixture({}, { localSaveError: new Error("Storage unavailable") });
+  await page.load();
+  await page.inputs["#inline-state-editing"].change({ checked: false });
+  assert.equal(page.inputs["#inline-state-editing"].checked, true);
+  assert.equal(page.inputs["#inline-state-editing"].disabled, false);
+  assert.match(page.inputs["#status"].textContent, /Storage unavailable/);
 });
 
 test("data consent restores from local storage and changes without altering synchronized preferences", async () => {

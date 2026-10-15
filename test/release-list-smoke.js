@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const os = require("node:os");
 
 async function runReleaseListSmoke(browser, extensionId) {
   const context = browser.contexts()[0];
@@ -8,6 +9,12 @@ async function runReleaseListSmoke(browser, extensionId) {
   const route = (request) => request.fulfill({ status: 200, contentType: "text/html",
     body: fs.readFileSync(path.join(__dirname, "release-list-fixture.html"), "utf8") });
   await context.route(url, route);
+  const categoriesUrl = "https://dev.azure.com/example/project/_apis/wit/workitemtypecategories?api-version=7.1";
+  const categoriesRoute = request => request.fulfill({ json: { value: [
+    { referenceName: "Microsoft.RequirementCategory", workItemTypes: [{ name: "Product Backlog Item" }, { name: "User Story" }] },
+    { referenceName: "Microsoft.BugCategory", workItemTypes: [{ name: "Bug" }] },
+  ] } });
+  await context.route(categoriesUrl, categoriesRoute);
   const page = await context.newPage();
   const options = await context.newPage();
   const selector = "[data-azure-niceties-copy-list]";
@@ -20,13 +27,29 @@ async function runReleaseListSmoke(browser, extensionId) {
     assert.equal(await options.locator("#data-consent").isChecked(), true, "copying starts enabled with no saved preference");
     await page.goto(url);
     await page.getByRole("button", { name: "Copy all loaded (4)", exact: true }).waitFor();
-    assert.equal(await page.locator("#items thead tr > :first-child [aria-label='Select all loaded work items']").count(), 1, "select-all is in the first header column");
-    assert.equal(await page.locator("#items tbody tr > :first-child").evaluateAll(cells => cells.every(cell => cell.hasAttribute("data-azure-niceties-release-column"))), true, "every table row has its own first selection cell");
+    const originalViewport = page.viewportSize();
+    for (const width of [360, 796, 1100]) {
+      await page.setViewportSize({ width, height: 800 });
+      const layout = await page.locator("#items").evaluate(table => ({
+        width: table.getBoundingClientRect().width,
+        available: table.parentElement.clientWidth - 48,
+        overflow: table.scrollWidth > table.clientWidth || document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      }));
+      assert.ok(Math.abs(layout.width - layout.available) < 2, "release table fills its container after resizing");
+      assert.equal(layout.overflow, false, "release table does not create horizontal scrolling");
+    }
+    await page.setViewportSize(originalViewport || { width: 1280, height: 800 });
+    assert.equal(await page.locator("#items thead tr > :nth-child(2) [aria-label='Select all loaded work items']").count(), 1, "select-all follows Copy");
+    assert.equal(await page.locator("#items tbody tr > :first-child").evaluateAll(cells => cells.every(cell => cell.dataset.azureNicetiesReleaseColumn === "copy")), true, "every table row starts with Copy");
     assert.equal(await page.locator("#items colgroup > col").count(), 5, "native table colgroups include selection and copy columns");
-    assert.equal(await page.locator("#items thead tr > :last-child").innerText(), "Copy", "the final header names the Copy column");
-    assert.equal(await page.locator("#items tbody tr [data-azure-niceties-release-copy='item']").evaluateAll(buttons => buttons.every(button => button.parentElement === button.closest("tr").lastElementChild)), true, "table Copy buttons occupy a dedicated last cell");
+    assert.equal(await page.locator("#items thead tr > :first-child").getAttribute("aria-label"), "Copy", "Copy header has an accessible label");
+    assert.equal(await page.locator("#items tbody tr [data-azure-niceties-release-copy='item']").evaluateAll(buttons => buttons.every(button => button.parentElement === button.closest("tr").firstElementChild && !button.textContent && button.querySelector("svg[aria-hidden='true']"))), true, "Copy buttons use labelled icons in the first column");
+    assert.equal(await page.locator("#items [data-azure-niceties-release-field='type']").evaluateAll(cells => cells.every(cell => getComputedStyle(cell).display === "none")), true, "native type columns are hidden");
     await options.locator("#data-consent").uncheck();
     await options.waitForFunction(async () => (await chrome.storage.local.get("dataConsent")).dataConsent === false);
+    await page.locator(selector).waitFor({ state: "detached" });
+    assert.equal(await page.locator("[data-azure-niceties-release-list],[data-azure-niceties-release-field]").count(), 0, "opting out restores native fields and table layout");
+    assert.equal(await page.locator("#items").evaluate(table => table.getBoundingClientRect().width), 480, "native table width is restored on opt-out");
     await page.goto(url);
     await page.waitForTimeout(200);
     assert.equal(await page.locator(selector).count(), 0, "saved copying opt-out survives reload");
@@ -40,8 +63,19 @@ async function runReleaseListSmoke(browser, extensionId) {
     await options.waitForFunction(() => !document.querySelector("#data-consent").disabled);
     await options.locator("#include-parent").uncheck();
     await page.getByRole("button", { name: "Copy all loaded (4)", exact: true }).waitFor();
-    await page.screenshot({ path: "/private/tmp/azure-release-list.png" });
+    await page.screenshot({ path: path.join(os.tmpdir(), "azure-release-list.png") });
     await page.bringToFront();
+    const quickCopies = [
+      ["bugs-and-backlog", "Copy all bugs + backlog items (3)", "#501\n#502\n#503"],
+      ["backlog", "Copy all backlog items (2)", "#501\n#502"],
+    ];
+    for (const [kind, name, expectedIds] of quickCopies) {
+      const button = page.getByRole("button", { name, exact: true });
+      await button.click({ modifiers: ["Alt"] });
+      await page.waitForFunction(kind => document.querySelector(`[data-azure-niceties-release-copy='${kind}']`)?.dataset.azureNicetiesCopied === "true", kind);
+      assert.equal(await page.evaluate(() => navigator.clipboard.readText()), expectedIds, "quick copy excludes unrelated types and duplicate rows");
+    }
+    assert.equal(await page.getByRole("button", { name: "Copy selected (0)", exact: true }).isDisabled(), true, "quick copy does not alter manual selection");
     await page.locator("#items tbody tr").evaluateAll(rows => {
       for (const index of [3, 4]) rows[index].querySelectorAll("td:not([data-azure-niceties-release-column])")[1].textContent = "Task";
     });
@@ -125,14 +159,75 @@ async function runReleaseListSmoke(browser, extensionId) {
     await page.locator(selector).waitFor();
     await page.evaluate(() => { history.pushState({}, "", "/example/project/_boards/board"); dispatchEvent(new PopStateEvent("popstate")); });
     await page.locator(selector).waitFor({ state: "detached" });
+    const legacyUrl = "https://dev.azure.com/example/project/_releaseProgress?releaseId=51&environmentId=3&_a=workitems";
+    const legacyRoute = request => request.fulfill({ status: 200, contentType: "text/html",
+      body: fs.readFileSync(path.join(__dirname, "release-list-legacy-fixture.html"), "utf8") });
+    await context.route(legacyUrl, legacyRoute);
+    try {
+      await page.goto(legacyUrl);
+      await page.getByRole("button", { name: "Copy all loaded (2)", exact: true }).waitFor();
+      for (const width of [360, 836, 1280]) {
+        await page.setViewportSize({ width, height: 940 });
+        const layout = await page.locator("#legacy-items").evaluate(grid => {
+          const panel = grid.closest("[role='dialog']").getBoundingClientRect();
+          const rows = [...grid.querySelectorAll("[data-azure-niceties-release-column-layout]")];
+          return {
+            gridWidth: grid.getBoundingClientRect().width,
+            panelWidth: panel.width,
+            overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth || grid.scrollWidth > grid.clientWidth,
+            columns: rows.map(row => {
+              const cell = field => row.querySelector(`[data-azure-niceties-release-field='${field}']`);
+              return {
+                titleWidth: cell("title").getBoundingClientRect().width,
+                titleStart: cell("title").getBoundingClientRect().left,
+                stateEnd: cell("state").getBoundingClientRect().right,
+                typeHidden: getComputedStyle(cell("type")).display === "none",
+                titleVisible: getComputedStyle(cell("title")).display !== "none",
+              };
+            }),
+          };
+        });
+        assert.ok(Math.abs(layout.gridWidth - layout.panelWidth) < 2, "legacy grid stretches through the narrow group to fill the panel");
+        assert.equal(layout.overflow, false, "legacy virtual canvases do not create horizontal scrolling");
+        assert.ok(layout.columns.every(column => column.typeHidden && column.titleVisible && column.titleWidth > 40 && Math.abs(column.titleStart - column.stateEnd) < 2), "Title remains visible after State despite decorations and native flex rules");
+        assert.ok(layout.columns.every(column => Math.abs(column.titleStart - layout.columns[0].titleStart) < 2), "legacy header and body columns align");
+        if (width === 836) await page.screenshot({ path: path.join(os.tmpdir(), "azure-release-legacy-layout.png") });
+      }
+      await page.setViewportSize(originalViewport || { width: 1280, height: 800 });
+      await options.locator("#data-consent").uncheck();
+      await page.locator(selector).waitFor({ state: "detached" });
+      assert.equal(await page.locator("[data-azure-niceties-release-width],[data-azure-niceties-release-field]").count(), 0, "native canvas and field styles are restored on opt-out");
+      assert.equal(await page.locator(".release-group").evaluate(group => group.getBoundingClientRect().width), 360, "the group's native width is restored");
+      await options.locator("#data-consent").check();
+    } finally { await context.unroute(legacyUrl, legacyRoute); }
     const demoUrl = "https://dev.azure.com/example/project/_release?releaseId=50&environmentId=3&_a=workitems";
     const demoRoute = request => request.fulfill({ status: 200, contentType: "text/html", body: fs.readFileSync(path.join(__dirname, "release-list-demo.html"), "utf8") });
     await context.route(demoUrl, demoRoute);
     try {
       await page.goto(demoUrl);
       await page.getByRole("button", { name: "Copy all loaded (4)", exact: true }).waitFor();
-      assert.equal(await page.locator("#items [role='row'] > :first-child").evaluateAll(cells => cells.every(cell => cell.hasAttribute("data-azure-niceties-release-column"))), true, "ARIA grids have a dedicated first selection column");
-      assert.equal(await page.locator("#items [role='row'] > :last-child").evaluateAll(cells => cells.every(cell => cell.getAttribute("data-azure-niceties-release-column") === "copy")), true, "ARIA grids have a dedicated last Copy column");
+      await page.locator("#items, #items [role='row']").evaluateAll(elements => {
+        for (const element of elements) element.style.cssText = "width: 700px; max-width: 700px";
+      });
+      const gridLayout = await page.locator("#items").evaluate(grid => ({
+        width: grid.getBoundingClientRect().width,
+        available: grid.parentElement.clientWidth,
+        rows: [...grid.querySelectorAll("[role='row']")].map(row => row.getBoundingClientRect().width),
+      }));
+      assert.ok(Math.abs(gridLayout.width - gridLayout.available) < 2, "release grid fills its container");
+      assert.ok(gridLayout.rows.every(width => Math.abs(width - (gridLayout.width - 2)) < 2), "grid headers and rows fill the expanded grid");
+      assert.equal(await page.locator("#items [role='row'] > :first-child").evaluateAll(cells => cells.every(cell => cell.dataset.azureNicetiesReleaseColumn === "copy")), true, "ARIA grids start with Copy");
+      assert.equal(await page.locator("#items [role='row'] > :nth-child(2)").evaluateAll(cells => cells.every(cell => cell.dataset.azureNicetiesReleaseColumn === "select")), true, "selection follows Copy");
+      for (const width of [360, 796, 1280]) {
+        await page.setViewportSize({ width, height: 800 });
+        const compact = await page.locator("#items [role='row']").evaluateAll(rows => rows.map(row => {
+          const box = field => row.querySelector(`[data-azure-niceties-release-field='${field}']`).getBoundingClientRect();
+          const copy = row.querySelector("[data-azure-niceties-release-column='copy']").getBoundingClientRect();
+          return { overflow: row.scrollWidth > row.clientWidth, stateEnd: box("state").right, titleStart: box("title").left, copyStart: copy.left, rowStart: row.getBoundingClientRect().left };
+        }));
+        assert.ok(compact.every(row => !row.overflow && row.stateEnd <= row.titleStart && Math.abs(row.copyStart - row.rowStart) < 1), "compact grid fits with Copy leftmost and State before Title");
+      }
+      await page.setViewportSize(originalViewport || { width: 1280, height: 800 });
       const copyCenters = await page.locator("#items [data-azure-niceties-release-column='copy']").evaluateAll(cells => cells.map(cell => {
         const box = cell.getBoundingClientRect(); return box.x + box.width / 2;
       }));
@@ -155,7 +250,7 @@ async function runReleaseListSmoke(browser, extensionId) {
       assert.equal(await page.locator("[data-azure-niceties-summary]").evaluate(panel => panel.closest("[role='dialog']")?.getAttribute("aria-label")), "Stage work items", "summary stays in the release stage sheet stacking context");
       assert.equal(await page.evaluate(() => window.nativeRowClicks), 0, "owned selection controls do not activate native row clicks");
       await page.locator("textarea").evaluate(textarea => { textarea.hidden = true; });
-      await page.screenshot({ path: "/private/tmp/azure-release-selection-demo.png" });
+      await page.screenshot({ path: path.join(os.tmpdir(), "azure-release-selection-demo.png") });
       await page.getByRole("button", { name: "Copy selected (2)", exact: true }).click();
       await page.waitForFunction(() => document.querySelector("[data-azure-niceties-release-copy='selected']").dataset.azureNicetiesCopied === "true");
       assert.equal(await page.evaluate(() => navigator.clipboard.readText()), "PBI 601: Improve search results\nBug 603: Fix empty results");
@@ -246,7 +341,7 @@ async function runReleaseListSmoke(browser, extensionId) {
       });
       await page.locator("#items [role='row']").first().evaluate(row => { row.removeAttribute("role"); row.className = "grid-header"; });
       await page.waitForTimeout(250);
-      assert.equal(await page.locator("#items .grid-header > :first-child [aria-label='Select all loaded work items']").count(), 1, "legacy headers keep select-all in their first column");
+      assert.equal(await page.locator("#items .grid-header > :nth-child(2) [aria-label='Select all loaded work items']").count(), 1, "legacy headers keep select-all after Copy");
       await page.getByRole("checkbox", { name: "Select all loaded work items", exact: true }).check();
       await page.getByRole("button", { name: "Copy selected (4)", exact: true }).waitFor();
       await options.locator("#data-consent").uncheck();
@@ -260,6 +355,7 @@ async function runReleaseListSmoke(browser, extensionId) {
     await page.close();
     await options.close();
     await context.unroute(url, route);
+    await context.unroute(categoriesUrl, categoriesRoute);
   }
 }
 

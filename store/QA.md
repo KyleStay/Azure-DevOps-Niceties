@@ -1,4 +1,12 @@
-# Release verification — 0.6.3
+# Work-item controls verification — October 15, 2026
+
+[Isolated Ubuntu verification](https://github.com/KyleStay/Azure-DevOps-Niceties/actions/runs/38764196198) passed with Chrome for Testing 151.0.7922.34: all 172 Node tests, syntax/public-content checks, the full manifest-loaded browser suite, allowlisted packaging, and the publishing-helper suite.
+
+Controlled browser fixtures cover the full-width compact release layout, legacy virtual grids with native header decorations, requirement/bug category copying, and inline state editing across tables, ARIA/legacy grids and cards. State cases include explicit choice, keyboard cancellation, revision conflicts, permissions, required fields, recycled rows and opt-out restoration. Clipboard formats and real paste, selection summaries, themes and existing copy controls also pass. Disposable browser profiles are removed and supported clipboard formats restored by the harness.
+
+Local macOS browser automation was blocked by the workspace sandbox; browser verification ran in the isolated CI environment. All work-item API writes were mocked against synthetic fixtures. Authenticated Azure DevOps workflows and the user's exact release overlay still require the procedure in `REVIEWER-TESTS.md`. No release was uploaded, published or installed. Earlier release evidence below describes the October 14 package and does not establish the current runtime ZIP hash.
+
+# Historical release verification — 0.6.3
 
 Verified October 14, 2026, on macOS with disposable Chrome for Testing 151.0.7922.34.
 
@@ -43,7 +51,7 @@ Per-service state distinguishes extension-applied dark/light changes from observ
 
 ## Release-stage interaction — October 14, 2026
 
-Release copying starts enabled when no local preference exists, and preserves explicit opt-outs. Each list has a dedicated first selection column with a header select-all checkbox, a final Copy column with individual buttons, safe Open links for linkless typed grids, Copy selected, Copy all loaded and Clear selection. Turning copying off removes the injected column and restores native table colgroups; a visible Enable copying card can re-enable it. Copy selected retains explicit reference snapshots while a mounted list is open, including temporarily unloaded rows; closing/replacing the list, changing views or turning copying off clears them. Summary totals remain limited to selected loaded rows.
+Release copying starts enabled when no local preference exists, and preserves explicit opt-outs. Each list has compact copy icons first, selection checkboxes second, State before Title, a hidden Type column, safe Open links for linkless typed grids, Copy selected, Copy all loaded and Clear selection. Turning copying off removes the injected column and restores native table colgroups; a visible Enable copying card can re-enable it. Copy selected retains explicit reference snapshots while a mounted list is open, including temporarily unloaded rows; closing/replacing the list, changing views or turning copying off clears them. Summary totals remain limited to selected loaded rows.
 
 Controlled browser tests cover linked tables, linkless ARIA grids, Type/Work Item Type headers, stage-dialog summary placement, duplicate/unsafe/mismatched references, per-row and selected clipboard output, text/keyboard interaction and opt-out cleanup. These are actual manifest-loaded controls with real clipboard reads/paste, using synthetic page fixtures. No signed-in release tab was available in the connected browser, so compatibility with the user's exact stage view is not established. The version is raised to 0.6.3 so the new package is distinct from prior 0.6.2 artifacts.
 

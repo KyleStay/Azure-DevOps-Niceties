@@ -1,0 +1,38 @@
+name: Verify extension
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run check
+      - run: npm run check:public
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - run: npm run package
+      - run: npm run test:publisher
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-qa-${{ github.run_id }}
+          retention-days: 3
+          if-no-files-found: ignore
+          path: |
+            /tmp/azure-inline-state-menu.png
+            /tmp/azure-release-list.png
+            /tmp/azure-release-legacy-layout.png
+            /tmp/azure-release-selection-demo.png
+            /tmp/azure-publisher-package.png
+            store/assets/settings-*-1280x800.png

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Inline work-item state editing — synthetic fixture</title>
+<style>
+  body { padding: 24px; font: 14px Arial; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+  th, td, [role='gridcell'], [role='columnheader'] { padding: 8px; text-align: left; }
+  th, td { border-bottom: 1px solid #ddd; }
+  .state-circle { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; background: #aaa; }
+  [role='grid'] > [role='row'] { display: grid; grid-template-columns: 80px 1fr 160px; }
+  .grid { margin: 20px 0; }
+  .grid-header-canvas, .grid-row { display: flex; height: 36px; }
+  .grid-header-column, .grid-cell { box-sizing: border-box; padding: 8px; }
+  .grid-header-column:nth-of-type(1), .grid-cell:nth-of-type(1) { width: 80px; }
+  .grid-header-column:nth-of-type(2), .grid-cell:nth-of-type(2) { width: 260px; }
+  .grid-header-column:nth-of-type(3), .grid-cell:nth-of-type(3) { width: 160px; }
+  .wit-card { padding: 12px; border: 1px solid #aaa; margin-bottom: 20px; }
+</style>
+<h1>Work-item states</h1>
+<table id="items"><thead><tr><th>ID</th><th>Title</th><th>State</th></tr></thead><tbody>
+  <tr data-item-id="701"><td><a href="/example/project/_workitems/edit/701">701</a></td><td>Fix search</td><td><span class="state-circle" aria-hidden="true"></span>New</td></tr>
+  <tr data-item-id="701"><td><a href="/example/project/_workitems/edit/701?duplicate=true">701</a></td><td>Fix search, duplicate view</td><td>New</td></tr>
+  <tr id="native-control" data-item-id="705"><td><a href="/example/project/_workitems/edit/705">705</a></td><td>Keep the native picker</td><td><select aria-label="Native State"><option>New</option><option>Active</option></select></td></tr>
+  <tr id="editing-row" data-item-id="706"><td><a href="/example/project/_workitems/edit/706">706</a></td><td><input aria-label="Title" value="Unsaved title"></td><td>New</td></tr>
+  <tr id="ambiguous-row" data-item-id="707"><td><a href="/example/project/_workitems/edit/707">707</a><a href="/example/project/_workitems/edit/708">708</a></td><td>Ambiguous</td><td>New</td></tr>
+</tbody></table>
+<div role="grid" id="aria-items">
+  <div role="row"><div role="columnheader">ID</div><div role="columnheader">Title</div><div role="columnheader">State</div></div>
+  <div role="row" data-item-id="702"><div role="gridcell">702</div><div role="gridcell">Custom request</div><div role="gridcell">Queued</div></div>
+</div>
+<div class="grid" id="legacy-items">
+  <div class="grid-header"><div class="grid-header-canvas"><div class="grid-header-column">Id</div><div class="grid-header-column">Title</div><div class="grid-header-column">State</div></div></div>
+  <div class="grid-content"><div class="grid-canvas"><div class="grid-row" data-item-id="703"><div class="grid-cell"><a href="/example/project/_workitems/edit/703">703</a></div><div class="grid-cell">Legacy task</div><div class="grid-cell">To Do</div></div></div></div>
+</div>
+<article class="wit-card" data-work-item-id="704"><a class="work-item-title" href="/example/project/_workitems/edit/704">Custom request on a card</a> · <span class="wit-state">Customer review</span></article>
+<article class="wit-card" data-work-item-id="709" contenteditable="true"><a href="/example/project/_workitems/edit/709">Editable content</a><span class="wit-state">New</span></article>
+<script>
+window.nativeStateRowClicks = 0;
+document.querySelectorAll("tr, [role='row'], .grid-row, .wit-card").forEach(row => row.addEventListener("click", () => window.nativeStateRowClicks++));
+</script>
+</html>

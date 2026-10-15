@@ -10,7 +10,7 @@
     <main>
       <header>
         <span class="mark" aria-hidden="true">✓</span>
-        <div><h1>Azure DevOps Niceties</h1><p>System theme · Copying · Selection totals</p></div>
+        <div><h1>Azure DevOps Niceties</h1><p>System theme · Copying · Selection totals · State editing</p></div>
       </header>
 
       <label class="toggle-row">
@@ -24,7 +24,7 @@
 
       <section aria-labelledby="privacy-heading" class="disclosure">
         <h2 id="privacy-heading">Your work-item data</h2>
-        <p>Enhanced copying reads work-item IDs, titles, types, and URLs locally and writes your chosen format to the clipboard. Release selections keep references in page memory while the list is open. Parent context requests information from your signed-in Azure DevOps organization. Preferences can sync through Chrome. Work-item content is not sent to the publisher. No analytics or ads.</p>
+        <p>Enhanced copying reads work-item IDs, titles, types, and URLs locally and writes your chosen format to the clipboard. Release selections keep references in page memory while the list is open. Quick-copy shortcuts read project work-item type categories from your signed-in Azure DevOps organization. Parent context requests information from your signed-in Azure DevOps organization. Preferences can sync through Chrome. Work-item content is not sent to the publisher. No analytics or ads.</p>
         <label class="toggle-row">
           <span><strong>Enable enhanced copying</strong><small>On by default · Turn off to keep native copying</small></span>
           <input id="data-consent" type="checkbox" role="switch" disabled>
@@ -33,6 +33,11 @@
         <label class="toggle-row">
           <span><strong>Enable selection summary</strong><small>On by default · Selected count and estimate totals from loaded rows</small></span>
           <input id="selection-summary" type="checkbox" role="switch" disabled>
+        </label>
+        <p>Inline state editing reads the current work-item revision and workflow states when you open a state picker. Choosing a new state immediately saves it to Azure DevOps using your signed-in session and normal permissions and rules.</p>
+        <label class="toggle-row">
+          <span><strong>Enable inline state editing</strong><small>On by default · Click a displayed State to change and save it</small></span>
+          <input id="inline-state-editing" type="checkbox" role="switch" disabled>
         </label>
       </section>
 

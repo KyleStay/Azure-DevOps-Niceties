@@ -6,6 +6,8 @@ const core = require("../src/work-item.js");
 const source = fs.readFileSync(require.resolve("../src/content.js"), "utf8").replace(/\}\)\(\);\s*$/, `globalThis.contentHelpers = {
   titleWithoutWorkItemPrefix, extractWorkItem, isWorkItemCopyControl, fetchParent,
   parentApiUrl, parentCache, activeParentLookups, nativeFallbackControls, reloadConsent, writeClipboard, showConfirmation,
+  loadReleaseCategories,
+  updateReleaseWidthHosts, setReleaseWidthHosts, releaseLists, updateReleaseColumns,
   copyForTest: workItem => copyWorkItem(workItem, "rich", null, ++latestCopyRequest), enabled: () => enabled
 }; })();`);
 
@@ -112,6 +114,197 @@ function row({ id = "12", url = "https://dev.azure.com/example/project/_workitem
 const child = { id: "12", title: "Child", type: "Bug", url: "https://dev.azure.com/example/project/_workitems/edit/12" };
 const api = "https://dev.azure.com/example/_apis/wit/workitems/900";
 const response = value => ({ ok: true, async json() { return value; } });
+
+const categoryPayload = { value: [
+  { referenceName: "Microsoft.RequirementCategory", workItemTypes: [{ name: "Requirement" }] },
+  { referenceName: "Microsoft.BugCategory", workItemTypes: [{ name: "Bug" }] },
+] };
+const releaseUrl = "https://dev.azure.com/example/project/_releaseProgress?releaseId=50";
+const releaseEntry = (page = releaseUrl) => ({ scope: new FakeElement(), page });
+
+function widthHost(parentElement) {
+  return { parentElement, dataset: {}, removeAttribute(name) {
+    if (name === "data-azure-niceties-release-width") delete this.dataset.azureNicetiesReleaseWidth;
+  } };
+}
+
+test("release column layout maps native cells rather than decorative row children", () => {
+  const h = harness();
+  function element(kind, textContent = "") {
+    return {
+      kind, textContent, dataset: {}, children: [], parentElement: null,
+      tagName: "DIV", attributes: {}, isConnected: true,
+      getAttribute(name) { return this.attributes[name] || null; },
+      setAttribute(name, value) { this.attributes[name] = value; },
+      removeAttribute(name) { delete this.attributes[name]; },
+      matches(selector) { return selector.includes("data-azure-niceties-release-column") && Boolean(this.dataset.azureNicetiesReleaseColumn); },
+      closest(selector) {
+        for (let node = this; node; node = node.parentElement) {
+          if (selector.includes("[role='row']") && node.kind === "row") return node;
+          if (selector.includes("[role='grid']") && node.kind === "grid") return node;
+        }
+        return null;
+      },
+      querySelectorAll(selector) {
+        const descendants = this.children.flatMap(child => [child, ...child.querySelectorAll("all")]);
+        if (selector === "all") return descendants;
+        if (selector.includes("[role='columnheader']")) return descendants.filter(child => child.kind === "header");
+        if (selector.startsWith("[role='gridcell']")) return descendants.filter(child => child.kind === "cell");
+        if (selector.startsWith("[role='row']")) return descendants.filter(child => child.kind === "row");
+        return [];
+      },
+      contains(child) { return this === child || this.children.some(node => node.contains(child)); },
+      append(...children) { for (const child of children) { child.parentElement = this; this.children.push(child); } },
+      prepend(...children) { for (const child of children) child.parentElement = this; this.children.unshift(...children); },
+      cloneNode() { const copy = element(this.kind); copy.dataset = { ...this.dataset }; copy.attributes = { ...this.attributes }; return copy; },
+      remove() { if (this.parentElement) this.parentElement.children = this.parentElement.children.filter(child => child !== this); },
+    };
+  }
+  h.context.document.createElement = tag => element(tag);
+  h.context.document.createElementNS = (_namespace, tag) => element(tag);
+  const scope = element("grid");
+  scope.parentElement = h.context.document.body;
+  const header = element("row");
+  const row = element("row");
+  const headers = ["Id", "Type", "Title", "State"].map(text => element("header", text));
+  const cells = ["701", "Product Backlog Item", "Keep the title visible", "Done"].map(text => element("cell", text));
+  const decorations = [element("decoration"), element("decoration")];
+  header.append(decorations[0], ...headers);
+  row.append(decorations[1], ...cells);
+  scope.append(header, row);
+  const entry = { scope, all: element("input"), columns: new Map(), copyColumns: new Map() };
+  h.updateReleaseColumns(entry, [{ row }]);
+  for (const columns of [headers, cells]) {
+    assert.deepEqual(columns.map(cell => cell.dataset.azureNicetiesReleaseField), ["id", "type", "title", "state"]);
+  }
+  assert.ok(decorations.every(node => node.dataset.azureNicetiesReleaseField === undefined));
+  assert.equal(row.children[0].dataset.azureNicetiesReleaseColumn, "copy");
+  assert.equal(row.children[1].dataset.azureNicetiesReleaseColumn, "select");
+});
+
+test("release width follows legacy header and virtual canvases through shrink-wrapped panel groups", () => {
+  const h = harness();
+  const panel = widthHost(h.context.document.body);
+  const group = widthHost(panel);
+  const scope = widthHost(group);
+  scope.closest = () => panel;
+  const header = widthHost(scope);
+  const headerCanvas = widthHost(header);
+  const viewport = widthHost(scope);
+  const canvas = widthHost(viewport);
+  const row = widthHost(canvas);
+  const entry = { scope, columns: new Map([[headerCanvas, {}], [row, {}]]) };
+  h.updateReleaseWidthHosts(entry);
+  for (const host of [group, header, viewport, canvas]) assert.equal(host.dataset.azureNicetiesReleaseWidth, "true");
+  for (const host of [panel, scope, row, h.context.document.body]) assert.equal(host.dataset.azureNicetiesReleaseWidth, undefined);
+  const replacementCanvas = widthHost(viewport);
+  row.parentElement = replacementCanvas;
+  h.updateReleaseWidthHosts(entry);
+  assert.equal(canvas.dataset.azureNicetiesReleaseWidth, undefined, "replaced canvases return to their native width");
+  assert.equal(replacementCanvas.dataset.azureNicetiesReleaseWidth, "true");
+  h.setReleaseWidthHosts(entry, new Set());
+  for (const host of [group, header, viewport, replacementCanvas]) assert.equal(host.dataset.azureNicetiesReleaseWidth, undefined);
+});
+
+test("shared release width hosts stay expanded until their last list is removed", () => {
+  const h = harness();
+  const shared = widthHost(h.context.document.body);
+  const left = { scope: {}, widthHosts: new Set() };
+  const right = { scope: {}, widthHosts: new Set() };
+  h.releaseLists.set(left.scope, left);
+  h.releaseLists.set(right.scope, right);
+  h.setReleaseWidthHosts(left, new Set([shared]));
+  h.setReleaseWidthHosts(right, new Set([shared]));
+  h.setReleaseWidthHosts(left, new Set());
+  assert.equal(shared.dataset.azureNicetiesReleaseWidth, "true");
+  h.setReleaseWidthHosts(right, new Set());
+  assert.equal(shared.dataset.azureNicetiesReleaseWidth, undefined);
+});
+
+test("release quick-copy categories use a project-scoped same-origin request and signed-in session", async () => {
+  for (const page of [releaseUrl, "https://example.visualstudio.com/Project%20One/_release?releaseId=50"]) {
+    const h = harness({ href: page, fetch: async (url, options) => {
+      const current = new URL(page);
+      assert.equal(url, `${current.origin}${current.pathname.split("/_release")[0]}/_apis/wit/workitemtypecategories?api-version=7.1`);
+      assert.equal(options.credentials, "include");
+      assert.equal(options.redirect, "error");
+      assert.ok(options.signal);
+      return response(categoryPayload);
+    } });
+    const entry = releaseEntry(page);
+    await h.loadReleaseCategories(entry);
+    assert.equal(entry.processState, "ready");
+    assert.deepEqual(entry.categories, { backlog: ["Requirement"], bugs: ["Bug"] });
+  }
+});
+
+test("release category failures disable quick copy without guessing or following redirected responses", async () => {
+  for (const result of [
+    { ok: false }, { ...response(categoryPayload), redirected: true },
+    { ...response(categoryPayload), url: "https://dev.azure.com/other/project/_apis/wit/workitemtypecategories?api-version=7.1" },
+    response({ value: [] }),
+  ]) {
+    const h = harness({ href: releaseUrl, fetch: async () => result });
+    const entry = releaseEntry();
+    await h.loadReleaseCategories(entry);
+    assert.equal(entry.processState, "unavailable");
+    assert.equal(entry.categories, null);
+  }
+});
+
+test("release category lookups stop without consent and never use an organization-wide route", async () => {
+  let requests = 0;
+  const fetch = async () => { requests++; return response(categoryPayload); };
+  const h = harness({ approved: false, href: releaseUrl, fetch });
+  await h.loadReleaseCategories(releaseEntry());
+  const noProject = "https://dev.azure.com/example/_release?releaseId=50";
+  const approved = harness({ href: noProject, fetch });
+  const entry = releaseEntry(noProject);
+  await approved.loadReleaseCategories(entry);
+  assert.equal(entry.processState, "unavailable");
+  assert.equal(requests, 0);
+});
+
+test("release category responses cannot carry across navigation or revoked copying", async () => {
+  for (const change of ["navigation", "revocation"]) {
+    let finish;
+    const h = harness({ href: releaseUrl, fetch: () => new Promise(resolve => { finish = resolve; }) });
+    const entry = releaseEntry();
+    const pending = h.loadReleaseCategories(entry);
+    if (change === "navigation") h.context.location.href = "https://dev.azure.com/other/project/_release?releaseId=1";
+    else {
+      h.context.azureNicetiesTestSettings.dataConsent = false;
+      await h.reloadConsent();
+    }
+    finish(response(categoryPayload));
+    await pending;
+    assert.equal(entry.categories, null);
+  }
+});
+
+test("release category timeout bounds hung requests and JSON, and cleanup rejects late responses", async () => {
+  for (const stage of ["fetch", "json"]) {
+    let finish;
+    const late = new Promise(resolve => { finish = resolve; });
+    const h = harness({ href: releaseUrl, timeout: 20, fetch: async () => stage === "fetch" ? late : { ok: true, json: () => late } });
+    const entry = releaseEntry();
+    await h.loadReleaseCategories(entry);
+    assert.equal(entry.processState, "unavailable");
+    assert.equal(entry.processController.signal.aborted, true);
+    finish(stage === "fetch" ? response(categoryPayload) : categoryPayload);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(entry.categories, null, "late results cannot re-enable quick copy");
+  }
+  let finish;
+  const h = harness({ href: releaseUrl, fetch: () => new Promise(resolve => { finish = resolve; }) });
+  const entry = releaseEntry();
+  const pending = h.loadReleaseCategories(entry);
+  entry.processController.abort();
+  await pending;
+  finish(response(categoryPayload));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(entry.categories, null);
+});
 
 test("explicit Title columns retain text resembling a work-item display prefix", () => {
   const h = harness();

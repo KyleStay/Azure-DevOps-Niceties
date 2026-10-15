@@ -24,6 +24,8 @@
   const RELEASE_SCOPE = "[role='grid'],[role='treegrid'],[role='table'],table,.grid,.bolt-table,.work-item-grid,.work-items-grid,.workitem-grid,.workitems-grid,.work-item-list,.workitems-list,.work-items-list,.release-work-items";
   const RELEASE_ACTIONS = "[data-azure-niceties-release-actions]";
   const RELEASE_COLUMN = "[data-azure-niceties-release-column]";
+  const RELEASE_HEADER_CELL = "[role='columnheader'],th,.grid-header-column,.bolt-table-header-cell";
+  const RELEASE_DATA_CELL = "[role='gridcell'],[role='cell'],td,.grid-cell,.bolt-table-cell";
 
   const COPY_CONTROL_SELECTOR = [
     "button[aria-label*='copy' i]",
@@ -247,22 +249,34 @@
     return { id, title, type: extractType(container, fields), url };
   }
 
+  function releaseField(name) {
+    return ({ title: "title", systemtitle: "title", type: "type", workitemtype: "type", systemworkitemtype: "type",
+      state: "state", systemstate: "state", id: "id", systemid: "id" })[
+      core.normalizeWhitespace(name).toLowerCase().replace(/[^a-z]/g, "")] || "";
+  }
+
+  function releaseHeaders(scope) {
+    return Array.from(scope.querySelectorAll(RELEASE_HEADER_CELL))
+      .filter((cell) => cell.closest(RELEASE_SCOPE) === scope && !cell.matches(RELEASE_COLUMN));
+  }
+
+  function releaseCells(row) {
+    return Array.from(row.querySelectorAll(RELEASE_DATA_CELL))
+      .filter((cell) => cell.closest(RELEASE_ROW) === row && !cell.matches(RELEASE_COLUMN));
+  }
+
   function listFields(row, headerCache = new Map()) {
     if (!row.matches(RELEASE_ROW)) return {};
     const gridSelector = RELEASE_SCOPE;
     const grid = row.closest(gridSelector);
     if (!grid) return {};
-    const field = (name) => ({ title: "title", systemtitle: "title", type: "type", workitemtype: "type", systemworkitemtype: "type", id: "id", systemid: "id" })[
-      core.normalizeWhitespace(name).toLowerCase().replace(/[^a-z]/g, "")];
-    if (!headerCache.has(grid)) headerCache.set(grid, Array.from(grid.querySelectorAll("[role='columnheader'],th,.grid-header-column,.bolt-table-header-cell"))
-      .filter((header) => header.closest(gridSelector) === grid && !header.matches(RELEASE_COLUMN))
+    if (!headerCache.has(grid)) headerCache.set(grid, releaseHeaders(grid)
       .map((header, index) => ({ index: header.getAttribute("aria-colindex") || String(index + 1),
-        field: field(attributeValue(header, ["data-field", "data-column-name", "data-column-key"]) || header.textContent) })));
+        field: releaseField(attributeValue(header, ["data-field", "data-column-name", "data-column-key"]) || header.textContent) })));
     const headers = headerCache.get(grid);
     const fields = {};
-    Array.from(row.querySelectorAll("[role='gridcell'],[role='cell'],td,.grid-cell,.bolt-table-cell"))
-      .filter((cell) => cell.closest(RELEASE_ROW) === row && !cell.matches(RELEASE_COLUMN)).forEach((cell, index) => {
-        const name = field(attributeValue(cell, ["data-field", "data-column-name", "data-column-key"]))
+    releaseCells(row).forEach((cell, index) => {
+        const name = releaseField(attributeValue(cell, ["data-field", "data-column-name", "data-column-key"]))
           || headers.find((header) => header.index === (cell.getAttribute("aria-colindex") || String(index + 1)))?.field;
         if (name) {
           const source = cell.querySelector(RELEASE_ACTIONS) ? cell.cloneNode(true) : cell;
@@ -333,6 +347,9 @@
   }
 
   function removeReleaseEntry(entry) {
+    entry.processController?.abort();
+    setReleaseWidthHosts(entry, new Set());
+    entry.scope.removeAttribute("data-azure-niceties-release-list");
     entry.toolbar.remove();
     for (const [row, controls] of entry.rows) {
       controls.actions.remove();
@@ -353,19 +370,44 @@
     entry.columns.get(row)?.remove();
     entry.copyColumns.get(row)?.remove();
     row.removeAttribute("data-azure-niceties-release-column-layout");
-    row.removeAttribute("data-azure-niceties-release-column-relative");
-    row.style.removeProperty("--azure-niceties-native-padding");
-    row.style.removeProperty("--azure-niceties-native-end-padding");
+    for (const cell of row.querySelectorAll("[data-azure-niceties-release-field]")) cell.removeAttribute("data-azure-niceties-release-field");
     entry.columns.delete(row);
     entry.copyColumns.delete(row);
+  }
+
+  function setReleaseWidthHosts(entry, hosts) {
+    for (const host of entry.widthHosts || []) {
+      if (!hosts.has(host) && !Array.from(releaseLists.values()).some((other) => other !== entry && other.widthHosts?.has(host))) {
+        host.removeAttribute("data-azure-niceties-release-width");
+      }
+    }
+    for (const host of hosts) host.dataset.azureNicetiesReleaseWidth = "true";
+    entry.widthHosts = hosts;
+  }
+
+  function updateReleaseWidthHosts(entry) {
+    const hosts = new Set();
+    // Legacy grids size their header, viewport and virtual canvas independently.
+    // Rows at 100% still stay narrow unless each containing canvas can stretch.
+    for (const row of entry.columns.keys()) {
+      for (let host = row.parentElement; host && host !== entry.scope; host = host.parentElement) hosts.add(host);
+    }
+    const panel = entry.scope.closest("[role='dialog'],.bolt-panel,.ms-Panel,.ui-dialog");
+    for (let host = entry.scope.parentElement; host && host !== panel && host !== document.body; host = host.parentElement) {
+      hosts.add(host);
+      if (!panel) break;
+    }
+    setReleaseWidthHosts(entry, hosts);
   }
 
   function updateReleaseColumns(entry, records) {
     const rows = new Set(Array.from(entry.scope.querySelectorAll(RELEASE_ROW)).filter((row) =>
       row.closest(RELEASE_SCOPE) === entry.scope && !row.closest(`${FORM_SELECTOR},[data-azure-niceties-release-header]`)));
     for (const { row } of records) rows.add(row);
-    const headerCell = Array.from(entry.scope.querySelectorAll("[role='columnheader'],th,.grid-header-column,.bolt-table-header-cell"))
-      .find((cell) => cell.closest(RELEASE_SCOPE) === entry.scope && !cell.matches(RELEASE_COLUMN));
+    const headerCells = releaseHeaders(entry.scope);
+    const headerCell = headerCells[0];
+    const fields = headerCells.map((cell, index) => ({ index: cell.getAttribute("aria-colindex") || String(index + 1),
+      field: releaseField(attributeValue(cell, ["data-field", "data-column-name", "data-column-key"]) || cell.textContent) }));
     let header = headerCell && (headerCell.closest(RELEASE_ROW) || headerCell.parentElement);
     if (header === entry.scope) header = null;
     if (header && entry.header) { entry.header.remove(); entry.header = null; }
@@ -382,6 +424,14 @@
     rows.add(header);
     for (const row of entry.columns.keys()) if (!rows.has(row)) removeReleaseColumn(entry, row);
     for (const row of rows) {
+      // Keep native cells in DOM order so extraction, virtual rows, and selection
+      // summaries still use the original field indices. CSS changes their order.
+      const nativeCells = row === header ? headerCells : releaseCells(row);
+      nativeCells.forEach((child, index) => {
+        child.dataset.azureNicetiesReleaseField = releaseField(attributeValue(child, ["data-field", "data-column-name", "data-column-key"]))
+          || fields.find((field) => field.index === (child.getAttribute("aria-colindex") || String(index + 1)))?.field || "other";
+      });
+      row.dataset.azureNicetiesReleaseColumnLayout = "compact";
       let cell = entry.columns.get(row);
       let copyCell = entry.copyColumns.get(row);
       if (!cell || cell.parentElement !== row || !copyCell || copyCell.parentElement !== row) {
@@ -395,23 +445,17 @@
         if (row === header && tableRow) cell.scope = "col";
         copyCell = cell.cloneNode(false);
         copyCell.dataset.azureNicetiesReleaseColumn = "copy";
-        if (row === header) copyCell.textContent = "Copy";
-        if (!tableRow) {
-          row.removeAttribute("data-azure-niceties-release-column-layout");
-          row.removeAttribute("data-azure-niceties-release-column-relative");
-          const layout = getComputedStyle(row);
-          row.style.setProperty("--azure-niceties-native-padding", layout.paddingInlineStart);
-          row.style.setProperty("--azure-niceties-native-end-padding", layout.paddingInlineEnd);
-          row.dataset.azureNicetiesReleaseColumnLayout = "overlay";
-          if (layout.position === "static") row.dataset.azureNicetiesReleaseColumnRelative = "true";
+        if (row === header) {
+          copyCell.setAttribute("aria-label", "Copy");
+          copyCell.append(releaseCopyIcon());
         }
-        row.prepend(cell);
-        row.append(copyCell);
+        row.prepend(copyCell, cell);
         entry.columns.set(row, cell);
         entry.copyColumns.set(row, copyCell);
       }
       if (row === header && !cell.contains(entry.all)) cell.append(entry.all);
     }
+    updateReleaseWidthHosts(entry);
     const colgroup = entry.scope.matches("table") && entry.scope.querySelector(":scope > colgroup");
     if (colgroup && entry.col?.parentElement !== colgroup) {
       entry.col?.remove();
@@ -423,7 +467,7 @@
       entry.copyCol?.remove();
       entry.copyCol = document.createElement("col");
       entry.copyCol.dataset.azureNicetiesReleaseColumn = "copy";
-      colgroup.append(entry.copyCol);
+      colgroup.prepend(entry.copyCol);
     }
   }
 
@@ -466,10 +510,27 @@
     releasePrompt.enable.hidden = enabled;
   }
 
+  function releaseCopyIcon() {
+    const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    icon.setAttribute("viewBox", "0 0 16 16");
+    icon.setAttribute("width", "16");
+    icon.setAttribute("height", "16");
+    icon.setAttribute("aria-hidden", "true");
+    icon.setAttribute("focusable", "false");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", "M6 1.5h7.5v9H11M2.5 5.5h7.5v9H2.5z");
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "currentColor");
+    path.setAttribute("stroke-linejoin", "round");
+    icon.append(path);
+    return icon;
+  }
+
   function releaseButton(label, kind) {
     const button = document.createElement("button");
     button.type = "button";
-    button.textContent = label;
+    if (kind === "item") button.append(releaseCopyIcon());
+    else button.textContent = label;
     button.dataset.azureNicetiesReleaseCopy = kind;
     button.title = "One linked reference per item. Shift: Markdown; Alt/Option: IDs; Ctrl/Command: URLs; Shift+Alt/Option: branch names.";
     return button;
@@ -477,6 +538,61 @@
 
   function releaseType(item) {
     return core.shortType(item.type).toLowerCase();
+  }
+
+  async function loadReleaseCategories(entry) {
+    entry.processController?.abort();
+    if (!enabled) return;
+    const controller = new AbortController();
+    entry.processController = controller;
+    entry.categories = null;
+    entry.processState = "loading";
+    const active = () => enabled && !controller.signal.aborted && entry.processController === controller
+      && entry.scope.isConnected && entry.page === location.href;
+    const deadline = window.setTimeout(() => controller.abort(), PARENT_LOOKUP_TIMEOUT_MS);
+    try {
+      const current = new URL(entry.page);
+      const prefix = current.pathname.split(/\/_[^/]*(?:\/|$)/)[0];
+      // Category routes require a project; never fall back to an organization route.
+      const parts = prefix.split("/").filter(Boolean);
+      if (parts.length < (current.hostname === "dev.azure.com" ? 2 : 1)) throw new Error("No project in release URL");
+      const url = `${current.origin}${prefix}/_apis/wit/workitemtypecategories?api-version=7.1`;
+      const cancelled = new Promise((_, reject) => controller.signal.addEventListener("abort", () => reject(new Error("Cancelled")), { once: true }));
+      const categories = await Promise.race([(async () => {
+        const response = await fetch(url, { credentials: "include", redirect: "error", signal: controller.signal });
+        if (!active() || !response.ok || response.redirected || (response.url && response.url !== url)) return null;
+        return core.releaseCategories(await response.json());
+      })(), cancelled]);
+      if (active()) entry.categories = categories;
+    } catch (_) {
+      // Manual type selection remains available when project categories cannot load.
+    } finally {
+      window.clearTimeout(deadline);
+      if (entry.processController === controller) {
+        entry.processState = entry.categories ? "ready" : "unavailable";
+        if (enabled && releaseLists.get(entry.scope) === entry && entry.scope.isConnected && entry.page === location.href) {
+          updateReleaseEntry(entry, releaseRecords(entry.scope));
+        }
+      }
+    }
+  }
+
+  function updateReleaseQuickCopy(entry, loaded) {
+    const types = entry.categories?.backlog.map((type) => core.shortType(type).toLowerCase()) || [];
+    const noun = types.length === 1 ? ({ pbi: "PBIs", us: "stories", issue: "issues", requirement: "requirements" })[types[0]] || "backlog items" : "backlog items";
+    for (const [button, kind, label] of [
+      [entry.backlogButton, "backlog", `Copy all ${noun}`],
+      [entry.bugsBacklogButton, "bugs-and-backlog", `Copy all bugs + ${noun}`],
+    ]) {
+      const count = core.filterReleaseItems([...loaded.values()], kind, entry.categories).length;
+      const text = `${label} (${count})`;
+      if (button.textContent !== text) button.textContent = text;
+      button.disabled = entry.processState !== "ready" || count === 0;
+      const help = entry.processState === "loading" ? "Loading project work-item types."
+        : entry.processState === "unavailable" ? "Choose types below, then use Copy selected."
+        : "Copies loaded, visible items of these types. Shift: Markdown; Alt/Option: IDs; Ctrl/Command: URLs; Shift+Alt/Option: branch names.";
+      if (button.title !== help) button.title = help;
+    }
   }
 
   function updateReleaseTypes(entry, loaded) {
@@ -520,6 +636,7 @@
   }
 
   function createReleaseEntry(scope) {
+    scope.dataset.azureNicetiesReleaseList = "true";
     const toolbar = document.createElement("div");
     toolbar.dataset.azureNicetiesReleaseToolbar = "true";
     toolbar.setAttribute("role", "group");
@@ -531,6 +648,9 @@
     const selectedButton = releaseButton("Copy selected (0)", "selected");
     const allButton = releaseButton("Copy all loaded", "all");
     allButton.dataset.azureNicetiesCopyList = "true";
+    const bugsBacklogButton = releaseButton("Copy all bugs + backlog items (0)", "bugs-and-backlog");
+    const backlogButton = releaseButton("Copy all backlog items (0)", "backlog");
+    bugsBacklogButton.disabled = backlogButton.disabled = true;
     const clear = document.createElement("button");
     clear.type = "button";
     clear.textContent = "Clear selection";
@@ -541,15 +661,19 @@
     const legend = document.createElement("legend");
     legend.textContent = "Select by type (selected/available)";
     typeChoices.append(legend);
-    toolbar.append(selectedButton, allButton, clear, typeChoices, hint);
+    toolbar.append(selectedButton, allButton, bugsBacklogButton, backlogButton, clear, typeChoices, hint);
     scope.before(toolbar);
-    return { scope, toolbar, all, selectedButton, allButton, clear, typeChoices, types: new Map(), selected: new Map(), rows: new Map(), columns: new Map(), copyColumns: new Map(), page: location.href };
+    const entry = { scope, toolbar, all, selectedButton, allButton, bugsBacklogButton, backlogButton, clear, typeChoices,
+      types: new Map(), selected: new Map(), rows: new Map(), columns: new Map(), copyColumns: new Map(), page: location.href };
+    loadReleaseCategories(entry);
+    return entry;
   }
 
   function updateReleaseEntry(entry, records) {
     updateReleaseColumns(entry, records);
     const unique = new Map();
     for (const record of records) if (!unique.has(record.key)) unique.set(record.key, record.item);
+    updateReleaseQuickCopy(entry, unique);
     for (const [key, item] of unique) if (entry.selected.has(key)) entry.selected.set(key, item);
     updateReleaseTypes(entry, unique);
     const current = new Set(records.map((record) => record.row));
@@ -668,6 +792,7 @@
         for (const control of entry.types.values()) control.label.remove();
         entry.types.clear();
         entry.page = location.href;
+        loadReleaseCategories(entry);
       }
       updateReleaseEntry(entry, records);
     }
@@ -697,17 +822,19 @@
       && (entry.scope.contains(target) || entry.toolbar.contains(target))) || null;
   }
 
-  async function copyReleaseItems(entry, mode, control, selectedOnly) {
+  async function copyReleaseItems(entry, mode, control, kind = "all") {
     const requestId = ++latestCopyRequest;
     const page = location.href;
     const records = releaseRecords(entry.scope);
+    const loaded = new Map();
     const chosen = new Map();
     for (const { key, item } of records) {
+      if (!loaded.has(key)) loaded.set(key, item);
       if (entry.selected.has(key) && !chosen.has(key)) chosen.set(key, item);
     }
     for (const [key, item] of chosen) entry.selected.set(key, item);
     for (const [key, item] of entry.selected) if (!chosen.has(key)) chosen.set(key, item);
-    const items = selectedOnly ? [...chosen.values()] : records.map((record) => record.item);
+    const items = core.filterReleaseItems(kind === "selected" ? [...chosen.values()] : [...loaded.values()], kind, entry.categories);
     const preferences = await settings();
     if (location.href !== page || !entry.scope.isConnected) return;
     const formatted = core.formatWorkItems(items, { mode, branchPrefix: preferences.branchPrefix });
@@ -1135,9 +1262,10 @@
         updateReleaseEntry(entry, releaseRecords(entry.scope));
         return;
       }
-      if (clicked === entry.allButton || clicked === entry.selectedButton) {
+      if ([entry.allButton, entry.selectedButton, entry.bugsBacklogButton, entry.backlogButton].includes(clicked)) {
         event.preventDefault(); event.stopImmediatePropagation();
-        copyReleaseItems(entry, core.modeFromModifiers(event), clicked, clicked === entry.selectedButton).catch(() => {
+        if (clicked.disabled) return;
+        copyReleaseItems(entry, core.modeFromModifiers(event), clicked, clicked.dataset.azureNicetiesReleaseCopy).catch(() => {
           const status = confirmationStatus();
           if (status) status.textContent = "Could not copy work items. Try again.";
         });
@@ -1230,7 +1358,7 @@
       && !event.target.closest?.(FORM_SELECTOR)
       && (!isEditableTarget(event.target) || ownSelection) && !window.getSelection?.().toString()) {
       event.preventDefault(); event.stopImmediatePropagation();
-      copyReleaseItems(releaseEntry, "rich", releaseEntry.selectedButton, true).catch(() => {});
+      copyReleaseItems(releaseEntry, "rich", releaseEntry.selectedButton, "selected").catch(() => {});
       return;
     }
     if (!event.shiftKey || !event.altKey || (event.code !== "KeyC" && event.code !== "KeyB")) return;
