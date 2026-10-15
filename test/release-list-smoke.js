@@ -265,12 +265,15 @@ async function runReleaseListSmoke(browser, extensionId) {
         assert.ok(layout.titles.every(cell => cell.width > 120 && Math.abs(cell.x - layout.titles[0].x) < 2), "all 35 native titles and the header align with useful text space");
         assert.ok(layout.contentWidth > 120, "nested title content escapes its old 24px width");
         assert.ok(layout.toolbarHeight <= (width === 360 ? 80 : 44), "closed toolbar stays compact instead of stacking every option");
-        await page.screenshot({ path: path.join(os.tmpdir(), `azure-release-nested-${width}.png`) });
         await page.locator("[data-azure-niceties-release-menu='copy'] > summary").click();
         assert.equal(await page.locator("[data-azure-niceties-release-copy='backlog']").isVisible(), true, "quick-copy choices remain available in the menu");
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth), false, "open menu fits the frame");
         await page.keyboard.press("Escape");
         assert.equal(await page.locator("[data-azure-niceties-release-copy='backlog']").isVisible(), false, "Escape dismisses the menu");
+        assert.equal(await (await typeChoice("Bug")).isVisible(), true);
+        await page.locator("h1").click();
+        assert.equal(await page.locator("[data-azure-niceties-release-menu][open]").count(), 0, "clicking outside dismisses type choices");
+        await page.screenshot({ path: path.join(os.tmpdir(), `azure-release-nested-${width}.png`) });
       }
       await (await typeChoice("Bug")).check();
       await page.getByRole("button", { name: "Copy selected (7)", exact: true }).click({ modifiers: ["Alt"] });
@@ -333,6 +336,7 @@ async function runReleaseListSmoke(browser, extensionId) {
       assert.equal(await page.locator("[data-azure-niceties-summary]").evaluate(panel => panel.closest("[role='dialog']")?.getAttribute("aria-label")), "Stage work items", "summary stays in the release stage sheet stacking context");
       assert.equal(await page.evaluate(() => window.nativeRowClicks), 0, "owned selection controls do not activate native row clicks");
       await page.locator("textarea").evaluate(textarea => { textarea.hidden = true; });
+      await page.keyboard.press("Escape");
       await page.screenshot({ path: path.join(os.tmpdir(), "azure-release-selection-demo.png") });
       fs.copyFileSync(path.join(os.tmpdir(), "azure-release-selection-demo.png"), path.resolve(__dirname, "../store/assets/release-selection-demo-1280x800.png"));
       await page.getByRole("button", { name: "Copy selected (2)", exact: true }).click();
@@ -370,6 +374,7 @@ async function runReleaseListSmoke(browser, extensionId) {
       await recycled.waitFor();
       const recycledRow = page.locator("#items [role='row']").nth(3);
       assert.equal(await recycledRow.locator("[data-azure-niceties-release-actions] a").getAttribute("href"), "https://dev.azure.com/example/project/_workitems/edit/605");
+      await page.keyboard.press("Escape");
       await recycled.click();
       await recycledRow.getByRole("checkbox", { name: "Select TC 605: Verify smoke test", exact: true }).check();
       await page.waitForFunction(() => document.querySelector("[data-azure-niceties-summary]")?.textContent.includes("Test Case: 1"));
