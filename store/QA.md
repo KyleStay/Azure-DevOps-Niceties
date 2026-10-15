@@ -1,3 +1,11 @@
+# State list compatibility — 0.6.5
+
+Prepared October 15, 2026. The State editor now keeps nested item metadata within its structural work-item row, resolves split presentation-table headers, recognizes field-reference metadata and decorated column labels, ignores hidden native editors, and rescans style-only visibility changes. Separate native tables retain independent header mappings. Visible unsaved inputs and ambiguous or conflicting item identities remain protected.
+
+All 185 Node tests pass, including 13 new compatibility regressions. Eleven of the initial compatibility cases failed against 0.6.4 before the fixes; all pass with the revised discovery code. Browser coverage adds controlled release-work-item, sprint-backlog, and product-backlog routes, each verifying picker opening, explicit revision-checked saving, cancellation and late-visible lists. The workflow repeats the full suite against the extracted upload ZIP. Final execution evidence is recorded in the release handoff. These fixtures do not establish the markup of the user's unavailable authenticated tab.
+
+The 16-file runtime ZIP SHA-256 is `cf9b38ac4d5c890df660c048c6fba6c3b102bad3b27e21364ff3b354742d6663`.
+
 # Update package — 0.6.4
 
 Prepared October 15, 2026. The runtime is the reviewed work-item-controls implementation below with manifest/package versions raised from 0.6.3 to 0.6.4. The runtime ZIP contains 16 allowlisted files and passed ZIP integrity, manifest-reference, and version checks. Its SHA-256 is `4abd89d2cde91be2985547ee8b410135a9f1f01126d98c66eede58c69cf94178`. The public privacy policy matched `docs/privacy.html` byte-for-byte on October 15, 2026.

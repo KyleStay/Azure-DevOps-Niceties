@@ -51,7 +51,7 @@ References use one clean linked `TYPE ID: Title` per line with no extra blank li
 
 ## Change a work-item state from a list
 
-Click a displayed **State** in a table, query, backlog, release list, or work-item card to open its state picker. Choosing a different state saves it immediately to Azure DevOps using your signed-in session. Workflow choices come from the item’s actual project and type, including custom processes. Opening the picker, moving keyboard focus, or pressing Escape makes no changes.
+Click a displayed **State** in a table, query, Sprints → Backlog, product backlog, release list, or work-item card to open its state picker. Choosing a different state saves it immediately to Azure DevOps using your signed-in session. Workflow choices come from the item’s actual project and type, including custom processes. Opening the picker, moving keyboard focus, or pressing Escape makes no changes.
 
 The extension checks the work-item revision before saving and respects Azure DevOps permissions and workflow rules. Conflicting edits require reopening the picker; transitions needing additional fields show an error and an **Open work item** link. An unconfirmed save is never retried automatically. Confirmed changes update other displayed copies of that item. Existing native state editors, ambiguous rows, and rows with unsaved input are left alone. Lists must expose an identifiable work-item ID and a readable state field; no work-item API calls occur until a picker is opened.
 
@@ -99,9 +99,9 @@ Browser verification loads the extension into a disposable headless Chromium pro
 
 ## Prepare a Web Store release
 
-After verification, run `npm run package`. It creates an allowlisted runtime ZIP and a complete submission kit under `release/0.6.4/`, with checksums and a standalone submission guide. The listing, privacy policy, image assets, release evidence, and dashboard steps live in [store/SUBMISSION.md](store/SUBMISSION.md).
+After verification, run `npm run package`. It creates an allowlisted runtime ZIP and a complete submission kit under `release/0.6.5/`, with checksums and a standalone submission guide. The listing, privacy policy, image assets, release evidence, and dashboard steps live in [store/SUBMISSION.md](store/SUBMISSION.md).
 
-Open `release/0.6.4/publish.html` or the [publishing helper](https://kylestay.github.io/Azure-DevOps-Niceties/publish.html) for copy-and-paste fields and one-click ZIP, submission-guide, and image downloads. This standalone file is generated from the reviewed documents and works offline. Run `npm run test:publisher` to verify its clipboard actions, downloads, private-note handling, and mobile layout in disposable Chromium.
+Open `release/0.6.5/publish.html` or the [publishing helper](https://kylestay.github.io/Azure-DevOps-Niceties/publish.html) for copy-and-paste fields and one-click ZIP, submission-guide, and image downloads. This standalone file is generated from the reviewed documents and works offline. Run `npm run test:publisher` to verify its clipboard actions, downloads, private-note handling, and mobile layout in disposable Chromium.
 
 The public [privacy policy](https://kylestay.github.io/Azure-DevOps-Niceties/privacy.html) is hosted with GitHub Pages from `docs/` on `main`. When updating `store/privacy.html`, run `npm run privacy:sync` to update the published copy. Keep its Markdown version consistent. Run `npm run check:public` before publishing changes; only synthetic Azure instance URLs belong in this repository.
 

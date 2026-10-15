@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Work-item State controls — synthetic cross-view sample</title>
+<style>
+body { margin: 24px; font: 14px Arial; }
+table { width: 100%; border-collapse: collapse; }
+th, td, [role='columnheader'], [role='gridcell'] { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+.headers, [role='row']:not(tr) { display: grid; grid-template-columns: 80px 1fr 160px; }
+section { margin-bottom: 28px; }
+.sort-hint { font-size: 11px; margin-left: 8px; }
+</style>
+<h1>Work-item State controls</h1>
+<p>Synthetic sample — release work items, sprint backlog, and product backlog.</p>
+<section role="treegrid" aria-label="Split backlog grid">
+  <div role="row" class="headers"><div role="columnheader">ID</div><div role="columnheader">Title</div><div role="columnheader"><span>State</span><span class="sort-hint">Sort descending</span></div></div>
+  <table role="presentation"><tbody><tr id="split-row">
+    <td></td><td><a class="work-item-card-title" data-item-id="720" href="/example/project/_workitems/edit/720">Nested item metadata and hidden native editor</a><input hidden value="Native editor"></td><td>New</td>
+  </tr></tbody></table>
+</section>
+<section role="grid" aria-label="Fields without native links">
+  <div role="row"><div role="columnheader">ID</div><div role="columnheader">Title</div><div role="columnheader">Workflow</div></div>
+  <div role="row" id="field-row"><div role="gridcell">721</div><div role="gridcell">State field reference metadata</div><div role="gridcell" data-field-reference-name="System.State">New</div></div>
+</section>
+<section role="grid" aria-label="Late-visible list" id="late-list" style="display: none">
+  <div role="row"><div role="columnheader">ID</div><div role="columnheader">Title</div><div role="columnheader">State</div></div>
+  <div role="row" id="late-row"><div role="gridcell">722</div><div role="gridcell">Panel opened by a style change</div><div role="gridcell">New</div></div>
+</section>
+<section role="grid" aria-label="Unsaved edits stay native">
+  <div role="row"><div role="columnheader">ID</div><div role="columnheader">Title</div><div role="columnheader">State</div></div>
+  <div role="row" data-item-id="723" id="unsaved-row"><div role="gridcell">723</div><div role="gridcell"><input value="Unsaved title"></div><div role="gridcell">New</div></div>
+</section>
+</html>

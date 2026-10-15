@@ -4,38 +4,27 @@ const { findTargets, nativeTextNodes } = require("../src/state-editor.js");
 
 const pageUrl = "https://dev.azure.com/example/project/_queries/query/1";
 function fixture({ id = "701", cellId = id, state = "New", links, linked = true, explicit = false, card = false, nativeControl = false, editing = false } = {}) {
-  function element(attributes = {}, text = "") {
-    return {
-      attributes, childNodes: [{ nodeType: 3, nodeValue: text }],
-      get textContent() { return this.childNodes.map(node => node.nodeValue || node.textContent || "").join(""); },
-      getAttribute(name) { return this.attributes[name] ?? null; },
-      hasAttribute(name) { return Object.hasOwn(this.attributes, name); },
-      matches() { return false; },
-      querySelector() { return null; },
-      querySelectorAll() { return []; },
-    };
-  }
-  const scope = element();
-  const row = element(card ? { "data-work-item-id": id } : { "data-item-id": id });
-  const headers = ["ID", "Title", "State"].map(text => element({}, text));
-  const cells = [element({}, cellId), element({}, "Improve search"), element(explicit ? { "data-field": "System.State" } : {}, state)];
-  const anchors = links !== undefined ? links.map(url => element({ href: url }))
-    : linked ? [element({ href: `/example/project/_workitems/edit/${id}` })] : [];
-  for (const header of headers) header.closest = () => scope;
-  for (const cell of [...cells, ...anchors]) cell.closest = selector => selector.startsWith("[role='row']") ? row : null;
-  cells[2].matches = selector => selector.includes(".wit-state") && card;
-  if (nativeControl) cells[2].querySelectorAll = () => [element()];
-  row.closest = selector => selector.startsWith("[role='grid']") ? card ? null : scope : null;
-  row.matches = () => card;
-  row.querySelector = () => editing ? element() : null;
-  row.querySelectorAll = selector => {
-    if (selector.startsWith("[role='gridcell']")) return card ? [] : cells;
-    if (selector.startsWith("[data-field]")) return explicit || card ? [cells[2]] : [];
-    if (selector.startsWith("a[href*=")) return anchors;
-    return [];
+  const page = require("./state-editor-dom.js").fixture();
+  const { document } = page;
+  const create = (tag, attributes = {}, text = "") => {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, value);
+    node.textContent = text;
+    return node;
   };
-  scope.querySelectorAll = () => headers;
-  const document = { querySelectorAll: () => [row] };
+  const scope = document.body.querySelector("table");
+  const row = card ? create("article", { class: "wit-card", "data-work-item-id": id }) : page.row;
+  const cells = card ? [create("span"), create("span"), create("span", { class: "wit-state" })] : page.cells;
+  row.setAttribute(card ? "data-work-item-id" : "data-item-id", id);
+  if (card) { scope.remove(); row.append(...cells); document.body.append(row); }
+  cells[0].textContent = cellId;
+  cells[1].textContent = "Improve search";
+  cells[2].textContent = state;
+  if (explicit) cells[2].setAttribute("data-field", "System.State");
+  const urls = links !== undefined ? links : linked ? [`/example/project/_workitems/edit/${id}`] : [];
+  for (const url of urls) cells[1].append(create("a", { href: url }, "Open"));
+  if (nativeControl) cells[2].append(create("select"));
+  if (editing) cells[1].append(create("input"));
   return { document, row, cells, scope, targets: () => findTargets(document, pageUrl, () => true) };
 }
 
@@ -91,14 +80,14 @@ test("hidden rows, hidden states and editable containers do not receive state co
 
 test("generic numeric list entries outside work-item views need a verified work-item identity", () => {
   const page = fixture({ linked: false });
-  page.scope.querySelectorAll = () => [];
+  page.scope.children[0].remove();
   page.cells[2].attributes["data-field"] = "System.State";
   assert.deepEqual(findTargets(page.document, "https://dev.azure.com/example/project/_git/repo", () => true), []);
 });
 
 test("work-item queries can edit states even when the Title column is not displayed", () => {
   const page = fixture({ linked: false });
-  page.scope.querySelectorAll = () => [];
+  page.scope.children[0].remove();
   page.cells[2].attributes["data-field"] = "System.State";
   assert.equal(page.targets()[0].id, "701");
 });

@@ -4,7 +4,7 @@ const vm = require("node:vm");
 const { fakeTimers } = require("./fake-timers.js");
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
-function fixture({ saveError = null, holdRead = false, holdSave = false } = {}) {
+function fixture({ saveError = null, holdRead = false, holdSave = false, pageUrl = "https://dev.azure.com/example/project/_queries/query/1" } = {}) {
   const handlers = new Map();
   const timers = fakeTimers();
   let notify;
@@ -93,7 +93,7 @@ function fixture({ saveError = null, holdRead = false, holdSave = false } = {}) 
   row.append(...cells); table.append(header, row); document.body.append(table);
   const root = {
     URL, AbortController,
-    document, location: { href: "https://dev.azure.com/example/project/_queries/query/1" }, innerWidth: 1024, innerHeight: 768,
+    document, location: { href: pageUrl }, innerWidth: 1024, innerHeight: 768,
     AzureNicetiesWorkItem: require("../src/work-item.js"), AzureNicetiesStateClient: require("../src/state-client.js"),
     setTimeout: timers.setTimeout, clearTimeout: timers.clearTimeout, addEventListener() {},
     getComputedStyle: () => ({ visibility: "visible", opacity: "1" }),
