@@ -408,6 +408,7 @@ async function runReleaseListSmoke(browser, extensionId) {
       assert.equal(await (await typeChoice("PBI")).count(), 1, "long and abbreviated types share a choice");
       await (await typeChoice("PBI")).check();
       await page.waitForFunction(() => document.querySelector("[data-azure-niceties-summary] > summary")?.textContent === "2 selected · Effort: 8");
+      await page.keyboard.press("Escape");
       await page.getByRole("checkbox", { name: "Select PBI 601: Improve search results", exact: true }).uncheck();
       assert.equal(await (await typeChoice("PBI")).evaluate(input => input.indeterminate), true, "manual partial selections update the type checkbox");
       await (await typeChoice("PBI")).focus();
