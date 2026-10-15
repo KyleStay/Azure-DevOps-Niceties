@@ -1,15 +1,15 @@
 # Chrome Web Store submission kit
 
-Prepared October 15, 2026, for version 0.6.5. This updates the existing extension with compact release lists, process-aware bulk copying, and inline state editing. The kit contains the runtime ZIP, current screenshots, icon, promotional image, listing, privacy answers, release notes, and reviewer procedure. See QA.md for actual checks and limits. The matching public privacy policy was verified byte-for-byte on October 15, 2026. Publisher account details, private reviewer access, distribution choices, and dashboard submission remain publisher steps. Store approval is determined by Google.
+Prepared October 15, 2026, for version 0.6.6. This updates the existing extension with compact release lists, process-aware bulk copying, and inline state editing. The kit contains the runtime ZIP, current screenshots, icon, promotional image, listing, privacy answers, release notes, and reviewer procedure. See QA.md for actual checks and limits. The matching public privacy policy was verified byte-for-byte on October 15, 2026. Publisher account details, private reviewer access, distribution choices, and dashboard submission remain publisher steps. Store approval is determined by Google.
 
 ## Upload this file
 
-Upload **`azure-devops-niceties-0.6.5.zip`** to Chrome Web Store. For an existing listing, upload it to that same item; use Add new item only for a first submission. The larger submission-kit ZIP contains this guide and store materials; do not upload that outer ZIP as the extension.
+Upload **`azure-devops-niceties-0.6.6.zip`** to Chrome Web Store. For an existing listing, upload it to that same item; use Add new item only for a first submission. The larger submission-kit ZIP contains this guide and store materials; do not upload that outer ZIP as the extension.
 
 Runtime ZIP SHA-256 (integrity verified during packaging):
 
 ```text
-879f6764bdd156594bfc925e38a20384102bb0a3c30a76140275bfa281f68333
+8af85c0f754e9bef291edd92fd4a7b24df767fd1dcde68e10183cfb62e9eefcc
 ```
 
 ## Included in this release
@@ -25,10 +25,10 @@ Runtime ZIP SHA-256 (integrity verified during packaging):
 
 | Item | File / source |
 | --- | --- |
-| Extension package | `azure-devops-niceties-0.6.5.zip` — upload this ZIP |
-| Downloadable release guide | `azure-devops-niceties-0.6.5-submission-guide.md` |
+| Extension package | `azure-devops-niceties-0.6.6.zip` — upload this ZIP |
+| Downloadable release guide | `azure-devops-niceties-0.6.6-submission-guide.md` |
 | Copy-and-paste publishing helper | Open the included `publish.html` (offline; contains this exact ZIP) |
-| All submission materials | `azure-devops-niceties-0.6.5-submission-kit.zip` — unpack locally; upload the inner runtime ZIP |
+| All submission materials | `azure-devops-niceties-0.6.6-submission-kit.zip` — unpack locally; upload the inner runtime ZIP |
 | Listing and privacy-tab answers | `store/LISTING.md` |
 | Hosted privacy policy | https://kylestay.github.io/Azure-DevOps-Niceties/privacy.html (source: `docs/privacy.html`) |
 | Reviewer's test steps | `store/REVIEWER-TESTS.md` |
@@ -38,9 +38,9 @@ Runtime ZIP SHA-256 (integrity verified during packaging):
 | Verification evidence and limits | `store/QA.md` |
 | Package and asset checksums | `SHA256SUMS.txt` |
 
-These files are provided in `release/0.6.5/` in the project. Extract the submission kit to get the upload ZIP, guide, helper, `store/` materials, and checksums together.
+These files are provided in `release/0.6.6/` in the project. Extract the submission kit to get the upload ZIP, guide, helper, `store/` materials, and checksums together.
 
-The upload ZIP must have `manifest.json` at its root, with packaged `src/`, `options/`, and `icons/` files present. Do not include `node_modules`, tests, Git files, account credentials, or this submission documentation in the runtime package. The release target is version 0.6.5 with Chrome 111 or later; confirm the final manifest matches. The package version is the version in the final manifest; do not upload an earlier ZIP after code changes.
+The upload ZIP must have `manifest.json` at its root, with packaged `src/`, `options/`, and `icons/` files present. Do not include `node_modules`, tests, Git files, account credentials, or this submission documentation in the runtime package. The release target is version 0.6.6 with Chrome 111 or later; confirm the final manifest matches. The package version is the version in the final manifest; do not upload an earlier ZIP after code changes.
 
 The HTML helper has copy buttons for every text field, downloads for the exact ZIP, release guide and five images, a private reviewer-notes editor, and a submission checklist. It also works offline as one file. Reviewer notes remain only in the open tab and are not saved or uploaded. `npm run package` regenerates the helper from `LISTING.md`, `REVIEWER-TESTS.md`, and the current release files, and includes it at the root of the submission kit.
 

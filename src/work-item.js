@@ -38,7 +38,7 @@
     try {
       const url = new URL(String(value || ""));
       if (url.protocol !== "https:" || url.username || url.password || url.port) return "";
-      if (!/\/_workitems\/edit\/\d+$/i.test(url.pathname)) return "";
+      if (!/\/_workitems\/edit\/\d+\/?$/i.test(url.pathname)) return "";
 
       if (url.hostname === "dev.azure.com") {
         const organization = decodeURIComponent(url.pathname.split("/")[1] || "");

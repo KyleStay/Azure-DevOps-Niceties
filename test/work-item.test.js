@@ -43,6 +43,16 @@ test("extracts an id from an Azure DevOps work item URL", () => {
   assert.equal(workItem.workItemIdFromUrl("https://dev.azure.com/o/p/_workitems/edit/9876"), "9876");
 });
 
+test("copy links retain native work-item URLs ending in one slash", () => {
+  const url = "https://dev.azure.com/example/Project%20One/_workitems/edit/701/?view=edit#state";
+  assert.equal(workItem.safeWorkItemUrl(url), url);
+  assert.equal(workItem.workItemIdFromUrl(url), "701");
+  assert.equal(workItem.formatWorkItem({ id: "701", type: "Bug", title: "Sample", url }, { mode: "url" }).plainText, url);
+  for (const suffix of ["//", "/extra", "/extra/"]) {
+    assert.equal(workItem.safeWorkItemUrl(`https://dev.azure.com/example/project/_workitems/edit/701${suffix}`), "");
+  }
+});
+
 test("supports Markdown, ID, URL, and branch copy formats", () => {
   const item = {
     id: "2345",

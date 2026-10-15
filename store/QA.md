@@ -1,3 +1,11 @@
+# Native sprint backlog links — 0.6.6
+
+The user supplied an actual Bolt sprint backlog row whose title link ends in a slash. The shared safe-work-item URL validator rejected that link, causing State discovery to skip the whole row. It now accepts one optional trailing slash while preserving the existing HTTPS, host, same-organization, ID, and path restrictions.
+
+All 195 Node tests pass. Six new regression tests failed against 0.6.5 and pass after the validator fix: route validation, copy output, and picker discovery on release, sprint, product-backlog, and query URLs. Tests also retain rejection of extra path segments, duplicate trailing slashes, and cross-organization links.
+
+The manifest-loaded browser suite includes an anonymized reproduction of the supplied Bolt row, retaining its utility columns, ARIA indices, nested state text, type icon, tag list, and trailing-slash title link. On release, sprint-backlog, product-backlog, and query routes it checks one picker, no writes on opening, an explicit revision-checked save for the correct item, state-label refresh, and preservation of native Add, More options, and tag controls. All work-item API responses and writes in these tests are mocked. Source and exact-ZIP browser execution evidence is recorded in the release handoff; the user's signed-in environment remains unverified.
+
 # State list compatibility — 0.6.5
 
 Prepared October 15, 2026. The State editor now keeps nested item metadata within its structural work-item row, resolves split presentation-table headers, recognizes field-reference metadata and decorated column labels, ignores hidden native editors, and rescans style-only visibility changes. Separate native tables retain independent header mappings. Visible unsaved inputs and ambiguous or conflicting item identities remain protected.

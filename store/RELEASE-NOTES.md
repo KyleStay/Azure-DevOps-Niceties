@@ -1,5 +1,6 @@
-# Azure DevOps Niceties 0.6.5
+# Azure DevOps Niceties 0.6.6
 
+- Fix State pickers missing from native sprint backlog rows whose work-item links end in a slash. The shared fix also covers matching links in queries, product backlogs, and release lists.
 - Fix State controls being skipped by nested item metadata, hidden native editors, split headers, or panels shown after loading. The same state editor supports release item lists, Sprints → Backlog, and product backlogs.
 - Release work-item lists now fill the overlay and fit narrow panels without horizontal scrolling. Copy icons appear first, followed by selection, State, and Title; Type stays available for filtering.
 - Copy all backlog items, with or without bugs, using the project’s own categories. Supports Scrum PBIs, Agile user stories, Basic issues, CMMI requirements, and custom backlog types.

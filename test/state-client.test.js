@@ -33,6 +33,22 @@ test("state routes stay within the current Azure HTTPS organization on both supp
   ]) assert.throws(() => itemRoute(url, pageUrl));
 });
 
+test("native backlog links with a trailing slash resolve to the same work item", () => {
+  for (const [url, page] of [
+    ["https://dev.azure.com/example/Project%20One/_workitems/edit/701/", pageUrl],
+    ["https://example.visualstudio.com/Project%20One/_workitems/edit/701/?view=edit#state", "https://example.visualstudio.com/Project%20One/_sprints/backlog/team/iteration"],
+  ]) {
+    const route = itemRoute(url, page);
+    assert.equal(route.id, "701");
+    assert.equal(route.url, url);
+    assert.match(route.api, /\/_apis\/wit\/workitems\/701\?api-version=7\.1$/);
+  }
+  for (const suffix of ["//", "/extra", "/extra/", "/%2f", "/701/"]) {
+    assert.throws(() => itemRoute(`${itemUrl}${suffix}`, pageUrl));
+  }
+  assert.throws(() => itemRoute("https://dev.azure.com/other/project/_workitems/edit/701/", pageUrl));
+});
+
 test("workflow choices follow transitions and custom state names rather than hardcoded process states", () => {
   assert.deepEqual(workflowStates(definition, "New"), [{ name: "New", color: "#aaaaaa" }, { name: "Active", color: "#0078d4" }]);
   assert.deepEqual(workflowStates({ states: [{ name: "Triaged" }, { name: "Customer review" }], transitions: { Triaged: [{ to: "Customer review" }, { to: "Customer review" }] } }, "Triaged").map(state => state.name), ["Triaged", "Customer review"]);

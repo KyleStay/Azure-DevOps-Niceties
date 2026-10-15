@@ -6,6 +6,7 @@ const views = [
   ["release work items", "_releaseProgress?releaseId=50&_a=workitems"],
   ["sprint backlog", "_sprints/backlog/team/iteration"],
   ["product backlog", "_backlogs/backlog/team/Backlog%20items"],
+  ["query results", "_queries/query/1"],
 ];
 function element(page, tag, attributes = {}, text = "") {
   const node = page.document.createElement(tag);
@@ -29,6 +30,19 @@ for (const [view, path] of views) {
     page.cells[1].append(element(page, "input", { hidden: "", value: "Native editor" }));
     await page.ready();
     assert.ok(page.cells[2].querySelector(trigger));
+  });
+  test(`${view}: native trailing-slash title links receive a State picker`, async () => {
+    const page = fixture({ pageUrl: `https://dev.azure.com/example/project/${path}` });
+    page.row.removeAttribute("data-item-id");
+    page.cells[0].textContent = "";
+    page.cells[1].textContent = "";
+    page.cells[1].append(element(page, "a", { href: "/example/Project%20One/_workitems/edit/701/" }, "Sample backlog item"));
+    await page.ready();
+    assert.ok(page.cells[2].querySelector(trigger));
+    assert.equal(page.requests.length, 0);
+    await page.event("click", page.cells[2].querySelector(trigger));
+    assert.match(page.requests[0].url, /\/_apis\/wit\/workitems\/701\?/);
+    assert.equal(page.requests.some(request => request.options.method === "PATCH"), false);
   });
 }
 test("split grid headers still describe rows inside a presentation table", async () => {

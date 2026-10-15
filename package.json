@@ -1,6 +1,6 @@
 {
   "name": "azure-devops-niceties",
-  "version": "0.6.5",
+  "version": "0.6.6",
   "private": true,
   "description": "System theme matching, work-item copying, selection summaries, and inline state editing for Azure DevOps.",
   "scripts": {

@@ -47,6 +47,7 @@ jobs:
           path: |
             /tmp/azure-inline-state-menu.png
             /tmp/azure-state-list-compatibility.png
+            /tmp/azure-native-sprint-state.png
             /tmp/azure-release-list.png
             /tmp/azure-release-legacy-layout.png
             /tmp/azure-release-selection-demo.png
