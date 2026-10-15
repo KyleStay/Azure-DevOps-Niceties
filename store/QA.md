@@ -1,4 +1,12 @@
-# Release verification — 0.6.3
+# Work-item controls verification — October 15, 2026
+
+[Isolated Ubuntu verification](https://github.com/KyleStay/Azure-DevOps-Niceties/actions/runs/38764196198) passed with Chrome for Testing 151.0.7922.34: all 172 Node tests, syntax/public-content checks, the full manifest-loaded browser suite, allowlisted packaging, and the publishing-helper suite.
+
+Controlled browser fixtures cover the full-width compact release layout, legacy virtual grids with native header decorations, requirement/bug category copying, and inline state editing across tables, ARIA/legacy grids and cards. State cases include explicit choice, keyboard cancellation, revision conflicts, permissions, required fields, recycled rows and opt-out restoration. Clipboard formats and real paste, selection summaries, themes and existing copy controls also pass. Disposable browser profiles are removed and supported clipboard formats restored by the harness.
+
+Local macOS browser automation was blocked by the workspace sandbox; browser verification ran in the isolated CI environment. All work-item API writes were mocked against synthetic fixtures. Authenticated Azure DevOps workflows and the user's exact release overlay still require the procedure in `REVIEWER-TESTS.md`. No release was uploaded, published or installed. Earlier release evidence below describes the October 14 package and does not establish the current runtime ZIP hash.
+
+# Historical release verification — 0.6.3
 
 Verified October 14, 2026, on macOS with disposable Chrome for Testing 151.0.7922.34.
 
