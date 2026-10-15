@@ -1,3 +1,13 @@
+# Compact State controls, workflow order, and form refresh — 0.6.7
+
+State controls use the available text width without a persistent arrow or its reserved spacing. Hover and an open picker show a highlight, and keyboard focus retains a visible outline. Browser regressions verify the supplied Bolt-row reproduction has no arrow, reserves no indicator width, fits Committed, and keeps its width on hover.
+
+State choices use explicit project process order when accessible. An optional same-organization project-capability and process-state lookup is bounded by a 1.5-second deadline and cached with the workflow definition for one minute. Permission failures, missing metadata, and unsupported processes retain type-definition order. Current-state selection, valid transitions, and hidden/disabled exclusions remain intact. No extension permissions are added.
+
+A confirmed save passes only the item ID and revision to a bundled MAIN-world form adapter. For up to five minutes, it checks a visible native form through the documented WorkItemFormService contract. It refreshes only a matching older clean form, checks identity and unsaved status again after asynchronous reads, stops on opt-out or organization navigation, and bounds late callbacks and refresh retries. It does not set fields, save the form, or reload the page. Native modules are not loaded while no form is visible. Missing native APIs leave native Refresh available; support on an authenticated Azure DevOps host is unverified because account access was declined.
+
+All 211 Node tests pass. Browser regressions cover hover width, keyboard focus, process-ordered New/Approved/Committed/Done choices, opening a cached form after a confirmed save, preserving an unsaved title, and refreshing after the simulated independent edit is resolved. Source and exact-ZIP execution evidence is recorded in the release handoff. Item APIs, process metadata, and the native form-service contract in browser tests are mocked. These checks do not establish that every Azure DevOps page exposes the native service.
+
 # Native sprint backlog links — 0.6.6
 
 The user supplied an actual Bolt sprint backlog row whose title link ends in a slash. The shared safe-work-item URL validator rejected that link, causing State discovery to skip the whole row. It now accepts one optional trailing slash while preserving the existing HTTPS, host, same-organization, ID, and path restrictions.

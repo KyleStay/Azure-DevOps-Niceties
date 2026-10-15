@@ -151,9 +151,8 @@ table[data-azure-niceties-release-list] > colgroup { display: none; }
 button[data-azure-niceties-state-trigger] {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
   box-sizing: border-box;
-  max-width: calc(100% - 12px);
+  max-width: 100%;
   min-width: 0;
   min-height: 20px;
   padding: 0;
@@ -168,17 +167,8 @@ button[data-azure-niceties-state-trigger] {
   cursor: pointer;
 }
 [data-azure-niceties-state-trigger] > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-[data-azure-niceties-state-trigger]::after {
-  content: "";
-  flex: 0 0 5px;
-  width: 5px;
-  height: 5px;
-  margin: -3px 2px 0 0;
-  border-inline-end: 1px solid currentColor;
-  border-block-end: 1px solid currentColor;
-  transform: rotate(45deg);
-}
-[data-azure-niceties-state-trigger]:hover { background: color-mix(in srgb, Highlight 12%, transparent); }
+[data-azure-niceties-state-trigger]:hover,
+[data-azure-niceties-state-trigger][aria-expanded='true'] { background: color-mix(in srgb, Highlight 12%, transparent); }
 [data-azure-niceties-state-trigger]:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
 [data-azure-niceties-state-trigger]:disabled { opacity: 0.6; cursor: wait; }
 [data-azure-niceties-state-menu] {

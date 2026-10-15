@@ -247,6 +247,9 @@
         const saved = await savingClient.save(editor.session, state, () => client === savingClient && current(editor.binding.target));
         if (enabled && client === savingClient && root.location.href === savingPage) {
           updateState(saved.key, saved.state, saved.choices.find(choice => choice.name === saved.state)?.color);
+          try {
+            root.postMessage?.({ type: "azure-niceties-state-saved", id: saved.id, rev: saved.rev }, new URL(root.location.href).origin);
+          } catch (_) { /* Form synchronization cannot turn a confirmed save into a save error. */ }
           announce(`Work item ${saved.id} saved as ${saved.state}.`);
           editor.binding.button.disabled = false;
           if (menu === editor) closeMenu();
@@ -382,6 +385,7 @@
 
     function observe() {
       if (!enabled || !document.documentElement || !root.MutationObserver) return;
+      document.documentElement.setAttribute("data-azure-niceties-state-editing", "true");
       observer ||= new root.MutationObserver(changes => {
         if (changes.some(change => !(change.target.nodeType === 1 ? change.target : change.target.parentElement)?.closest(`${TRIGGER},${MENU}`))) schedule();
       });
@@ -393,6 +397,7 @@
     async function reload() {
       const version = ++loadVersion;
       enabled = false;
+      document.documentElement?.setAttribute("data-azure-niceties-state-editing", "false");
       observer?.disconnect();
       root.clearTimeout(timer);
       timer = null;

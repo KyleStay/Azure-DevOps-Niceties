@@ -16,6 +16,8 @@ async function runStateListSmoke(browser, extensionId) {
   const fixture = route => route.fulfill({ contentType: "text/html", body: fs.readFileSync(path.join(__dirname, "state-list-fixture.html"), "utf8") });
   const itemPattern = "https://dev.azure.com/example/_apis/wit/workitems/**";
   const typePattern = "https://dev.azure.com/example/project/_apis/wit/workitemtypes/**";
+  const projectPattern = "https://dev.azure.com/example/_apis/projects/project?includeCapabilities=true&api-version=7.1";
+  const processPattern = "https://dev.azure.com/example/_apis/work/processes/00000000-0000-0000-0000-000000000001/workItemTypes/Custom.PBI/states?api-version=7.1";
   const items = new Map([720, 721, 722, 725].map(id => [id, { state: "New", rev: 4 }]));
   items.set(726, { state: "Committed", rev: 4 });
   const patches = [];
@@ -33,13 +35,18 @@ async function runStateListSmoke(browser, extensionId) {
     return route.fulfill({ json: { id, rev: item.rev, fields: { "System.Id": id, "System.State": item.state, "System.WorkItemType": id === 726 ? "Product Backlog Item" : "Bug", "System.TeamProject": "project" } } });
   };
   const typeRoute = route => route.fulfill({ json: route.request().url().includes("Product%20Backlog%20Item")
-    ? { name: "Product Backlog Item", states: [{ name: "Committed" }, { name: "Done" }], transitions: { Committed: [{ to: "Done" }], Done: [] } }
+    ? { name: "Product Backlog Item", referenceName: "Custom.PBI", states: [{ name: "Done" }, { name: "Approved" }, { name: "New" }, { name: "Committed" }],
+      transitions: { Committed: [{ to: "Done" }, { to: "Approved" }, { to: "New" }], Done: [] } }
     : { name: "Bug", states: [{ name: "New" }, { name: "Active" }], transitions: { New: [{ to: "Active" }], Active: [{ to: "New" }] } } });
+  const projectRoute = route => route.fulfill({ json: { name: "project", capabilities: { processTemplate: { templateTypeId: "00000000-0000-0000-0000-000000000001" } } } });
+  const processRoute = route => route.fulfill({ json: { value: [{ name: "Done", order: 40 }, { name: "Committed", order: 30 }, { name: "New", order: 10 }, { name: "Approved", order: 20 }] } });
   let previous;
   try {
     for (const [, url] of views) await context.route(url, fixture);
     await context.route(itemPattern, itemRoute);
     await context.route(typePattern, typeRoute);
+    await context.route(projectPattern, projectRoute);
+    await context.route(processPattern, processRoute);
     await options.goto(`chrome-extension://${extensionId}/options/options.html`);
     await options.waitForFunction(() => !document.querySelector("#inline-state-editing").disabled);
     previous = await options.evaluate(async () => chrome.storage.local.get(["inlineStateEditing", "dataConsent", "selectionSummary"]));
@@ -62,8 +69,30 @@ async function runStateListSmoke(browser, extensionId) {
       assert.equal(patches.at(-1), 720, `${name}: explicit choice updates the linked item, not the nested metadata element`);
       const nativeRow = page.locator("#native-bolt-row");
       assert.equal(await nativeRow.locator("[data-azure-niceties-state-trigger]").count(), 1, `${name}: the supplied native row has one State picker`);
-      await nativeRow.getByRole("button", { name: "Change state of work item 726, currently Committed", exact: true }).click();
+      const nativeTrigger = nativeRow.getByRole("button", { name: "Change state of work item 726, currently Committed", exact: true });
+      await page.mouse.move(0, 0);
+      const normal = await nativeTrigger.evaluate(button => ({
+        arrow: getComputedStyle(button, "::after").content,
+        background: getComputedStyle(button).backgroundColor,
+        width: button.getBoundingClientRect().width,
+        textWidth: button.firstElementChild.getBoundingClientRect().width,
+        textFits: button.firstElementChild.scrollWidth <= button.firstElementChild.clientWidth,
+      }));
+      assert.ok(["none", "normal"].includes(normal.arrow), `${name}: no persistent dropdown arrow`);
+      assert.ok(Math.abs(normal.width - normal.textWidth) < 1, `${name}: the State button reserves no indicator width`);
+      assert.equal(normal.textFits, true, `${name}: Committed fits without extension truncation`);
+      if (name === "sprint-backlog") await nativeRow.screenshot({ path: path.join(os.tmpdir(), "azure-state-normal.png") });
+      await nativeTrigger.hover();
+      assert.notEqual(await nativeTrigger.evaluate(button => getComputedStyle(button).backgroundColor), normal.background, `${name}: hovering reveals interactivity`);
+      assert.equal(await nativeTrigger.evaluate(button => button.getBoundingClientRect().width), normal.width, `${name}: hover does not shift the row`);
+      if (name === "sprint-backlog") await nativeRow.screenshot({ path: path.join(os.tmpdir(), "azure-state-hover.png") });
+      await page.keyboard.press("Tab");
+      await nativeTrigger.focus();
+      assert.equal(await nativeTrigger.evaluate(button => getComputedStyle(button).outlineStyle), "solid", `${name}: keyboard focus remains visible`);
+      await nativeTrigger.click();
       await menu.getByRole("option", { name: "Done", exact: true }).waitFor();
+      assert.deepEqual(await menu.getByRole("option").allTextContents(), ["New", "Approved", "Committed", "Done"], `${name}: menu follows workflow order with the current state in place`);
+      assert.equal(await menu.getByRole("option", { name: "Committed", exact: true }).getAttribute("aria-selected"), "true");
       assert.equal(patches.length, writes + 1, `${name}: opening the native row picker does not save`);
       if (name === "sprint-backlog") await page.screenshot({ path: path.join(os.tmpdir(), "azure-native-sprint-state.png"), fullPage: true });
       await menu.getByRole("option", { name: "Done", exact: true }).click();
@@ -97,6 +126,7 @@ async function runStateListSmoke(browser, extensionId) {
     await page.close(); await options.close();
     for (const [, url] of views) await context.unroute(url, fixture);
     await context.unroute(itemPattern, itemRoute); await context.unroute(typePattern, typeRoute);
+    await context.unroute(projectPattern, projectRoute); await context.unroute(processPattern, processRoute);
   }
 }
 module.exports = { runStateListSmoke };

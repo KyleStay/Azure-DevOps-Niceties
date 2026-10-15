@@ -29,7 +29,7 @@ function fixture(get) {
   };
   vm.runInNewContext(source, root);
   return { observed, reads: () => reads, closed: () => closed, advance: timers.advance,
-    ready() { document.documentElement = {}; document.body = {}; document.dispatchEvent(new Event("DOMContentLoaded")); },
+    ready() { document.documentElement = { setAttribute() {} }; document.body = {}; document.dispatchEvent(new Event("DOMContentLoaded")); },
     revoke() { get = async () => ({ inlineStateEditing: false }); changed({ inlineStateEditing: { newValue: false } }, "local"); },
   };
 }

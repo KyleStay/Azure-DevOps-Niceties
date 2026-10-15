@@ -1,5 +1,7 @@
-# Azure DevOps Niceties 0.6.6
+# Azure DevOps Niceties 0.6.7
 
+- After a confirmed inline save, refresh a matching older item form through the native form service when it is available. Forms with unsaved edits stay untouched; synchronization does not save fields or reload the page.
+- State text no longer reserves space for a dropdown arrow. Hover and keyboard focus reveal the control without shifting the row. State choices use the project’s process order when available, with a bounded metadata lookup and a fallback to definition order; valid-transition filtering remains in place.
 - Fix State pickers missing from native sprint backlog rows whose work-item links end in a slash. The shared fix also covers matching links in queries, product backlogs, and release lists.
 - Fix State controls being skipped by nested item metadata, hidden native editors, split headers, or panels shown after loading. The same state editor supports release item lists, Sprints → Backlog, and product backlogs.
 - Release work-item lists now fill the overlay and fit narrow panels without horizontal scrolling. Copy icons appear first, followed by selection, State, and Title; Type stays available for filtering.

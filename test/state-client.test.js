@@ -58,6 +58,70 @@ test("workflow choices follow transitions and custom state names rather than har
   assert.equal(workflowStates({ states: [{ name: "Active", color: 'url("https://evil.test")' }] }, "Active")[0].color, "");
 });
 
+test("state choices retain workflow order instead of putting the current state or transitions first", () => {
+  const workflow = {
+    states: [{ name: "New" }, { name: "Active" }, { name: "Resolved" }, { name: "Closed" }],
+    transitions: { Active: [{ to: "Closed" }, { to: "New" }, { to: "Active" }] },
+  };
+  assert.deepEqual(workflowStates(workflow, "Active").map(state => state.name), ["New", "Active", "Closed"]);
+  assert.deepEqual(workflowStates({ states: workflow.states }, "Resolved").map(state => state.name), ["New", "Active", "Resolved", "Closed"]);
+  assert.deepEqual(workflowStates({ transitions: { Active: [{ to: "Closed" }, { to: "New" }] } }, "Active").map(state => state.name), ["Active", "Closed", "New"]);
+});
+
+test("explicit workflow state order supports custom names and keeps unavailable states excluded", () => {
+  const workflow = {
+    states: [{ name: "Customer review", order: 20 }, { name: "Shipped", order: 30 },
+      { name: "Queued", order: 10 }, { name: "Hidden", order: 0, hidden: true }],
+    transitions: { "Customer review": [{ to: "Shipped" }, { to: "Hidden" }, { to: "Queued" }] },
+  };
+  assert.deepEqual(workflowStates(workflow, "Customer review").map(state => state.name), ["Queued", "Customer review", "Shipped"]);
+  assert.deepEqual(workflowStates({ states: [{ name: "Queued" }, { name: "Review" }] }, "Legacy state").map(state => state.name), ["Legacy state", "Queued", "Review"]);
+});
+
+test("picker reads and caches the project's process order without adding unavailable transitions", async () => {
+  const { client, calls } = fixture({ fetch: async url => {
+    if (url.includes("/_apis/projects/")) return response({ name: "Actual Project", capabilities: { processTemplate: { templateTypeId: "00000000-0000-0000-0000-000000000001" } } });
+    if (url.includes("/_apis/work/processes/")) return response({ value: [{ name: "Closed", order: 3 }, { name: "New", order: 1 }, { name: "Active", order: 2 }] });
+    if (url.includes("/workitemtypes/")) return response({ ...definition, referenceName: "Custom.Bug", states: [...definition.states].reverse() });
+    return response(item({ state: "Active" }));
+  } });
+  assert.deepEqual((await client.inspect(itemUrl)).choices.map(state => state.name), ["Active", "Closed"]);
+  assert.equal(calls.length, 4);
+  assert.equal(calls[2].url, "https://dev.azure.com/example/_apis/projects/Actual%20Project?includeCapabilities=true&api-version=7.1");
+  assert.match(calls[3].url, /\/workItemTypes\/Custom\.Bug\/states\?api-version=7\.1$/);
+  await client.inspect(itemUrl);
+  assert.equal(calls.length, 5, "only the item is read again while metadata is fresh");
+});
+
+test("unavailable or mismatched process metadata falls back without blocking the picker", async () => {
+  for (const mode of ["denied", "wrong-project", "invalid-process", "malformed", "process-denied"]) {
+    const { client, calls } = fixture({ fetch: async url => {
+      if (url.includes("/_apis/projects/")) return mode === "denied" ? response({}, 403) : response({
+        name: mode === "wrong-project" ? "Other" : "Actual Project",
+        capabilities: { processTemplate: { templateTypeId: mode === "invalid-process" ? "../other" : "00000000-0000-0000-0000-000000000001" } },
+      });
+      if (url.includes("/_apis/work/processes/")) return mode === "process-denied" ? response({}, 403) : response({ value: "unexpected" });
+      return response(url.includes("/workitemtypes/") ? { ...definition, referenceName: "Custom.Bug" } : item());
+    } });
+    assert.deepEqual((await client.inspect(itemUrl)).choices.map(state => state.name), ["New", "Active"]);
+    assert.equal(calls.some(call => call.options.method === "PATCH"), false);
+  }
+});
+
+test("revocation during an optional process lookup cancels discovery", async () => {
+  let started;
+  const begun = new Promise(resolve => { started = resolve; });
+  const { client } = fixture({ fetch: async url => {
+    if (url.includes("/_apis/projects/")) { started(); return new Promise(() => {}); }
+    return response(url.includes("/workitemtypes/") ? { ...definition, referenceName: "Custom.Bug" } : item());
+  } });
+  const controller = new AbortController();
+  const pending = client.inspect(itemUrl, controller.signal);
+  await begun;
+  controller.abort();
+  await assert.rejects(pending, /Could not load states/);
+});
+
 test("opening reads only needed item fields and uses the item's authoritative project and type", async () => {
   const { client, calls } = fixture();
   const session = await client.inspect(itemUrl);

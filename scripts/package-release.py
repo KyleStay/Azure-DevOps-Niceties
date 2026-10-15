@@ -17,7 +17,7 @@ assert manifest["manifest_version"] == 3
 assert set(manifest["permissions"]) == {"clipboardWrite", "storage"}
 assert not manifest.get("host_permissions")
 files = ["manifest.json", "src/work-item.js", "src/content.js", "src/state-client.js", "src/state-editor.js", "src/selection-summary.js", "src/content.css",
-         "src/theme.js", "src/theme-settings.js", "options/options.html", "options/options.css", "options/options.js",
+         "src/theme.js", "src/theme-settings.js", "src/state-form.js", "options/options.html", "options/options.css", "options/options.js",
          "icons/icon-16.png", "icons/icon-32.png", "icons/icon-48.png", "icons/icon-128.png"]
 referenced = list(manifest["icons"].values()) + list(manifest["action"]["default_icon"].values())
 referenced += [manifest["action"]["default_popup"], manifest["options_ui"]["page"]]

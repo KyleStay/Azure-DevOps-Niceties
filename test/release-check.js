@@ -9,6 +9,7 @@ const { runClipboardSmoke } = require("./clipboard-smoke.js");
 const { runReleaseListSmoke } = require("./release-list-smoke.js");
 const { runStateEditorSmoke } = require("./state-editor-smoke.js");
 const { runStateListSmoke } = require("./state-list-smoke.js");
+const { runStateFormSmoke } = require("./state-form-smoke.js");
 const { saveClipboard, restoreClipboard } = require("./clipboard-state.js");
 
 async function main() {
@@ -146,6 +147,7 @@ async function main() {
     if (!releaseOnly) await runClipboardSmoke(context.browser(), extensionId);
     if (!releaseOnly) await runStateEditorSmoke(context.browser(), extensionId);
     if (!releaseOnly) await runStateListSmoke(context.browser(), extensionId);
+    if (!releaseOnly) await runStateFormSmoke(context.browser(), extensionId);
     await runReleaseListSmoke(context.browser(), extensionId);
     if (!releaseOnly) await runBrowserSmoke(context.browser(), extensionId);
     console.log(JSON.stringify({ browserSmoke: "passed", suite: releaseOnly ? "release-list" : "full", extensionId, assets }));
