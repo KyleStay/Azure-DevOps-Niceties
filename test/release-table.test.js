@@ -34,7 +34,7 @@ test("browser request functions retain the global receiver", async () => {
 test("clipboard table has exactly three columns, headers, escaped HTML, and tab-separated plain text", () => {
   const formatted = formatTable([{ title: 'Fix <table> & "copy"\t now', state: "In\nProgress", value: "QA\r\nOwner" },
     { title: "Empty field", state: "Done", value: null }], qa);
-  assert.equal(formatted.plainText, 'Title\tState\tAssigned QA PBI\r\nFix <table> & "copy" now\tIn Progress\tQA Owner\r\nEmpty field\tDone\t');
+  assert.equal(formatted.plainText, 'Title\tState\tAssigned QA PBI\r\n"Fix <table> & ""copy"" now"\tIn Progress\tQA Owner\r\nEmpty field\tDone\t');
   assert.equal((formatted.html.match(/<th>/g) || []).length, 3);
   assert.equal((formatted.html.match(/<td>/g) || []).length, 6);
   assert.ok(formatted.html.includes("Fix &lt;table&gt; &amp; &quot;copy&quot; now"));

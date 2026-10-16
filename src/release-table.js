@@ -39,8 +39,9 @@
     const headers = ["Title", "State", cellText(field.name, title, htmlToText)];
     const cells = rows.map(row => [cellText(row.title, title, htmlToText), cellText(row.state, state, htmlToText), cellText(row.value, field, htmlToText)]);
     const render = (values, tag) => `<tr>${values.map(value => `<${tag}>${core.escapeHtml(value)}</${tag}>`).join("")}</tr>`;
+    const tsv = value => value.includes('"') ? `"${value.replace(/"/g, '""')}"` : value;
     return { rich: true, mode: "table", label: `${rows.length} work items as a table`, count: rows.length,
-      plainText: [headers, ...cells].map(values => values.join("\t")).join("\r\n"),
+      plainText: [headers, ...cells].map(values => values.map(tsv).join("\t")).join("\r\n"),
       html: `<table><thead>${render(headers, "th")}</thead><tbody>${cells.map(values => render(values, "td")).join("")}</tbody></table>` };
   }
 
