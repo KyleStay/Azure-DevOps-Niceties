@@ -61,6 +61,9 @@ data = {
     "reviewerProcedure": procedure,
     "assets": [],
 }
+for item in data["privacy"]:
+    if len(item["value"]) > 1000:
+        raise ValueError(f"{item['label']} exceeds the dashboard's 1,000-character limit")
 for name, label, use in [
     ("icon-128.png", "Extension icon", "128 × 128 PNG"),
     ("promo-440x280.png", "Small promotional tile", "440 × 280 PNG"),

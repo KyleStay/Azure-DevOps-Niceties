@@ -1,6 +1,6 @@
 # Chrome Web Store listing
 
-Copy the text inside each block into the matching dashboard field. URLs, account identity, and reviewer credentials must come from the publisher; none are invented here.
+Copy the text inside each block into the matching dashboard field. Keep privacy explanations concise and factual, below the 1,000-character limit; use only the space needed. URLs, account identity, and reviewer credentials must come from the publisher; none are invented here.
 
 ## Name
 
@@ -63,7 +63,11 @@ WORKS WHERE YOU WORK
 Designed for work-item copy controls across Azure DevOps boards, backlogs, queries, pull requests, and work-item forms on dev.azure.com and Azure DevOps's legacy visualstudio.com addresses. Requires access to an Azure DevOps organization. Azure DevOps page changes can affect compatibility; unrecognized copy controls keep their normal behavior.
 
 DATA AND PRIVACY
-Enhanced copying and selection summaries default on and respect saved opt-outs on each device. Work-item titles, types, IDs, and URLs are processed while copying is enabled on your device and written to the clipboard only when you copy. With parent context enabled, the extension requests parent details from Azure DevOps using your existing signed-in session. Selection summaries separately read displayed estimates, types, states, and assignments on your device. System-theme, parent-context, and branch-prefix preferences use Chrome sync storage and may sync through your Google account; the copying, summary, and inline-state-editing switches stay on this device. Opening a state picker requests the item’s current state, type, project, revision and workflow metadata from the same Azure DevOps organization. Choosing a state sends that state and revision back to Azure DevOps using normal permissions and rules. Release-list shortcuts request project type categories. Empty native release titles are recovered with bounded read-only ID/title requests, using the same signed-in session and page-memory cache. Opening Copy as table reads field metadata; copying reads saved work-item types, titles, states, and the user-chosen fields for the selected scope. These read-only values stay in page memory and are written to the clipboard only when requested. The chosen field reference names and order are saved locally under the organization identifier so future visits restore the same export columns; work-item values are not saved. These features send no work-item information to the developer. Work-item content is not saved in Chrome storage. Automatic theme matching works independently. The extension has no analytics, advertising, or developer-operated data collection server.
+Work-item information is processed in the open page for copying, selection summaries, and State editing. This can include names or email addresses in assignments and chosen export fields. Copy actions write to your clipboard; the extension does not read it.
+
+Requests for workflow metadata, project categories, missing titles, table fields, and optional parent details stay within your Azure DevOps organization and use your existing signed-in session. Choosing a State saves that change immediately with normal permissions and revision checks.
+
+Theme, parent-context, and branch-prefix settings may sync through your Google account. Feature switches and export field choices, including the organization identifier, stay in local Chrome storage. Work-item content is not saved there or sent to the developer. There is no analytics or advertising. Features can be turned off in the extension menu. See the privacy policy for details.
 
 This is an independent extension and is not affiliated with or endorsed by Microsoft.
 ```
@@ -83,7 +87,7 @@ This is an independent extension and is not affiliated with or endorsed by Micro
 ## Single purpose
 
 ```text
-Improve the Azure DevOps work-item workflow with useful reference copying, inline state updates, selected-item summaries, and native themes that follow system appearance.
+Improve Azure DevOps work-item workflows with reference copying, inline State editing, selection summaries, and system theme matching.
 ```
 
 ## Permissions justifications
@@ -91,19 +95,19 @@ Improve the Azure DevOps work-item workflow with useful reference copying, inlin
 ### clipboardWrite
 
 ```text
-Writes an Azure DevOps work-item reference or a release-stage list of references to the user's clipboard after an explicit click on a native or extension-provided item/list copy control or a copy keyboard shortcut. Supports rich HTML/plain text, Markdown, ID, URL, and branch-name formats. The extension does not read clipboard contents.
+Copies work-item links, IDs, branch names, or tables to the clipboard after a copy click or keyboard shortcut. The extension does not read the clipboard.
 ```
 
 ### storage
 
 ```text
-Stores the user's system-theme-sync preference, include-parent preference, and branch-name prefix using chrome.storage.sync so those settings persist and can follow the user's Chrome profile across devices. Stores the default-on enhanced-copying, selection-summary, and inline-state-editing preferences only in chrome.storage.local. These features start enabled unless the user saves a local opt-out. Additional export field reference names and their order use chrome.storage.local under the Azure DevOps organization identifier. Work-item data is not saved in Chrome storage.
+Saves theme, parent-context, and branch-prefix settings through Chrome sync, which may use your Google account. Saves feature switches and export field choices locally on this device. Export choices include the organization identifier and ordered field reference names. Work-item content is not saved in Chrome storage.
 ```
 
 ### Host permission justification
 
 ```text
-Runs on https://dev.azure.com/* and https://*.visualstudio.com/* to use Azure DevOps's native theme service and, when enhanced copying is enabled, to find work-item IDs, titles, types, links, native copy controls, and loaded release-stage lists, including typed grid cells without native item links. Default-on selection summaries read displayed selected rows, estimates, types, states, and assignments locally without additional requests. The visualstudio.com wildcard covers organization-specific legacy Azure DevOps hosts and may also match other Microsoft subdomains; copying requires a recognized Azure work-item control and theme matching requires Azure DevOps's platform service. Release-list shortcuts read project work-item categories. When native release title links are empty, enhanced copying reads those items’ IDs/titles in bounded same-organization batches and shows extension-owned fallback links; this does not write work-item fields. When a state picker is opened, state editing reads the current work-item revision and workflow metadata; an explicit choice sends a revision-checked System.State update. These requests use the existing signed-in session, normal permissions and workflow rules, and stay within the current Azure DevOps organization. When parent context is enabled and a rich or Markdown copy is requested, the extension fetches child relations and parent details from that organization.
+Access to https://dev.azure.com/* and https://*.visualstudio.com/* enables copying, selection summaries, State editing, and native themes. The extension reads displayed work-item data and requests metadata, missing titles, chosen export fields, and optional parent details from the same Azure DevOps organization using your signed-in session. Choosing a State immediately saves that change using normal permissions and revision checks. Work-item content is not sent to the developer. The visualstudio.com wildcard supports legacy organization addresses and can also match other Microsoft subdomains; features require recognized Azure DevOps controls or services.
 ```
 
 Use this explanation in the Chrome Web Store privacy tab's **Host permission justification** field. The manifest grants site access through `content_scripts.matches`, without a separate `host_permissions` entry. Site access still requires this explanation. The extension does not request `<all_urls>`, `tabs`, `history`, `cookies`, or `clipboardRead`.
@@ -112,7 +116,7 @@ Use this explanation in the Chrome Web Store privacy tab's **Host permission jus
 
 Select **Website content**, **Web history / browsing activity**, and **Personally identifiable information** (use the equivalent current dashboard labels). Work-item data and the current work-item URL are handled locally even though they are not sent to a developer server. Do not claim “no user data handled.” The Web history disclosure describes Azure DevOps URLs needed for copying; the extension does not read Chrome's history database or track browsing across sites. See the [official local-processing FAQ](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq).
 
-Displayed assignments may include names or email addresses. These are read locally only to distinguish assigned from unassigned rows for selection summaries; the extension does not build identity profiles or send assignments to the developer. This is the reason for the Personally identifiable information disclosure.
+Assignments and chosen export fields may contain names or email addresses. Selection summaries use assignments to count unassigned rows; table copies include the fields the user chooses. These values are not sent to the developer. This is the reason for the Personally identifiable information disclosure.
 
 The extension does not intentionally read passwords, authentication tokens, payment data, health data, personal communications, or location. Azure DevOps content may itself contain sensitive information; that content remains covered by the Website content disclosure. Chrome supplies existing session credentials to Azure DevOps requests; the extension does not extract or retain them.
 
@@ -127,5 +131,5 @@ For the dashboard's remote-code question, choose **Yes** conservatively and prov
 Suggested factual explanation:
 
 ```text
-The extension bundles all of its own scripts. Its packaged MAIN-world theme script invokes Azure DevOps's existing native Context module and theme service to apply the site's native light/dark themes. Azure DevOps may load its native module through its own loader. The extension does not download or evaluate remotely hosted extension scripts, configuration logic, or JavaScript responses. Its bundled MAIN-world form script also calls the page-owned WorkItemFormService to refresh a matching older clean form after a confirmed inline save. Work-item and process metadata requests return JSON data only. Please see src/theme.js and src/state-form.js and the supplied reviewer instructions for this page-service integration.
+All extension scripts are packaged. Theme matching and form refresh call Azure DevOps's existing page services; its loader may fetch Microsoft's native modules. The extension does not fetch or evaluate remote extension code. Work-item and workflow requests return JSON. See src/theme.js and src/state-form.js.
 ```
