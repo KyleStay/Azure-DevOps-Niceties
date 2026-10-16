@@ -48,7 +48,7 @@
     constructor({ pageUrl, fetch: request = globalThis.fetch, timeout = 10_000 } = {}) {
       this.pageUrl = pageUrl;
       this.organization = api.organizationUrl(pageUrl);
-      this.fetch = request;
+      this.fetch = request.bind(globalThis);
       this.timeout = timeout;
       this.controllers = new Set();
       this.catalog = null;

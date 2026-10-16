@@ -23,6 +23,14 @@ test("field picker resolves custom display names and reference names without con
   assert.throws(() => resolveField([qa], "not a field"), /Choose a field/);
 });
 
+test("browser request functions retain the global receiver", async () => {
+  const value = new ReleaseTableClient({ pageUrl, fetch: function () {
+    assert.equal(this, globalThis);
+    return Promise.resolve(response([qa]));
+  } });
+  assert.deepEqual(await value.fields(), [qa]);
+});
+
 test("clipboard table has exactly three columns, headers, escaped HTML, and tab-separated plain text", () => {
   const formatted = formatTable([{ title: 'Fix <table> & "copy"\t now', state: "In\nProgress", value: "QA\r\nOwner" },
     { title: "Empty field", state: "Done", value: null }], qa);

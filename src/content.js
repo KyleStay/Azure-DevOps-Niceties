@@ -628,6 +628,7 @@
     }
     const rowsLabel = document.createElement("label"); rowsLabel.append("Rows", rows);
     const button = releaseButton("Copy table", "table");
+    button.disabled = true;
     button.title = "Copy Title, State, and your chosen field for pasting into Excel.";
     const hint = document.createElement("small");
     hint.textContent = "Title, State, and your chosen field. Blank fields stay blank.";
@@ -677,6 +678,7 @@
   }
 
   async function copyReleaseTable(entry) {
+    if (!entry.tableClient || entry.tableClient.closed) return;
     const requestId = ++latestCopyRequest, consentVersion = consentLoad;
     const page = location.href, client = entry.tableClient;
     const active = () => enabled && consentLoad === consentVersion && requestId === latestCopyRequest
