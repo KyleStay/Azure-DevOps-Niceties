@@ -7,19 +7,48 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function (core, stateApi) {
   "use strict";
 
-  const ROW = "[role='row'],tr,.grid-row,.bolt-table-row,.wit-card,.board-card,[class*='work-item-card'],[data-work-item-id],[data-item-id],[role='listitem'],li,.work-item-row,.workitem-row";
-  const GRID = "[role='grid'],[role='treegrid'],[role='table'],table,.grid,.bolt-table,.work-item-grid,.work-items-grid,.workitem-grid,.workitems-grid,.work-item-list,.workitems-list,.work-items-list,.release-work-items";
+  const STRUCTURAL_ROW = "[role='row'],[role='listitem'],tr,li,.grid-row,.bolt-table-row,.wit-card,.board-card,.work-item-card,.workitem-card,.work-item-row,.workitem-row";
+  const ROW = `${STRUCTURAL_ROW},[data-work-item-id],[data-item-id]`;
+  const GRID = "[role='grid'],[role='treegrid'],[role='table'],.grid,.bolt-table,.work-item-grid,.work-items-grid,.workitem-grid,.workitems-grid,.work-item-list,.workitems-list,.work-items-list,.release-work-items";
   const CELL = "[role='gridcell'],[role='cell'],td,.grid-cell,.bolt-table-cell";
   const HEADER = "[role='columnheader'],th,.grid-header-column,.bolt-table-header-cell";
-  const FIELD = "[data-field],[data-column-name],[data-column-key]";
+  const FIELD_ATTRIBUTES = ["data-field", "data-field-name", "data-field-reference-name", "data-column-name", "data-column-key", "data-column-id"];
+  const FIELD = FIELD_ATTRIBUTES.map(name => `[${name}]`).join(",");
   const STATE = ".work-item-state,.wit-state,.state-value,.bolt-workitem-state-text,[data-state],[data-azure-niceties-release-field='state']";
   const TRIGGER = "[data-azure-niceties-state-trigger]";
   const MENU = "[data-azure-niceties-state-menu]";
   const EDITABLE = "input:not([type='checkbox']):not([type='hidden']):not([readonly]):not([disabled]),textarea:not([readonly]):not([disabled]),select:not([disabled]),[contenteditable]:not([contenteditable='false']),[role='textbox'],[role='combobox']";
 
+  function canonicalField(value) {
+    const name = core.normalizeWhitespace(value).toLowerCase().replace(/[^a-z]/g, "").replace(/^system/, "");
+    return ["id", "title", "state", "type", "workitemtype"].includes(name) ? name : "";
+  }
+
   function fieldName(element) {
-    const value = element.getAttribute("data-field") || element.getAttribute("data-column-name") || element.getAttribute("data-column-key") || "";
-    return core.normalizeWhitespace(value).toLowerCase().replace(/[^a-z]/g, "").replace(/^system/, "");
+    return FIELD_ATTRIBUTES.map(name => canonicalField(element.getAttribute(name))).find(Boolean) || "";
+  }
+
+  function rowOwner(element) {
+    // Item metadata on a title link or state span belongs to its structural row.
+    return element.closest(STRUCTURAL_ROW) || element.closest(ROW);
+  }
+
+  function gridOwner(element) {
+    // Backlogs can render headers outside a separate table used for row layout.
+    const grid = element.closest(GRID);
+    const table = element.closest("table");
+    if (!table || !grid || table.contains(grid)) return grid || table;
+    return table.matches("[role='presentation'],[role='none']") || !table.querySelector(HEADER) ? grid : table;
+  }
+
+  function headerField(header) {
+    const explicit = fieldName(header) || canonicalField(header.getAttribute("aria-label")) || canonicalField(header.getAttribute("title"));
+    if (explicit) return explicit;
+    const nodes = nativeTextNodes(header);
+    const joined = canonicalField(nodes.map(node => node.nodeValue).join(""));
+    if (joined) return joined;
+    const labels = new Set(nodes.map(node => canonicalField(node.nodeValue)).filter(Boolean));
+    return labels.size === 1 ? [...labels][0] : "";
   }
 
   function nativeTextNodes(element) {
@@ -40,7 +69,7 @@
   }
 
   function workItemContext(row, scope, fields, pageUrl) {
-    if (row.matches("[data-work-item-id],.wit-card,.board-card,[class*='work-item-card']")
+    if (row.matches("[data-work-item-id],.wit-card,.board-card,.work-item-card,.workitem-card")
       || scope?.matches(".work-item-grid,.work-items-grid,.workitem-grid,.workitems-grid,.work-item-list,.workitems-list,.work-items-list,.release-work-items")
       || fields.has("workitemtype") || fields.has("type")) return true;
     const url = new URL(pageUrl);
@@ -54,24 +83,25 @@
     const headerCache = new Map();
     const targets = [];
     for (const row of document.querySelectorAll(ROW)) {
-      if (!visible(row) || row.closest("[hidden],[aria-hidden='true'],[contenteditable]:not([contenteditable='false'])") || row.querySelector(EDITABLE)) continue;
-      const scope = row.closest(GRID);
+      if (rowOwner(row) !== row || !visible(row) || row.closest("[hidden],[aria-hidden='true'],[contenteditable]:not([contenteditable='false'])")
+        || [...row.querySelectorAll(EDITABLE)].some(control => rowOwner(control) === row && visible(control))) continue;
+      const scope = gridOwner(row);
       if (scope && !headerCache.has(scope)) {
         headerCache.set(scope, [...scope.querySelectorAll(HEADER)]
-          .filter(header => header.closest(GRID) === scope && !header.hasAttribute("data-azure-niceties-release-column"))
-          .map((header, index) => ({ index: header.getAttribute("aria-colindex") || String(index + 1),
-            field: fieldName(header) || core.normalizeWhitespace(header.textContent).toLowerCase().replace(/[^a-z]/g, "").replace(/^system/, "") })));
+          .filter(header => gridOwner(header) === scope && !header.hasAttribute("data-azure-niceties-release-column") && !core.isPresentationCell(header))
+          .map((header, index) => ({ index: core.columnIndex(header, index),
+            field: headerField(header) })));
       }
       const headers = headerCache.get(scope) || [];
       const fields = new Map();
       const candidates = new Set();
-      [...row.querySelectorAll(CELL)].filter(cell => cell.closest(ROW) === row && !cell.hasAttribute("data-azure-niceties-release-column")).forEach((cell, index) => {
-        const field = fieldName(cell) || headers.find(header => header.index === (cell.getAttribute("aria-colindex") || String(index + 1)))?.field;
+      [...row.querySelectorAll(CELL)].filter(cell => rowOwner(cell) === row && !cell.hasAttribute("data-azure-niceties-release-column") && !core.isPresentationCell(cell)).forEach((cell, index) => {
+        const field = fieldName(cell) || headers.find(header => header.index === (core.columnIndex(cell, index)))?.field;
         if (field) fields.set(field, cell);
         if (field === "state") candidates.add(cell);
       });
       for (const cell of row.querySelectorAll(`${FIELD},${STATE}`)) {
-        if (cell.closest(ROW) !== row) continue;
+        if (rowOwner(cell) !== row) continue;
         if (fieldName(cell) === "state" || cell.matches(STATE)) candidates.add(cell);
         if (fieldName(cell)) fields.set(fieldName(cell), cell);
       }
@@ -79,7 +109,7 @@
       const attributeId = row.getAttribute("data-work-item-id") || row.getAttribute("data-item-id") || "";
       const cellId = core.normalizeWhitespace(fields.get("id")?.textContent || "").replace(/^#/, "");
       if ((attributeId && !/^[1-9]\d*$/.test(attributeId)) || (cellId && !/^[1-9]\d*$/.test(cellId)) || (attributeId && cellId && attributeId !== cellId)) continue;
-      const links = [...row.querySelectorAll("a[href*='/_workitems/edit/' i]")].filter(link => link.closest(ROW) === row);
+      const links = [...row.querySelectorAll("a[href*='/_workitems/edit/' i]")].filter(link => rowOwner(link) === row);
       let routes;
       try { routes = links.map(link => stateApi.itemRoute(new URL(link.getAttribute("href"), pageUrl).href, pageUrl)); }
       catch (_) { continue; }
@@ -96,7 +126,7 @@
       for (const cell of candidates) {
         if (!visible(cell) || cell.closest("[hidden],[aria-hidden='true']") || [...candidates].some(other => other !== cell && other.contains(cell))) continue;
         const interactive = [...cell.querySelectorAll("button,input,textarea,select,a[href],[role='button'],[role='combobox'],[contenteditable]:not([contenteditable='false'])")]
-          .some(control => !control.matches(TRIGGER));
+          .some(control => !control.matches(TRIGGER) && visible(control));
         const state = stateValue(cell);
         if (!interactive && state) targets.push({ row, cell, ...route, state, expectedType });
       }
@@ -217,6 +247,9 @@
         const saved = await savingClient.save(editor.session, state, () => client === savingClient && current(editor.binding.target));
         if (enabled && client === savingClient && root.location.href === savingPage) {
           updateState(saved.key, saved.state, saved.choices.find(choice => choice.name === saved.state)?.color);
+          try {
+            root.postMessage?.({ type: "azure-niceties-state-saved", id: saved.id, rev: saved.rev }, new URL(root.location.href).origin);
+          } catch (_) { /* Form synchronization cannot turn a confirmed save into a save error. */ }
           announce(`Work item ${saved.id} saved as ${saved.state}.`);
           editor.binding.button.disabled = false;
           if (menu === editor) closeMenu();
@@ -342,7 +375,7 @@
         }
         const name = `Change state of work item ${target.id}, currently ${target.state}`;
         if (binding.button.getAttribute("aria-label") !== name) binding.button.setAttribute("aria-label", name);
-        binding.button.title = "Change state and save immediately";
+        if (binding.button.title !== "Change state and save immediately") binding.button.title = "Change state and save immediately";
         binding.button.disabled = client.saving.has(target.key);
       }
       if (menu && !current(menu.binding.target)) closeMenu(false);
@@ -352,17 +385,19 @@
 
     function observe() {
       if (!enabled || !document.documentElement || !root.MutationObserver) return;
+      document.documentElement.setAttribute("data-azure-niceties-state-editing", "true");
       observer ||= new root.MutationObserver(changes => {
         if (changes.some(change => !(change.target.nodeType === 1 ? change.target : change.target.parentElement)?.closest(`${TRIGGER},${MENU}`))) schedule();
       });
       observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true,
-        attributeFilter: ["class", "hidden", "aria-hidden", "href", "data-value", "data-field", "data-column-name", "data-column-key", "data-work-item-id", "data-item-id"] });
+        attributeFilter: ["class", "style", "hidden", "aria-hidden", "aria-colindex", "aria-label", "title", "href", "data-value", ...FIELD_ATTRIBUTES, "data-work-item-id", "data-item-id"] });
       schedule();
     }
 
     async function reload() {
       const version = ++loadVersion;
       enabled = false;
+      document.documentElement?.setAttribute("data-azure-niceties-state-editing", "false");
       observer?.disconnect();
       root.clearTimeout(timer);
       timer = null;

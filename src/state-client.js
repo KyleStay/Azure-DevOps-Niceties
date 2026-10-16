@@ -46,8 +46,12 @@
   function workflowStates(definition, current) {
     if (definition?.isDisabled) return [{ name: current, color: "" }];
     const states = new Map();
-    for (const state of Array.isArray(definition?.states) ? definition.states : []) {
-      if (typeof state?.name !== "string" || state.hidden || state.isDisabled) continue;
+    const orderedStates = (Array.isArray(definition?.states) ? definition.states : [])
+      .filter(state => typeof state?.name === "string" && state.name.trim() && !state.hidden && !state.isDisabled);
+    // Prefer explicit process order when supplied; otherwise keep the server's
+    // definition order rather than transition order or the current state first.
+    if (orderedStates.every(state => Number.isFinite(state.order))) orderedStates.sort((a, b) => a.order - b.order);
+    for (const state of orderedStates) {
       const name = state.name.trim();
       if (name) states.set(name, /^[a-f0-9]{6}$/i.test(state.color || "") ? `#${state.color}` : "");
     }
@@ -57,7 +61,10 @@
       names = Array.isArray(transitions) ? transitions.filter(transition => typeof transition?.to === "string")
         .map(transition => transition.to.trim()).filter(name => name && (!states.size || states.has(name))) : [];
     }
-    return [...new Set([current, ...names])].map(name => ({ name, color: states.get(name) || "" }));
+    const allowed = new Set([current, ...names]);
+    const ordered = [...states.keys()].filter(name => allowed.has(name));
+    return [...new Set([...(states.has(current) ? [] : [current]), ...ordered, ...names])]
+      .map(name => ({ name, color: states.get(name) || "" }));
   }
 
   class StateClient {
@@ -124,6 +131,35 @@
       }
     }
 
+    async withStateOrder(route, item, definition, signal) {
+      if (!/^[\w.-]+$/.test(definition.referenceName || "") || /^\.{1,2}$/.test(definition.referenceName) || !Array.isArray(definition.states)) return definition;
+      const controller = new AbortController();
+      const abort = () => controller.abort();
+      signal?.addEventListener("abort", abort, { once: true });
+      const deadline = setTimeout(abort, 1500);
+      try {
+        if (signal?.aborted) abort();
+        const project = await this.request(`${route.organization}/_apis/projects/${encodeURIComponent(item.project)}?includeCapabilities=true&api-version=7.1`, {}, controller.signal);
+        const process = project?.capabilities?.processTemplate?.templateTypeId;
+        if (project?.name !== item.project || !/^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i.test(process || "")) return definition;
+        const result = await this.request(`${route.organization}/_apis/work/processes/${process}/workItemTypes/${encodeURIComponent(definition.referenceName)}/states?api-version=7.1`, {}, controller.signal);
+        const order = new Map((Array.isArray(result?.value) ? result.value : []).filter(state =>
+          typeof state?.name === "string" && Number.isFinite(state.order)).map(state => [state.name.trim(), state]));
+        return { ...definition, states: definition.states.map(state => {
+          const metadata = order.get(state?.name?.trim());
+          return metadata ? { ...state, order: metadata.order, hidden: state.hidden || metadata.hidden } : state;
+        }) };
+      } catch (error) {
+        if (signal?.aborted || this.closed) throw error;
+        // Process metadata is optional; its permissions or availability must
+        // not prevent editing with the authoritative type and transitions.
+        return definition;
+      } finally {
+        clearTimeout(deadline);
+        signal?.removeEventListener("abort", abort);
+      }
+    }
+
     async inspect(itemUrl, signal) {
       const route = itemRoute(itemUrl, this.pageUrl);
       const readUrl = `${route.api}&fields=System.Id,System.State,System.WorkItemType,System.TeamProject`;
@@ -131,8 +167,9 @@
       const typeUrl = `${route.organization}/${encodeURIComponent(item.project)}/_apis/wit/workitemtypes/${encodeURIComponent(item.type)}?api-version=7.1`;
       let cached = this.definitions.get(typeUrl);
       if (!cached || cached.expires <= Date.now()) {
-        const definition = await this.request(typeUrl, {}, signal);
+        let definition = await this.request(typeUrl, {}, signal);
         if (typeof definition?.name !== "string" || definition.name.toLowerCase() !== item.type.toLowerCase()) throw new Error("Azure DevOps returned a different work-item type.");
+        definition = await this.withStateOrder(route, item, definition, signal);
         cached = { definition: { name: definition.name, states: definition.states, transitions: definition.transitions, isDisabled: definition.isDisabled }, expires: Date.now() + 60_000 };
         if (!signal?.aborted) this.definitions.set(typeUrl, cached);
       }

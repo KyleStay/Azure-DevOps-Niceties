@@ -1,11 +1,11 @@
 {
   "name": "azure-devops-niceties",
-  "version": "0.6.3",
+  "version": "0.6.14",
   "private": true,
   "description": "System theme matching, work-item copying, selection summaries, and inline state editing for Azure DevOps.",
   "scripts": {
     "test": "node --test test/*.test.js",
-    "check": "node --check src/work-item.js && node --check src/content.js && node --check src/selection-summary.js && node --check src/theme.js && node --check src/theme-settings.js && node --check options/options.js && node --check test/browser-smoke.js && node --check test/theme-smoke.js && node --check test/selection-summary-smoke.js && node --check test/clipboard-smoke.js && node --check test/release-list-smoke.js && node --check test/release-check.js && node --check test/publisher-smoke.js && node --check src/state-client.js && node --check src/state-editor.js && node --check test/state-editor-smoke.js",
+    "check": "node --check src/release-table.js && node --check test/release-table-smoke.js && node --check src/work-item.js && node --check src/content.js && node --check src/selection-summary.js && node --check src/theme.js && node --check src/theme-settings.js && node --check options/options.js && node --check test/browser-smoke.js && node --check test/theme-smoke.js && node --check test/selection-summary-smoke.js && node --check test/clipboard-smoke.js && node --check test/release-list-smoke.js && node --check test/release-bolt-smoke.js && node --check test/release-check.js && node --check test/publisher-smoke.js && node --check src/state-client.js && node --check src/state-editor.js && node --check test/state-editor-smoke.js && node --check test/state-list-smoke.js && node --check src/state-form.js && node --check test/state-form-smoke.js",
     "test:browser": "node test/release-check.js",
     "test:release": "node test/release-check.js --release-only",
     "test:publisher": "node test/publisher-smoke.js",

@@ -1,46 +1,54 @@
 # Chrome Web Store submission kit
 
-Prepared October 14, 2026, for version 0.6.3. The runtime ZIP, three screenshots, icon, promotional image, listing, privacy answers, and reviewer procedure are prepared and tested. The matching public privacy policy is live and verified. Publisher account details, private reviewer access, distribution choices, and dashboard submission remain publisher steps. Store approval is determined by Google.
+Prepared October 16, 2026, for version 0.6.14. This adds remembered optional table columns and visible work-item IDs to the existing release-list controls. The kit contains the runtime ZIP, current screenshots, icon, promotional image, listing, privacy answers, release notes, and reviewer procedure. See QA.md for actual checks and limits. Before submitting this version, publish the updated docs/privacy.html at the policy URL below and verify the hosted text matches. The earlier hosted policy does not yet include this version’s process-order lookup, native form-refresh details, missing-release-title reads, on-demand table field reads, and local organization-scoped field preferences. Publisher account details, private reviewer access, distribution choices, and dashboard submission remain publisher steps. Store approval is determined by Google.
 
 ## Upload this file
 
-Upload **`azure-devops-niceties-0.6.3.zip`** to Chrome Web Store. For an existing listing, upload it to that same item; use Add new item only for a first submission. The larger submission-kit ZIP contains this guide and store materials; do not upload that outer ZIP as the extension.
+Upload **`azure-devops-niceties-0.6.14.zip`** to Chrome Web Store. For an existing listing, upload it to that same item; use Add new item only for a first submission. The larger submission-kit ZIP contains this guide and store materials; do not upload that outer ZIP as the extension.
 
-Verified runtime ZIP SHA-256:
+Runtime ZIP SHA-256 (integrity verified during packaging):
 
 ```text
-099ee233b07bb2259ccf75357bb3e276370f39cb9453365888ac4d808222fe13
+0bcd0459c0528d84701139d093693dc6c2da5efe0a289845537b56a53d15bf3b
 ```
 
 ## Included in this release
 
-- Enhanced copying and selected-item summaries start enabled, while saved opt-outs are preserved. Automatic theme matching preserves selected native dark and high-contrast themes.
-- Release lists have copy icons in the first column, selection checkboxes in the second, State before Title, a hidden Type column, and Select by type controls. Choose Bug and PBI, leave Task unchecked, then Copy selected. Custom types and partial selections are supported; Copy all loaded still includes all types.
-- Selected loaded rows show Effort and other displayed estimate totals. Copies use clean, clickable references such as `PBI 601: Improve search results`, one line per item, without extra blank lines or font styling.
+- Copy as table includes linked Title and State followed by any optional fields added by the user. Field reference names and order are remembered locally per organization, including an empty optional selection. Work-item values are not stored.
+- Release-list Title cells show the work-item ID beside the native title without changing copied references or table labels.
 
+- Shared State detection now handles nested item metadata, split grid headers, alternate field-reference attributes, hidden native editors, and panels becoming visible. Release item lists, Sprints → Backlog, and product backlog use the same editing path.
+
+- Enhanced copying and selected-item summaries start enabled, while saved opt-outs are preserved. Automatic theme matching preserves selected native dark and high-contrast themes.
+- Bolt spacer cells are excluded from field indexing and layout. Empty native release title links are recovered with read-only same-organization requests; native title links remain untouched and incomplete copying stays disabled on lookup failure.
+- Release lists fill the overlay with aligned columns and flexible nested title text. The standalone ID column stays hidden; copied references retain IDs. Sort labels preserve Title and State mapping. The compact toolbar keeps extra copy actions and type choices in dismissible menus. Release lists have copy icons in the first column, selection checkboxes in the second, State before Title, a hidden Type column, and Select by type controls. Copy all bugs + PBIs and Copy all PBIs adapt to the project’s requirement and bug categories, including Agile stories, Basic issues, CMMI requirements, and custom types. Manual type selection remains available. Custom types and partial selections are supported; Copy all loaded still includes all types.
+- Selected loaded rows show Effort and other displayed estimate totals. Copies use clean, clickable references such as `PBI 601: Improve search results`, one line per item, without extra blank lines or font styling.
 - Displayed State values in identifiable work-item lists open a workflow picker. Explicit choices save immediately using normal Azure DevOps permissions and a revision check. Inline state editing has an independent local opt-out. Browser write scenarios use controlled fixtures.
 
 ## Files to use
 
 | Item | File / source |
 | --- | --- |
-| Extension package | `azure-devops-niceties-0.6.3.zip` — upload this ZIP |
-| Downloadable release guide | `azure-devops-niceties-0.6.3-submission-guide.md` |
-| Copy-and-paste publishing helper | Open `publish.html` or https://kylestay.github.io/Azure-DevOps-Niceties/publish.html |
-| All submission materials | `azure-devops-niceties-0.6.3-submission-kit.zip` — unpack locally; upload the inner runtime ZIP |
+| Extension package | `azure-devops-niceties-0.6.14.zip` — upload this ZIP |
+| Downloadable release guide | `azure-devops-niceties-0.6.14-submission-guide.md` |
+| Copy-and-paste publishing helper | Open the included `publish.html` (offline; contains this exact ZIP) |
+| All submission materials | `azure-devops-niceties-0.6.14-submission-kit.zip` — unpack locally; upload the inner runtime ZIP |
 | Listing and privacy-tab answers | `store/LISTING.md` |
 | Hosted privacy policy | https://kylestay.github.io/Azure-DevOps-Niceties/privacy.html (source: `docs/privacy.html`) |
 | Reviewer's test steps | `store/REVIEWER-TESTS.md` |
 | Extension icon | `store/assets/icon-128.png` (128 × 128 PNG) |
 | Store screenshots and promo image | `store/assets/` (instructions in `assets/README.md`) |
+| What changed / release notes | `store/RELEASE-NOTES.md` |
 | Verification evidence and limits | `store/QA.md` |
 | Package and asset checksums | `SHA256SUMS.txt` |
 
-These files are provided in `release/0.6.3/` in the project. Extract the submission kit to get the upload ZIP, guide, helper, `store/` materials, and checksums together.
+These files are provided in `release/0.6.14/` in the project. Extract the submission kit to get the upload ZIP, guide, helper, `store/` materials, and checksums together.
 
-The upload ZIP must have `manifest.json` at its root, with packaged `src/`, `options/`, and `icons/` files present. Do not include `node_modules`, tests, Git files, account credentials, or this submission documentation in the runtime package. The release target is version 0.6.3 with Chrome 111 or later; confirm the final manifest matches. The package version is the version in the final manifest; do not upload an earlier ZIP after code changes.
+The upload ZIP must have `manifest.json` at its root, with packaged `src/`, `options/`, and `icons/` files present. Do not include `node_modules`, tests, Git files, account credentials, or this submission documentation in the runtime package. The release target is version 0.6.14 with Chrome 111 or later; confirm the final manifest matches. The package version is the version in the final manifest; do not upload an earlier ZIP after code changes.
 
 The HTML helper has copy buttons for every text field, downloads for the exact ZIP, release guide and five images, a private reviewer-notes editor, and a submission checklist. It also works offline as one file. Reviewer notes remain only in the open tab and are not saved or uploaded. `npm run package` regenerates the helper from `LISTING.md`, `REVIEWER-TESTS.md`, and the current release files, and includes it at the root of the submission kit.
+
+In the dashboard's privacy tab, use **Host permission justification** for the site's access explanation, matching the helper and listing labels. This applies to access declared through `content_scripts.matches` even though this extension has no separate `host_permissions` entry.
 
 ## Information only the publisher can supply
 
@@ -61,8 +69,8 @@ Use assets that demonstrate the final extension. If a screenshot is a project-ow
 
 1. Confirm the final release handoff's verification results and limitations. Load the final package locally and complete the actual Azure DevOps checks in `REVIEWER-TESTS.md`. Fixture tests alone do not establish compatibility with today's authenticated service.
 2. Use the native theme-service disclosure in `LISTING.md` for the remote-code field. All extension logic is packaged; the explanation identifies the page-owned Microsoft integration so Google can assess it. No additional extension scripts are downloaded.
-3. Verify the live privacy-policy URL and finish publisher account verification and Two-Step Verification. The policy matching this release was published and verified on October 14, 2026.
-4. In the dashboard, choose **Add new item** and upload the final ZIP. For an existing item, upload the new version to that item rather than making a duplicate listing.
+3. Verify the live privacy-policy URL and finish publisher account verification and Two-Step Verification. The current policy was verified against docs/privacy.html on October 15, 2026.
+4. In the dashboard, open the existing Azure DevOps Niceties item, choose its package upload/update control, and upload the final runtime ZIP. Use Add new item only if this extension has never been submitted.
 5. Fill the Store listing tab with `LISTING.md`, upload the icon/screenshots/small promo tile, and choose the offered category closest to Developer Tools and English language. Add genuine support/homepage URLs if available.
 6. Fill the Privacy tab: single purpose, `clipboardWrite`, `storage`, site-access explanations, remote-code declaration (**Yes**, with native page-service explanation), Website content, Web history/browsing activity, and Personally identifiable information data handling, and the hosted privacy-policy URL. Review the certifications against the final code.
 7. Fill Distribution with your intended audience and regions. This extension is free and requires an Azure DevOps account/project that the user already has access to.
