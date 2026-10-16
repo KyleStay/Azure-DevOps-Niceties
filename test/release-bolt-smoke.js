@@ -44,6 +44,7 @@ async function runReleaseBoltSmoke(browser, extensionId) {
     await page.evaluate(() => { window.initialNativeTitle = document.querySelector("tbody tr .title-link a"); });
     assert.equal(await first.locator(".title-link a").textContent(), "", "recovery does not overwrite React's empty native link");
     assert.equal(await first.locator("[data-azure-niceties-release-actions] a").textContent(), recovered);
+    assert.ok((await first.locator("[data-azure-niceties-release-actions] a").getAttribute("class")).includes("bolt-link"));
     assert.deepEqual(titleRequests, ["701"], "only the missing title is requested, once");
     assert.equal(await page.locator("tbody tr").nth(1).locator(".title-link a").textContent(), "Done", "a title matching a state name is never blanked");
     for (const width of [360, 836, 1280]) {
@@ -58,6 +59,11 @@ async function runReleaseBoltSmoke(browser, extensionId) {
           links: [...table.querySelectorAll("tbody .title-link")].slice(1).map(link => link.getBoundingClientRect().width),
           states: [...table.querySelectorAll("tbody [data-azure-niceties-release-field='state']")].map(cell => cell.textContent.trim()),
           labels: [...table.querySelectorAll("[data-azure-niceties-release-copy='item']")].map(button => button.getAttribute("aria-label")),
+          headerLabels: ["state", "title"].map(field => {
+            const cell = table.querySelector(`thead [data-azure-niceties-release-field='${field}']`);
+            const range = document.createRange(); range.selectNodeContents(cell.firstChild);
+            return { start: range.getBoundingClientRect().left, expected: cell.getBoundingClientRect().left + parseFloat(getComputedStyle(cell).paddingLeft) };
+          }),
         };
       });
       assert.ok(Math.abs(layout.width - layout.available) < 2); assert.equal(layout.overflow, false);
@@ -67,6 +73,7 @@ async function runReleaseBoltSmoke(browser, extensionId) {
       assert.ok(layout.links.every(width => width > 80), "the native work-item-small-view/title-link flex chain stays readable");
       assert.ok(layout.states.every(state => state === "Done"));
       assert.ok(layout.labels.every(label => !/:\s*$/.test(label)), "no blank title copy labels remain");
+      assert.ok(layout.headerLabels.every(label => Math.abs(label.start - label.expected) < 2), "header text starts at its column's left padding instead of floating in the center");
       await page.screenshot({ path: path.join(os.tmpdir(), `azure-release-bolt-${width}.png`) });
     }
     await page.getByRole("button", { name: "Copy all loaded (35)", exact: true }).click();

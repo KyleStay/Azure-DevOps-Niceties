@@ -855,6 +855,7 @@
             actions.append(icon);
           }
           const open = document.createElement("a");
+          if (record.fallbackTitle) open.className = "bolt-link no-underline-link";
           open.textContent = "Open";
           open.target = "_blank";
           open.rel = "noopener noreferrer";

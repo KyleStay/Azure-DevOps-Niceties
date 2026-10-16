@@ -139,6 +139,7 @@ table[data-azure-niceties-release-list] > colgroup { display: none; }
 [data-azure-niceties-release-title-fallback] > [data-azure-niceties-release-actions] a { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 [data-azure-niceties-release-column-layout] a { font: inherit !important; }
 [data-azure-niceties-release-list] :is(th,[role='columnheader'],.grid-header-column) { font-weight: 600; color: var(--text-secondary-color, #5c6570); }
+[data-azure-niceties-release-column-layout] > :is(th,[role='columnheader'],.grid-header-column,.bolt-table-header-cell)[data-azure-niceties-release-field] { text-align: left !important; justify-content: flex-start !important; }
 [data-azure-niceties-release-row]:hover { background: color-mix(in srgb, Highlight 5%, transparent); }
 [data-azure-niceties-release-row][data-azure-niceties-release-selected='true'] { background: color-mix(in srgb, Highlight 9%, transparent); }
 [data-azure-niceties-release-column] {
