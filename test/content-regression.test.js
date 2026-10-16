@@ -466,6 +466,19 @@ test("explicit Title columns retain text resembling a work-item display prefix",
   }
 });
 
+test("extension-owned recovery links can never become the native title", () => {
+  const h = harness();
+  const { container } = row({ title: "" });
+  const placeholder = new FakeElement({ href: "https://dev.azure.com/example/project/_workitems/edit/12" }, "Loading title…");
+  placeholder.closest = selector => selector.includes("data-azure-niceties-release-actions") ? {} : null;
+  container.links.push(placeholder);
+  assert.equal(h.extractWorkItem(container, {}), null, "a loading label is not work-item data");
+  container.links[0].textContent = "Actual title";
+  assert.equal(h.extractWorkItem(container, {}).title, "Actual title");
+  placeholder.textContent = "Title unavailable — open item";
+  assert.equal(h.extractWorkItem(container, {}).title, "Actual title");
+});
+
 test("numeric titles retain their text while explicit work-item prefixes are removed", () => {
   const h = harness();
   for (const title of ["123 invoices fail", "12 invoices fail", "123: invoices fail", "Bug 123: invoices fail"]) {

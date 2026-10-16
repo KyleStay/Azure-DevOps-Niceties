@@ -188,7 +188,8 @@
     if (textElement && textElement !== link) return elementValue(textElement);
 
     const candidates = [
-      ...Array.from(container.querySelectorAll("a[href*='/_workitems/edit/']"), (candidate) => candidate.textContent),
+      ...Array.from(container.querySelectorAll("a[href*='/_workitems/edit/']"))
+        .filter(candidate => !candidate.closest(RELEASE_ACTIONS)).map(candidate => candidate.textContent),
       attributeValue(link, ["title"]),
       attributeValue(link, ["aria-label"]),
       textElement && textElement.textContent,
