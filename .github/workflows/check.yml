@@ -62,6 +62,9 @@ jobs:
             /tmp/azure-release-bolt-836.png
             /tmp/azure-release-bolt-1280.png
             /tmp/azure-release-bolt-failure.png
+            /tmp/azure-release-table-360.png
+            /tmp/azure-release-table-836.png
+            /tmp/azure-release-table-failure.png
             /tmp/azure-release-selection-demo.png
             /tmp/azure-publisher-package.png
             store/assets/settings-*-1280x800.png

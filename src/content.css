@@ -80,6 +80,10 @@ table[data-azure-niceties-release-list] > colgroup { display: none; }
 [data-azure-niceties-release-menu] > summary:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
 [data-azure-niceties-release-menu-panel] { position: absolute; inset: 100% auto auto 0; z-index: 1001; box-sizing: border-box; width: max-content; max-width: min(320px, 100%); padding: 8px; border: 1px solid GrayText; border-radius: 4px; color: var(--text-primary-color, CanvasText); background: var(--background-color, Canvas); box-shadow: 0 2px 8px #0002; }
 [data-azure-niceties-release-menu-panel] > button { display: block; width: 100%; text-align: left; }
+[data-azure-niceties-release-table] { display: flex; flex-direction: column; gap: 8px; width: 280px; max-width: 100%; margin: 0; }
+[data-azure-niceties-release-toolbar] [data-azure-niceties-release-table] label { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+[data-azure-niceties-release-table] :is(input,select) { box-sizing: border-box; width: 100%; min-width: 0; padding: 5px; font: inherit; color: inherit; background: var(--background-color, Canvas); border: 1px solid GrayText; border-radius: 3px; }
+[data-azure-niceties-release-table-status] { overflow-wrap: anywhere; }
 [data-azure-niceties-release-toolbar] label { display: inline-flex; align-items: center; gap: 6px; }
 [data-azure-niceties-release-toolbar] small { font-size: 11px; opacity: 0.7; }
 [data-azure-niceties-release-types] { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }

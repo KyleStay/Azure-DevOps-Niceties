@@ -1,4 +1,6 @@
-# Azure DevOps Niceties 0.6.11
+# Azure DevOps Niceties 0.6.12
+
+- Add Copy as table to release lists: choose all loaded or selected items and a custom or standard work-item field. Paste Title, State, and that field into Excel for the web as three columns. Read saved values on demand; keep blank fields and preserve the clipboard on errors.
 
 - Make enhanced release work-item grid wrappers use one full-width column instead of the native three-column layout. Turning enhanced copying off restores the native grid.
 

@@ -7,6 +7,7 @@ const assert = require("node:assert/strict");
 const { runBrowserSmoke } = require("./browser-smoke.js");
 const { runClipboardSmoke } = require("./clipboard-smoke.js");
 const { runReleaseBoltSmoke } = require("./release-bolt-smoke.js");
+const { runReleaseTableSmoke } = require("./release-table-smoke.js");
 const { runReleaseListSmoke } = require("./release-list-smoke.js");
 const { runStateEditorSmoke } = require("./state-editor-smoke.js");
 const { runStateListSmoke } = require("./state-list-smoke.js");
@@ -146,6 +147,7 @@ async function main() {
       await native.close();
     }
     await runReleaseBoltSmoke(context.browser(), extensionId);
+    await runReleaseTableSmoke(context.browser(), extensionId);
     if (!releaseOnly) await runClipboardSmoke(context.browser(), extensionId);
     if (!releaseOnly) await runStateEditorSmoke(context.browser(), extensionId);
     if (!releaseOnly) await runStateListSmoke(context.browser(), extensionId);
