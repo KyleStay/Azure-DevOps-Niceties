@@ -48,6 +48,8 @@ The upload ZIP must have `manifest.json` at its root, with packaged `src/`, `opt
 
 The HTML helper has copy buttons for every text field, downloads for the exact ZIP, release guide and five images, a private reviewer-notes editor, and a submission checklist. It also works offline as one file. Reviewer notes remain only in the open tab and are not saved or uploaded. `npm run package` regenerates the helper from `LISTING.md`, `REVIEWER-TESTS.md`, and the current release files, and includes it at the root of the submission kit.
 
+In the dashboard's privacy tab, use **Host permission justification** for the site's access explanation, matching the helper and listing labels. This applies to access declared through `content_scripts.matches` even though this extension has no separate `host_permissions` entry.
+
 ## Information only the publisher can supply
 
 - A Google account registered in the [Chrome Web Store developer dashboard](https://chrome.google.com/webstore/devconsole), with Google's one-time registration fee paid if needed. Use an account you intend to maintain. See [registration instructions](https://developer.chrome.com/docs/webstore/register).

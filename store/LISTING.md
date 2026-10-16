@@ -100,13 +100,13 @@ Writes an Azure DevOps work-item reference or a release-stage list of references
 Stores the user's system-theme-sync preference, include-parent preference, and branch-name prefix using chrome.storage.sync so those settings persist and can follow the user's Chrome profile across devices. Stores the default-on enhanced-copying, selection-summary, and inline-state-editing preferences only in chrome.storage.local. These features start enabled unless the user saves a local opt-out. Additional export field reference names and their order use chrome.storage.local under the Azure DevOps organization identifier. Work-item data is not saved in Chrome storage.
 ```
 
-### Website access / content-script matches
+### Host permission justification
 
 ```text
 Runs on https://dev.azure.com/* and https://*.visualstudio.com/* to use Azure DevOps's native theme service and, when enhanced copying is enabled, to find work-item IDs, titles, types, links, native copy controls, and loaded release-stage lists, including typed grid cells without native item links. Default-on selection summaries read displayed selected rows, estimates, types, states, and assignments locally without additional requests. The visualstudio.com wildcard covers organization-specific legacy Azure DevOps hosts and may also match other Microsoft subdomains; copying requires a recognized Azure work-item control and theme matching requires Azure DevOps's platform service. Release-list shortcuts read project work-item categories. When native release title links are empty, enhanced copying reads those items’ IDs/titles in bounded same-organization batches and shows extension-owned fallback links; this does not write work-item fields. When a state picker is opened, state editing reads the current work-item revision and workflow metadata; an explicit choice sends a revision-checked System.State update. These requests use the existing signed-in session, normal permissions and workflow rules, and stay within the current Azure DevOps organization. When parent context is enabled and a rich or Markdown copy is requested, the extension fetches child relations and parent details from that organization.
 ```
 
-The manifest grants these sites through content-script match patterns; it does not request `<all_urls>`, `tabs`, `history`, `cookies`, or `clipboardRead`.
+Use this explanation in the Chrome Web Store privacy tab's **Host permission justification** field. The manifest grants site access through `content_scripts.matches`, without a separate `host_permissions` entry. Site access still requires this explanation. The extension does not request `<all_urls>`, `tabs`, `history`, `cookies`, or `clipboardRead`.
 
 ## Data-use declarations
 
