@@ -686,6 +686,7 @@
     const active = () => enabled && consentLoad === consentVersion && requestId === latestCopyRequest
       && entry.page === page && location.href === page && entry.scope.isConnected
       && isVisibleShortcutCandidate(entry.scope)
+      && isVisibleShortcutCandidate(entry.tableMenu)
       && entry.tableClient === client && entry.tableMenu.open && !client.closed;
     entry.tableButton.disabled = true;
     entry.tableField.disabled = entry.tableRows.disabled = true;
@@ -913,7 +914,10 @@
       types: new Map(), selected: new Map(), rows: new Map(), columns: new Map(), copyColumns: new Map(),
       titles: new Map(), titleAttempts: new Set(), page: location.href };
     addReleaseTableMenu(entry, menu);
-    more.after(entry.tableMenu);
+    more.querySelector("[data-azure-niceties-release-menu-panel]").append(entry.tableMenu);
+    more.addEventListener("toggle", () => {
+      if (!more.open) entry.tableMenu.open = false;
+    });
     loadReleaseCategories(entry);
     return entry;
   }

@@ -1,6 +1,6 @@
 ## Copy a release list as a table
 
-1. Open a release-stage Work items list and open Copy as table. Field metadata loads only after opening this menu.
+1. Open a release-stage Work items list and open More copy options → Copy as table. Field metadata loads only after opening this menu.
 2. Choose All loaded items or select rows and choose Selected items. Type the display name or reference name of a real organization field, including a custom QA assignment field, and choose it.
 3. Click Copy table. Select a cell in Excel for the web and paste normally. Expect a header and exactly three columns: Title, State, and the selected field. Values come from the saved work items at copy time. Unset fields remain blank.
 4. Verify multiline/rich-text values stay in one cell, identities use readable names, and formula-like strings remain text.

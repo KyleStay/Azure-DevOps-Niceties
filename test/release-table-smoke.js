@@ -50,12 +50,17 @@ async function runReleaseTableSmoke(browser, extensionId) {
     assert.equal(fieldReads.length, 0, "no field catalog or extra values read until the table menu is opened");
     assert.equal(reads.length, 0);
     const summary = page.locator("[data-azure-niceties-release-menu='table'] > summary");
+    const moreSummary = page.locator("[data-azure-niceties-release-menu='copy'] > summary");
+    const toggleTable = async () => {
+      if (!await summary.isVisible()) await moreSummary.click();
+      await summary.click();
+    };
     const form = page.locator("[data-azure-niceties-release-table]");
     const button = form.getByRole("button", { name: "Copy table", exact: true });
     const field = form.getByLabel("Additional field", { exact: true });
     const rows = form.getByLabel("Rows", { exact: true });
     const status = form.getByRole("status");
-    await summary.click(); await button.waitFor();
+    await toggleTable(); await button.waitFor();
     await page.waitForFunction(() => !document.querySelector("[data-azure-niceties-release-copy='table']").disabled);
     assert.equal(fieldReads.length, 1); assert.equal(reads.length, 0);
     assert.equal(await form.locator(`option[value='${qa.referenceName}']`).getAttribute("label"), qa.name);
@@ -87,10 +92,10 @@ async function runReleaseTableSmoke(browser, extensionId) {
     assert.deepEqual(pasted.cells, expected.split("\r\n").map(row => row.split("\t")));
     assert.equal(pasted.unsafe, 0);
     // Close the popup before selecting the rows it covers, then retain the field choice.
-    await summary.click();
+    await moreSummary.click();
     await page.locator("tbody tr").nth(0).locator("[data-azure-niceties-release-select]").check();
     await page.locator("tbody tr").nth(2).locator("[data-azure-niceties-release-select]").check();
-    await summary.click(); await page.waitForFunction(() => !document.querySelector("[data-azure-niceties-release-copy='table']").disabled);
+    await toggleTable(); await page.waitForFunction(() => !document.querySelector("[data-azure-niceties-release-copy='table']").disabled);
     await rows.selectOption("selected"); await button.click();
     await page.getByText("Copied 2 rows. Select a cell in Excel and paste.", { exact: true }).waitFor();
     assert.deepEqual(reads.at(-1).ids, [701, 703]);
@@ -110,10 +115,10 @@ async function runReleaseTableSmoke(browser, extensionId) {
     deny = false; delay = true; await button.click();
     await page.waitForFunction(() => document.querySelector("[data-azure-niceties-release-table-status]").textContent === "Reading table values…");
     for (let attempt = 0; !reply && attempt < 50; attempt++) await page.waitForTimeout(20);
-    assert.ok(reply); await summary.click(); reply(); await page.waitForTimeout(150);
+    assert.ok(reply); await moreSummary.click(); reply(); await page.waitForTimeout(150);
     assert.equal(await page.evaluate(() => navigator.clipboard.readText()), before, "closing the menu cancels a pending table copy");
     delay = false;
-    await summary.click(); await page.waitForFunction(() => !document.querySelector("[data-azure-niceties-release-copy='table']").disabled);
+    await toggleTable(); await page.waitForFunction(() => !document.querySelector("[data-azure-niceties-release-copy='table']").disabled);
     assert.equal(await field.isDisabled(), false, "closing an in-flight copy does not leave inputs disabled on reopen");
     assert.equal(await rows.isDisabled(), false);
     await options.locator("#data-consent").uncheck();

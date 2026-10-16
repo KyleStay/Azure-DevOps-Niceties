@@ -99,7 +99,7 @@ Browser verification loads the extension into a disposable headless Chromium pro
 
 ## Prepare a Web Store release
 
-In a release list, open **Copy as table**, choose **All loaded items** or **Selected items**, choose an additional field by name or reference name (including custom fields such as Assigned QA PBI), then click **Copy table**. Select one cell in Excel for the web and paste. The three columns are Title, State, and the selected field, with a header row. Saved values are read on demand; blank fields remain blank. HTML and tab-separated clipboard formats preserve the table structure. Rich text becomes plain text within its cell. Formula-like strings are copied as text. A failed lookup leaves the clipboard unchanged.
+In a release list, open **More copy options → Copy as table**, choose **All loaded items** or **Selected items**, choose an additional field by name or reference name (including custom fields such as Assigned QA PBI), then click **Copy table**. Select one cell in Excel for the web and paste. The three columns are Title, State, and the selected field, with a header row. Saved values are read on demand; blank fields remain blank. HTML and tab-separated clipboard formats preserve the table structure. Rich text becomes plain text within its cell. Formula-like strings are copied as text. A failed lookup leaves the clipboard unchanged.
 
 After verification, run `npm run package`. It creates an allowlisted runtime ZIP and a complete submission kit under `release/0.6.12/`, with checksums and a standalone submission guide. The listing, privacy policy, image assets, release evidence, and dashboard steps live in [store/SUBMISSION.md](store/SUBMISSION.md).
 
