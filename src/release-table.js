@@ -17,6 +17,51 @@
     return matches[0];
   }
 
+  function resolveFields(catalog, values) {
+    const fields = values.filter(value => core.normalizeWhitespace(value)).map(value => resolveField(catalog, value));
+    if (new Set(fields.map(field => field.referenceName.toLowerCase())).size !== fields.length) throw new Error("Choose each additional field only once.");
+    return fields;
+  }
+
+  class FieldPreferences {
+    constructor({ pageUrl, storage = globalThis.chrome?.storage?.local } = {}) {
+      const organization = api.organizationUrl(pageUrl);
+      if (!organization) throw new Error("Invalid Azure DevOps organization.");
+      this.key = `releaseTableFields:${organization.toLowerCase()}`;
+      this.storage = storage;
+      this.pending = Promise.resolve();
+    }
+
+    async load() {
+      await this.pending.catch(() => {});
+      this.lastQueued = null;
+      if (!this.storage) throw new Error("Settings storage is unavailable.");
+      const stored = (await this.storage.get(this.key))[this.key];
+      if (stored === undefined) return null;
+      if (!Array.isArray(stored) || stored.some(value => !validReference(value))
+        || new Set(stored.map(value => value.toLowerCase())).size !== stored.length) throw new Error("Saved fields are unreadable.");
+      this.lastQueued = JSON.stringify(stored);
+      return stored.slice();
+    }
+
+    save(fields) {
+      const references = fields.map(field => field.referenceName);
+      if (references.some(value => !validReference(value))
+        || new Set(references.map(value => value.toLowerCase())).size !== references.length) return Promise.reject(new Error("Invalid field preferences."));
+      const signature = JSON.stringify(references);
+      if (signature === this.lastQueued) return this.pending;
+      this.lastQueued = signature;
+      this.pending = this.pending.catch(() => {}).then(() => {
+        if (!this.storage) throw new Error("Settings storage is unavailable.");
+        return this.storage.set({ [this.key]: references });
+      }).catch(error => {
+        if (this.lastQueued === signature) this.lastQueued = null;
+        throw error;
+      });
+      return this.pending;
+    }
+  }
+
   function cellText(value, field, htmlToText) {
     if (value == null) return "";
     if (typeof value === "object") {
@@ -33,10 +78,10 @@
     return !numeric && /^[=+\-@]/.test(text) ? `'${text}` : text;
   }
 
-  function formatTable(rows, field, htmlToText = value => value) {
+  function formatTable(rows, fields, htmlToText = value => value) {
     if (!rows.length) throw new Error("There are no work items to copy.");
     const title = { name: "Title", type: "string" }, state = { name: "State", type: "string" };
-    const headers = ["Title", "State", cellText(field.name, title, htmlToText)];
+    const headers = ["Title", "State", ...fields.map(field => cellText(field.name, title, htmlToText))];
     const links = rows.map(row => {
       const url = core.safeWorkItemUrl(row.url);
       if (!url || core.workItemIdFromUrl(url) !== String(row.id) || !/^[1-9]\d*$/.test(String(row.id))
@@ -48,7 +93,7 @@
     const cells = rows.map(row => {
       const words = core.shortType(row.type).split(" ");
       const type = words.length > 1 ? words.map(word => word.match(/[\p{L}\p{N}]/u)?.[0] || "").join("").toUpperCase() : words[0];
-      return [cellText(`${type} ${row.id} ${row.title}`, title, htmlToText), cellText(row.state, state, htmlToText), cellText(row.value, field, htmlToText)];
+      return [cellText(`${type} ${row.id} ${row.title}`, title, htmlToText), cellText(row.state, state, htmlToText), ...fields.map(field => cellText(row.values?.[field.referenceName], field, htmlToText))];
     });
     const render = (values, tag) => `<tr>${values.map(value => `<${tag}>${core.escapeHtml(value)}</${tag}>`).join("")}</tr>`;
     const tsv = value => value.includes('"') ? `"${value.replace(/"/g, '""')}"` : value;
@@ -114,8 +159,10 @@
       });
     }
 
-    async read(items, field) {
-      if (!validReference(field?.referenceName) || !this.catalog?.some(candidate => candidate.referenceName === field.referenceName)) throw new Error("Choose an available work-item field first.");
+    async read(items, selectedFields) {
+      if (!Array.isArray(selectedFields) || selectedFields.some(field => !validReference(field?.referenceName)
+        || !this.catalog?.some(candidate => candidate.referenceName === field.referenceName))
+        || new Set(selectedFields.map(field => field.referenceName)).size !== selectedFields.length) throw new Error("Choose available work-item fields first.");
       const routes = new Map(items.map(item => {
         const route = api.itemRoute(item.url, this.pageUrl);
         return [route.id, route.url];
@@ -126,7 +173,7 @@
         const rows = new Map();
         for (let start = 0; start < ids.length; start += 50) {
           const batch = ids.slice(start, start + 50);
-          const fields = [...new Set(["System.Id", "System.Title", "System.State", "System.WorkItemType", field.referenceName])].join(",");
+          const fields = [...new Set(["System.Id", "System.Title", "System.State", "System.WorkItemType", ...selectedFields.map(field => field.referenceName)])].join(",");
           const values = await this.get(`workitems?ids=${batch.join(",")}&fields=${encodeURIComponent(fields)}&errorPolicy=Fail&api-version=7.1`, signal);
           for (const item of values) {
             const id = String(item?.id), data = item?.fields;
@@ -134,7 +181,8 @@
               || typeof data?.["System.Title"] !== "string" || !data["System.Title"].trim()
               || typeof data?.["System.WorkItemType"] !== "string" || !data["System.WorkItemType"].trim()
               || typeof data?.["System.State"] !== "string" || !data["System.State"].trim()) throw new Error("Azure DevOps returned incomplete or mismatched work-item data. Nothing was copied.");
-            rows.set(id, { id, url: routes.get(id), type: data["System.WorkItemType"], title: data["System.Title"], state: data["System.State"], value: data[field.referenceName] });
+            rows.set(id, { id, url: routes.get(id), type: data["System.WorkItemType"], title: data["System.Title"], state: data["System.State"],
+              values: Object.fromEntries(selectedFields.map(field => [field.referenceName, data[field.referenceName]])) });
           }
           if (batch.some(id => !rows.has(id))) throw new Error("Some work items could not be read. Nothing was copied.");
         }
@@ -143,5 +191,5 @@
     }
   }
 
-  return { ReleaseTableClient, resolveField, cellText, formatTable };
+  return { ReleaseTableClient, FieldPreferences, resolveField, resolveFields, cellText, formatTable };
 });

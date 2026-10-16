@@ -1,4 +1,7 @@
-# Azure DevOps Niceties 0.6.13
+# Azure DevOps Niceties 0.6.14
+
+- Add and remove optional columns in Copy as table. Remember chosen field reference names and order per organization on this device, including an export with no optional fields. Keep linked Title and State first; store no work-item values.
+- Show the work-item ID beside each displayed release-list title. Keep native title links and all copied text unchanged.
 
 - Copy table Titles as working work-item links labeled Type ID Title, such as PBI 123 Improve search. Abbreviate multiword standard/custom types and keep State and the chosen field in their own columns.
 

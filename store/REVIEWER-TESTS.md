@@ -1,10 +1,12 @@
 ## Copy a release list as a table
 
 1. Open a release-stage Work items list and open More copy options → Copy as table. Field metadata loads only after opening this menu.
-2. Choose All loaded items or select rows and choose Selected items. Type the display name or reference name of a real organization field, including a custom QA assignment field, and choose it.
-3. Click Copy table. Select a cell in Excel for the web and paste normally. Expect a header and exactly three columns: Title, State, and the selected field. Each first-column cell must be a working link labeled with type, ID, and title, for example PBI 123 Improve search. Multiword types are abbreviated; Bug and Task keep their names. Click a pasted link to verify its item ID. Paste normally to retain hyperlinks; plain-text paste retains only the label. Values come from the saved work items at copy time. Unset fields remain blank.
+2. Choose All loaded items or select rows and choose Selected items. Use Add field and Remove to choose optional columns by display or reference name, including a custom QA assignment field. Configure several fields and verify their order.
+3. Click Copy table. Select a cell in Excel for the web and paste normally. Expect a header and Title, State, then the chosen optional fields in order. Each first-column cell must be a working link labeled with type, ID, and title, for example PBI 123 Improve search. Multiword types are abbreviated; Bug and Task keep their names. Click a pasted link to verify its item ID. Paste normally to retain hyperlinks; plain-text paste retains only the label. Values come from the saved work items at copy time. Unset fields remain blank.
 4. Verify multiline/rich-text values stay in one cell, identities use readable names, and formula-like strings remain text.
-5. An inaccessible item or invalid field must show an error and leave the previous clipboard contents intact. Closing the menu or turning enhanced copying off cancels pending table reads. No work-item updates are made.
+5. Change field choices without copying, refresh the release page, and reopen Copy as table. Expect the same optional fields and order. Remove every optional field and refresh again: expect a Title-and-State-only export. A missing/deleted saved field must remain visible for correction. Different organizations keep separate choices, stored only as ordered reference names.
+6. Confirm displayed release Title cells show an ID while native title anchors stay unchanged. Individual and bulk reference copies must retain their previous exact text; table copies must contain the type/ID prefix only once. Recycled rows must update their displayed IDs, and opt-out must remove the display prefixes.
+7. An inaccessible item or invalid field must show an error and leave the previous clipboard contents intact. Closing the menu or turning enhanced copying off cancels pending table reads. No work-item updates are made.
 
 # Reviewer test instructions
 

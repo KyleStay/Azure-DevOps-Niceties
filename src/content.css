@@ -84,6 +84,11 @@ table[data-azure-niceties-release-list] > colgroup { display: none; }
 [data-azure-niceties-release-toolbar] [data-azure-niceties-release-table] label { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
 [data-azure-niceties-release-table] :is(input,select) { box-sizing: border-box; width: 100%; min-width: 0; padding: 5px; font: inherit; color: inherit; background: var(--background-color, Canvas); border: 1px solid GrayText; border-radius: 3px; }
 [data-azure-niceties-release-table-status] { overflow-wrap: anywhere; }
+[data-azure-niceties-release-table-fields] { display: flex; flex-direction: column; gap: 8px; max-height: 40vh; overflow-y: auto; }
+[data-azure-niceties-release-table-field-row] { display: flex; align-items: flex-end; gap: 6px; min-width: 0; }
+[data-azure-niceties-release-table-field-row] > label { flex: 1; min-width: 0; }
+[data-azure-niceties-release-table-field-row] > button { flex: 0 0 auto; }
+[data-azure-niceties-release-table-preferences-status] { overflow-wrap: anywhere; }
 [data-azure-niceties-release-menu='table'] > [data-azure-niceties-release-menu-panel] { position: static; width: auto; max-width: 100%; padding: 8px 0 0; border: 0; box-shadow: none; }
 [data-azure-niceties-release-toolbar] label { display: inline-flex; align-items: center; gap: 6px; }
 [data-azure-niceties-release-toolbar] small { font-size: 11px; opacity: 0.7; }
@@ -139,6 +144,10 @@ table[data-azure-niceties-release-list] > colgroup { display: none; }
   max-width: 100% !important;
 }
 [data-azure-niceties-release-field='title'] [data-azure-niceties-release-content] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-azure-niceties-release-field='title']:has(> [data-azure-niceties-release-content]) { display: flex !important; align-items: center; }
+[data-azure-niceties-release-field='title'] > [data-azure-niceties-release-content] { flex: 1 1 0; }
+[data-azure-niceties-release-field='title'] > [data-azure-niceties-release-actions] { flex: 0 0 auto; gap: 6px; margin: 0 6px 0 0; }
+[data-azure-niceties-release-display-id] { flex: 0 0 auto; color: var(--text-secondary-color, GrayText); font-variant-numeric: tabular-nums; }
 [data-azure-niceties-release-field='title'] :is(.bolt-table-cell-content,.work-item-small-view) { display: flex !important; align-items: center; flex: 1 1 0 !important; min-width: 0 !important; }
 [data-azure-niceties-release-field='title'] .type-icon-container { flex: 0 0 auto !important; }
 [data-azure-niceties-release-field='title'] .title-link { display: block !important; flex: 1 1 0 !important; min-width: 0 !important; }

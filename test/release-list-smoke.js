@@ -185,6 +185,7 @@ async function runReleaseListSmoke(browser, extensionId) {
               const cell = field => row.querySelector(`[data-azure-niceties-release-field='${field}']`);
               return {
                 titleWidth: cell("title").getBoundingClientRect().width,
+                actionsWidth: cell("title").querySelector("[data-azure-niceties-release-actions]")?.getBoundingClientRect().width || 0,
                 titleStart: cell("title").getBoundingClientRect().left,
                 stateEnd: cell("state").getBoundingClientRect().right,
                 typeHidden: getComputedStyle(cell("type")).display === "none",
@@ -198,7 +199,7 @@ async function runReleaseListSmoke(browser, extensionId) {
         assert.equal(layout.overflow, false, "legacy virtual canvases do not create horizontal scrolling");
         assert.ok(layout.columns.every(column => column.typeHidden && column.titleVisible && column.titleWidth > 40 && Math.abs(column.titleStart - column.stateEnd) < 2), "Title remains visible after State despite decorations and native flex rules");
         assert.ok(layout.columns.every(column => Math.abs(column.titleStart - layout.columns[0].titleStart) < 2), "legacy header and body columns align");
-        assert.ok(layout.columns.filter(column => column.contentWidth != null).every(column => column.contentWidth >= column.titleWidth - 18), "nested title text fills the actual column instead of retaining a stale native width");
+        assert.ok(layout.columns.filter(column => column.contentWidth != null).every(column => column.contentWidth >= column.titleWidth - column.actionsWidth - 24), "nested title text fills the space after its displayed ID instead of retaining a stale native width");
         if (width >= 836) assert.ok(layout.columns.every(column => column.titleWidth > layout.panelWidth * 0.55), "Title receives most of the overlay width");
         if (width === 836) await page.screenshot({ path: path.join(os.tmpdir(), "azure-release-legacy-layout.png") });
       }
@@ -263,7 +264,7 @@ async function runReleaseListSmoke(browser, extensionId) {
         assert.equal(layout.overflow, false, "nested release layout has no bottom scrollbar");
         assert.equal(layout.states, 36); assert.equal(layout.titles.length, 36);
         assert.ok(layout.titles.every(cell => cell.width > 120 && Math.abs(cell.x - layout.titles[0].x) < 2), "all 35 native titles and the header align with useful text space");
-        assert.ok(layout.contentWidth > 120, "nested title content escapes its old 24px width");
+        assert.ok(layout.contentWidth > (width === 360 ? 80 : 120), "nested title content remains readable after its displayed ID and escapes its old 24px width");
         assert.ok(layout.toolbarHeight <= (width === 360 ? 80 : 44), "closed toolbar stays compact instead of stacking every option");
         await page.locator("[data-azure-niceties-release-menu='copy'] > summary").click();
         assert.equal(await page.locator("[data-azure-niceties-release-copy='backlog']").isVisible(), true, "quick-copy choices remain available in the menu");

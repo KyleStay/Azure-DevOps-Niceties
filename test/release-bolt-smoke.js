@@ -59,6 +59,7 @@ async function runReleaseBoltSmoke(browser, extensionId) {
           ids: rows.map(row => row.querySelector("[data-column-index='0']")?.dataset.azureNicetiesReleaseField),
           titles: rows.map(row => { const box = row.querySelector("[data-azure-niceties-release-field='title']")?.getBoundingClientRect(); return box && { x: box.x, width: box.width }; }),
           links: [...table.querySelectorAll("tbody .title-link")].slice(1).map(link => link.getBoundingClientRect().width),
+          displayIds: [...table.querySelectorAll("tbody [data-azure-niceties-release-display-id]")].map(node => ({ text: node.textContent, width: node.getBoundingClientRect().width })),
           states: [...table.querySelectorAll("tbody [data-azure-niceties-release-field='state']")].map(cell => cell.textContent.trim()),
           labels: [...table.querySelectorAll("[data-azure-niceties-release-copy='item']")].map(button => button.getAttribute("aria-label")),
           headerLabels: ["state", "title"].map(field => {
@@ -75,7 +76,9 @@ async function runReleaseBoltSmoke(browser, extensionId) {
       assert.ok(layout.spacers.every(cell => cell.display === "none" && cell.width === 0), "Bolt spacers consume zero layout width");
       assert.ok(layout.ids.every(field => field === "id"), "the leading spacer cannot steal ID's index");
       assert.ok(layout.titles.every(box => box && box.width > 120 && Math.abs(box.x - layout.titles[0].x) < 2), "native header and all Title cells align and receive available width");
-      assert.ok(layout.links.every(width => width > 80), "the native work-item-small-view/title-link flex chain stays readable");
+      assert.ok(layout.links.every(linkWidth => linkWidth > (width === 360 ? 60 : 80)), "native titles retain readable space alongside their displayed IDs");
+      assert.deepEqual(layout.displayIds.map(node => node.text), Array.from({ length: 35 }, (_, index) => String(index + 701)));
+      assert.ok(layout.displayIds.every(node => node.width > 0), "each work-item ID is visible in the Title cell");
       assert.ok(layout.states.every(state => state === "Done"));
       assert.ok(layout.labels.every(label => !/:\s*$/.test(label)), "no blank title copy labels remain");
       assert.ok(layout.headerLabels.every(label => Math.abs(label.start - label.expected) < 2), "header text starts at its column's left padding instead of floating in the center");
@@ -96,6 +99,7 @@ async function runReleaseBoltSmoke(browser, extensionId) {
     assert.equal(await page.evaluate(() => window.initialNativeTitle === document.querySelector("tbody tr .title-link a")), true);
     await first.evaluate(row => { row.querySelector("[data-column-index='0'] .text-ellipsis").textContent = "999"; const link = row.querySelector(".title-link a"); link.href = link.href.replace("701", "999"); link.textContent = ""; });
     await page.getByRole("button", { name: "Copy PBI 999: Recovered title 999", exact: true }).waitFor();
+    assert.equal(await first.locator("[data-azure-niceties-release-display-id]").textContent(), "999", "recycled rows show the current ID without changing their copied title");
     assert.deepEqual(titleRequests, ["701", "999"], "recycled rows never reuse another item's title");
     await first.evaluate(row => { row.querySelector("[data-column-index='0'] .text-ellipsis").textContent = "901"; const link = row.querySelector(".title-link a"); link.href = link.href.replace("999", "901"); });
     await first.getByRole("link", { name: "Title unavailable — open item", exact: true }).waitFor();
@@ -105,7 +109,7 @@ async function runReleaseBoltSmoke(browser, extensionId) {
     await options.locator("#data-consent").uncheck();
     await page.waitForFunction(() => !document.querySelector("[data-azure-niceties-release-toolbar]"));
     assert.equal(await page.locator(".work-item-grid").evaluate(grid => getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length), 3, "opt-out restores the native three-column grid");
-    assert.equal(await page.locator("[data-azure-niceties-release-title-fallback],[data-azure-niceties-release-content]").count(), 0);
+    assert.equal(await page.locator("[data-azure-niceties-release-title-fallback],[data-azure-niceties-release-content],[data-azure-niceties-release-display-id]").count(), 0);
     console.log(JSON.stringify({ releaseBoltRow: "passed", rows: 35, widths: [360,836,1280], cases: "supplied spacers, ID indexing, native flex chain, empty-title GET recovery, no native title mutation, state-label title preservation, recycling, permissions, no writes, opt-out" }));
   } catch (error) {
     console.log(JSON.stringify({ releaseBoltDiagnosis: await page.evaluate(() => ({

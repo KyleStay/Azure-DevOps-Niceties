@@ -11,6 +11,7 @@ async function runReleaseTableSmoke(browser, extensionId) {
   const categoryUrl = "https://dev.azure.com/example/project/_apis/wit/workitemtypecategories?api-version=7.1";
   const qa = { name: "Assigned QA PBI", referenceName: "Custom.AssignedQAPBI", type: "string" };
   const fields = [qa, { name: "Description", referenceName: "System.Description", type: "html" }, { name: "Effort", referenceName: "Microsoft.VSTS.Scheduling.Effort", type: "double" }];
+  const preferenceKey = "releaseTableFields:https://dev.azure.com/example";
   const reads = [], writes = [], fieldReads = [];
   let deny = false, delay = false, reply;
   const fixture = fs.readFileSync(path.join(__dirname, "release-list-bolt-fixture.html"), "utf8")
@@ -22,19 +23,19 @@ async function runReleaseTableSmoke(browser, extensionId) {
     const request = route.request(), query = new URL(request.url()).searchParams;
     assert.equal(request.method(), "GET"); assert.equal(query.get("errorPolicy"), "Fail");
     const ids = query.get("ids").split(",").map(Number);
-    const extra = query.get("fields").split(",").find(name => !["System.Id", "System.Title", "System.State", "System.WorkItemType"].includes(name));
+    const extras = query.get("fields").split(",").filter(name => !["System.Id", "System.Title", "System.State", "System.WorkItemType"].includes(name));
     assert.ok(query.get("fields").split(",").includes("System.WorkItemType"));
-    assert.ok(fields.some(field => field.referenceName === extra));
-    reads.push({ ids, extra });
+    assert.ok(extras.every(extra => fields.some(field => field.referenceName === extra)));
+    reads.push({ ids, extras });
     if (delay) await new Promise(resolve => { reply = resolve; });
     if (deny) return route.fulfill({ status: 403, json: { message: "Denied" } });
     await route.fulfill({ json: { value: ids.slice().reverse().map(id => ({ id, fields: {
       "System.Id": id, "System.Title": id === 701 ? "Fix <copy> & table\nlayout" : `Saved title ${id}`,
       "System.WorkItemType": id === 701 ? "Product Backlog Item" : id === 702 ? "Bug" : "Customer Support Request",
       "System.State": id === 701 ? "Active" : "Done",
-      [extra]: extra === qa.referenceName ? (id === 701 ? { displayName: "QA Person", uniqueName: "qa@example.test" } : id === 702 ? null : "=1+1")
+      ...Object.fromEntries(extras.map(extra => [extra, extra === qa.referenceName ? (id === 701 ? { displayName: "QA Person", uniqueName: "qa@example.test" } : id === 702 ? null : "=1+1")
         : extra === "System.Description" ? "First<div>Second &amp; third<br>Fourth</div><script>bad()</script><img src='https://invalid.example.test/tracker'>"
-          : 0,
+          : 0])),
     } })) } }).catch(() => {});
   };
   const observe = request => { if (request.method() === "PATCH") writes.push(request.url()); };
@@ -45,7 +46,8 @@ async function runReleaseTableSmoke(browser, extensionId) {
   try {
     await options.goto(`chrome-extension://${extensionId}/options/options.html`);
     await options.waitForFunction(() => !document.querySelector("#data-consent").disabled && !document.querySelector("#inline-state-editing").disabled);
-    saved = await options.evaluate(() => chrome.storage.local.get(["dataConsent", "inlineStateEditing"]));
+    saved = await options.evaluate(key => chrome.storage.local.get(["dataConsent", "inlineStateEditing", key]), preferenceKey);
+    await options.evaluate(key => chrome.storage.local.remove(key), preferenceKey);
     await options.locator("#data-consent").check(); await options.locator("#inline-state-editing").uncheck();
     await page.goto(url);
     await page.getByRole("button", { name: "Copy all loaded (3)", exact: true }).waitFor();
@@ -59,9 +61,10 @@ async function runReleaseTableSmoke(browser, extensionId) {
     };
     const form = page.locator("[data-azure-niceties-release-table]");
     const button = form.getByRole("button", { name: "Copy table", exact: true });
-    const field = form.getByLabel("Additional field", { exact: true });
+    const field = form.getByLabel("Additional field 1", { exact: true });
     const rows = form.getByLabel("Rows", { exact: true });
-    const status = form.getByRole("status");
+    const ready = () => page.waitForFunction(() => !document.querySelector("[data-azure-niceties-release-copy='table']").disabled);
+    const remembered = references => options.waitForFunction(async ({ key, references }) => JSON.stringify((await chrome.storage.local.get(key))[key]) === JSON.stringify(references), { key: preferenceKey, references });
     await toggleTable(); await button.waitFor();
     await page.waitForFunction(() => !document.querySelector("[data-azure-niceties-release-copy='table']").disabled);
     assert.equal(fieldReads.length, 1); assert.equal(reads.length, 0);
@@ -77,7 +80,7 @@ async function runReleaseTableSmoke(browser, extensionId) {
     await page.getByText("Copied 3 rows. Select a cell in Excel and paste.", { exact: true }).waitFor();
     const expected = "Title\tState\tAssigned QA PBI\r\nPBI 701 Fix <copy> & table layout\tActive\tQA Person\r\nBug 702 Saved title 702\tDone\t\r\nCSR 703 Saved title 703\tDone\t'=1+1";
     assert.equal(await page.evaluate(() => navigator.clipboard.readText()), expected);
-    assert.deepEqual(reads, [{ ids: [701, 702, 703], extra: qa.referenceName }]);
+    assert.deepEqual(reads, [{ ids: [701, 702, 703], extras: [qa.referenceName] }]);
     await page.evaluate(() => {
       const plain = document.createElement("textarea"); plain.id = "paste-table-plain";
       const rich = document.createElement("div"); rich.id = "paste-table-rich"; rich.contentEditable = "true";
@@ -125,17 +128,71 @@ async function runReleaseTableSmoke(browser, extensionId) {
     await toggleTable(); await page.waitForFunction(() => !document.querySelector("[data-azure-niceties-release-copy='table']").disabled);
     assert.equal(await field.isDisabled(), false, "closing an in-flight copy does not leave inputs disabled on reopen");
     assert.equal(await rows.isDisabled(), false);
+    // Additional columns are saved on choice/removal, before another copy.
+    await field.fill(qa.name);
+    await form.getByRole("button", { name: "Add field", exact: true }).click();
+    await form.getByLabel("Additional field 2", { exact: true }).fill("Description");
+    await form.getByRole("button", { name: "Add field", exact: true }).click();
+    await form.getByLabel("Additional field 3", { exact: true }).fill("Effort");
+    await form.getByLabel("Additional field 3", { exact: true }).press("Tab");
+    await remembered([qa.referenceName, "System.Description", "Microsoft.VSTS.Scheduling.Effort"]);
+    for (const width of [360, 836]) {
+      await page.setViewportSize({ width, height: 940 });
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+      const box = await form.boundingBox(); assert.ok(box.x >= 0 && box.x + box.width <= width);
+      await page.screenshot({ path: path.join(os.tmpdir(), `azure-release-table-${width}.png`) });
+    }
+    await button.click();
+    await page.waitForFunction(async () => (await navigator.clipboard.readText()).startsWith("Title\tState\tAssigned QA PBI\tDescription\tEffort"));
+    assert.deepEqual(reads.at(-1).extras, [qa.referenceName, "System.Description", "Microsoft.VSTS.Scheduling.Effort"]);
+    await page.locator("#paste-table-rich").evaluate(host => host.replaceChildren());
+    await page.locator("#paste-table-rich").focus(); await page.keyboard.press(pasteKey);
+    assert.deepEqual(await page.locator("#paste-table-rich tr").evaluateAll(rows => rows.map(row => row.children.length)), [5, 5, 5]);
+    assert.equal(await page.locator("#paste-table-rich a").count(), 2);
+    await form.getByRole("button", { name: "Remove field 2", exact: true }).click();
+    await remembered([qa.referenceName, "Microsoft.VSTS.Scheduling.Effort"]);
+    const beforeReload = reads.length;
+    await page.reload(); await page.getByRole("button", { name: "Copy all loaded (3)", exact: true }).waitFor();
+    assert.equal(reads.length, beforeReload, "restoring preferences does not read work-item values");
+    await toggleTable(); await ready();
+    assert.equal(await field.inputValue(), qa.name);
+    assert.equal(await form.getByLabel("Additional field 2", { exact: true }).inputValue(), "Effort");
+    await button.click();
+    await page.waitForFunction(async () => (await navigator.clipboard.readText()).startsWith("Title\tState\tAssigned QA PBI\tEffort"));
+    assert.deepEqual(reads.at(-1).extras, [qa.referenceName, "Microsoft.VSTS.Scheduling.Effort"]);
+    await form.getByRole("button", { name: "Remove field 1", exact: true }).click();
+    await form.getByRole("button", { name: "Remove field 1", exact: true }).click();
+    await remembered([]);
+    await page.reload(); await page.getByRole("button", { name: "Copy all loaded (3)", exact: true }).waitFor();
+    await toggleTable(); await ready();
+    assert.equal(await form.locator("[data-azure-niceties-release-table-fields] input").count(), 0);
+    await button.click();
+    await page.waitForFunction(async () => (await navigator.clipboard.readText()).startsWith("Title\tState\r\n"));
+    assert.deepEqual(reads.at(-1).extras, [], "removing optional fields removes them from API requests and export columns");
+    // A deleted field remains visible for correction instead of silently changing the export.
+    await options.evaluate(key => chrome.storage.local.set({ [key]: ["Custom.Removed"] }), preferenceKey);
+    await page.reload(); await page.getByRole("button", { name: "Copy all loaded (3)", exact: true }).waitFor();
+    await toggleTable(); await ready();
+    await page.getByText("A saved field is no longer available. Remove it or choose another field.", { exact: true }).waitFor();
+    assert.equal(await field.inputValue(), "Custom.Removed");
+    const unchanged = await page.evaluate(() => navigator.clipboard.readText());
+    await button.click(); await ready();
+    assert.equal(await page.evaluate(() => navigator.clipboard.readText()), unchanged);
+    await form.getByRole("button", { name: "Remove field 1", exact: true }).click();
+    await remembered([]);
+    await form.getByRole("button", { name: "Add field", exact: true }).click();
+    await field.fill(qa.name); await field.press("Tab"); await remembered([qa.referenceName]);
     await options.locator("#data-consent").uncheck();
     await page.waitForFunction(() => !document.querySelector("[data-azure-niceties-release-table]"));
     assert.deepEqual(writes, []);
-    console.log(JSON.stringify({ releaseTable: "passed", cases: "custom-field choice, no eager reads, current saved states, exact HTML/TSV clipboard + native paste, blank/identity/formula/rich-text/numeric values, selected rows, permission failure, cancellation, opt-out" }));
+    console.log(JSON.stringify({ releaseTable: "passed", cases: "add/remove multiple fields, ordered five-column native paste, saved field choices before copy and across reload, empty export configuration, deleted-field recovery, custom fields, no eager item reads, current saved states, hyperlinks, typed values, selected rows, permission failure, cancellation, opt-out" }));
   } catch (error) {
     console.log(JSON.stringify({ releaseTableDiagnosis: await page.locator("[data-azure-niceties-release-toolbar]").textContent().catch(() => "missing toolbar"), reads, fieldReads }));
     await page.screenshot({ path: path.join(os.tmpdir(), "azure-release-table-failure.png") }).catch(() => {});
     throw error;
   } finally {
     reply?.();
-    if (saved) await options.evaluate(async previous => { await chrome.storage.local.remove(["dataConsent", "inlineStateEditing"]); await chrome.storage.local.set(previous); }, saved).catch(() => {});
+    if (saved) await options.evaluate(async ({ previous, key }) => { await chrome.storage.local.remove(["dataConsent", "inlineStateEditing", key]); await chrome.storage.local.set(previous); }, { previous: saved, key: preferenceKey }).catch(() => {});
     context.off("request", observe);
     await page.close(); await options.close();
     await context.unroute(url, fixtureRoute); await context.unroute(fieldsUrl, fieldRoute);
