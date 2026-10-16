@@ -623,6 +623,7 @@
     const fieldLabel = document.createElement("label");
     fieldLabel.append("Additional field", field);
     const rows = document.createElement("select");
+    rows.setAttribute("aria-label", "Rows");
     for (const [value, label] of [["all", "All loaded items"], ["selected", "Selected items"]]) {
       const option = document.createElement("option"); option.value = value; option.textContent = label; rows.append(option);
     }
@@ -651,6 +652,7 @@
       entry.tableClient = null;
       button.disabled = true;
       field.disabled = rows.disabled = false;
+      choices.replaceChildren();
       if (!entry.tableMenu.open || !enabled || entry.page !== location.href) return;
       status.textContent = "Loading fields…";
       const client = new globalThis.AzureNicetiesReleaseTable.ReleaseTableClient({ pageUrl: entry.page });
