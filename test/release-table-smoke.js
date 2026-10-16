@@ -86,7 +86,8 @@ async function runReleaseTableSmoke(browser, extensionId) {
     }));
     assert.deepEqual(pasted.cells, expected.split("\r\n").map(row => row.split("\t")));
     assert.equal(pasted.unsafe, 0);
-    // Choosing rows outside the menu closes it; reopen with the field choice intact.
+    // Close the popup before selecting the rows it covers, then retain the field choice.
+    await summary.click();
     await page.locator("tbody tr").nth(0).locator("[data-azure-niceties-release-select]").check();
     await page.locator("tbody tr").nth(2).locator("[data-azure-niceties-release-select]").check();
     await summary.click(); await page.waitForFunction(() => !document.querySelector("[data-azure-niceties-release-copy='table']").disabled);
