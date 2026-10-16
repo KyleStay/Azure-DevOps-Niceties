@@ -1,3 +1,7 @@
+# Single-column release wrapper — 0.6.11
+
+The supplied `.wit-ui-control.work-item-grid` wrapper retained three native CSS grid tracks even after it expanded to full width. The release-only override now uses `minmax(0, 1fr)` on marked work-item-grid wrappers. Other grids remain unchanged and removing the release markers restores native columns. The supplied-row browser fixture now includes a three-column wrapper and asserts one full-width computed track at 360/836/1280px, full-width table bounds, and restoration to three tracks on opt-out. Browser execution results are recorded in the release handoff.
+
 # Supplied Bolt release row — 0.6.10
 
 The supplied live row exposed concrete gaps in earlier fixtures: native presentation/spacer cells were treated as data columns, a leading spacer could shadow ID’s index, the title’s nested work-item-small-view/title-link flex chain was missing from the test pages, and its native title anchor was empty. Microsoft’s published Bolt Table/Core CSS also showed that native inner cell padding and header margins must be removed when the compact row supplies its own padding. The fixture includes that native baseline and checks compact row height and header text position. The new fixture reproduces those classes and column attributes with anonymized IDs/URLs, leading/trailing spacers, an empty title, and a real title equal to the state name Done.

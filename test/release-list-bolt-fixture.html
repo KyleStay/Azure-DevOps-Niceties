@@ -13,6 +13,7 @@
   body { margin: 0; padding: 20px; color: #242424; font: 14px "Segoe UI", Arial, sans-serif; }
   h1 { font-size: 22px; font-weight: 400; }
   .native-group, .native-host { width: 280px; max-width: 280px; }
+  .work-item-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   table { width: 360px; max-width: 360px; table-layout: fixed; border-collapse: collapse; }
   .bolt-table-cell, .bolt-table-header-cell { padding: 8px; border-bottom: 1px solid #eee; }
   .bolt-table-cell-content { display: flex; align-items: center; padding: .5625rem .75rem; }
@@ -31,7 +32,7 @@
   <h1>Production · Work items</h1>
   <p class="sample">Anonymized supplied Bolt-row structure · synthetic titles and IDs</p>
   <h2>Example build <small>(35 work items)</small></h2>
-  <div class="native-group"><div class="native-host">
+  <div class="native-group"><div class="native-host wit-ui-control work-item-grid">
     <table class="bolt-table" id="bolt-items" role="grid">
       <colgroup><col><col><col><col><col><col><col></colgroup>
       <thead><tr class="bolt-table-header-row" role="row">

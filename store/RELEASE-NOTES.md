@@ -1,4 +1,6 @@
-# Azure DevOps Niceties 0.6.10
+# Azure DevOps Niceties 0.6.11
+
+- Make enhanced release work-item grid wrappers use one full-width column instead of the native three-column layout. Turning enhanced copying off restores the native grid.
 
 - Fix native Bolt release rows: exclude presentation/spacer cells, align ID/header mapping, and preserve the work-item-small-view/title-link flex chain. Recover empty native title links through bounded read-only ID/title requests and an extension-owned display link. Disable incomplete copying if a title cannot be loaded. Native links and work-item fields remain untouched.
 

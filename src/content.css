@@ -61,6 +61,9 @@
   min-width: 0 !important;
   align-self: stretch !important;
 }
+.work-item-grid:is([data-azure-niceties-release-width],[data-azure-niceties-release-list]) {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
 table[data-azure-niceties-release-list],
 table[data-azure-niceties-release-list] > :is(thead, tbody, tfoot),
 table[data-azure-niceties-release-width],

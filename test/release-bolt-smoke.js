@@ -52,6 +52,7 @@ async function runReleaseBoltSmoke(browser, extensionId) {
       const layout = await page.locator("#bolt-items").evaluate(table => {
         const rows = [...table.querySelectorAll("tr")];
         return { width: table.getBoundingClientRect().width, available: document.querySelector(".stage-frame").getBoundingClientRect().width,
+          gridColumns: getComputedStyle(table.parentElement).gridTemplateColumns.trim().split(/\s+/),
           overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
           heights: rows.map(row => row.getBoundingClientRect().height),
           spacers: [...table.querySelectorAll("[role='presentation']")].map(cell => ({ display: getComputedStyle(cell).display, width: cell.getBoundingClientRect().width })),
@@ -68,6 +69,8 @@ async function runReleaseBoltSmoke(browser, extensionId) {
         };
       });
       assert.ok(Math.abs(layout.width - layout.available) < 2); assert.equal(layout.overflow, false);
+      assert.equal(layout.gridColumns.length, 1, "the native work-item-grid uses one full-width track instead of three");
+      assert.ok(Math.abs(parseFloat(layout.gridColumns[0]) - layout.available) < 2);
       assert.ok(layout.heights.every(height => height <= 38), "native inner padding and header margins do not double the compact row height");
       assert.ok(layout.spacers.every(cell => cell.display === "none" && cell.width === 0), "Bolt spacers consume zero layout width");
       assert.ok(layout.ids.every(field => field === "id"), "the leading spacer cannot steal ID's index");
@@ -101,6 +104,7 @@ async function runReleaseBoltSmoke(browser, extensionId) {
     assert.deepEqual(writes, [], "title recovery performs no work-item writes");
     await options.locator("#data-consent").uncheck();
     await page.waitForFunction(() => !document.querySelector("[data-azure-niceties-release-toolbar]"));
+    assert.equal(await page.locator(".work-item-grid").evaluate(grid => getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length), 3, "opt-out restores the native three-column grid");
     assert.equal(await page.locator("[data-azure-niceties-release-title-fallback],[data-azure-niceties-release-content]").count(), 0);
     console.log(JSON.stringify({ releaseBoltRow: "passed", rows: 35, widths: [360,836,1280], cases: "supplied spacers, ID indexing, native flex chain, empty-title GET recovery, no native title mutation, state-label title preservation, recycling, permissions, no writes, opt-out" }));
   } catch (error) {
