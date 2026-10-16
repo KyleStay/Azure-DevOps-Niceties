@@ -37,12 +37,24 @@
     if (!rows.length) throw new Error("There are no work items to copy.");
     const title = { name: "Title", type: "string" }, state = { name: "State", type: "string" };
     const headers = ["Title", "State", cellText(field.name, title, htmlToText)];
-    const cells = rows.map(row => [cellText(row.title, title, htmlToText), cellText(row.state, state, htmlToText), cellText(row.value, field, htmlToText)]);
+    const links = rows.map(row => {
+      const url = core.safeWorkItemUrl(row.url);
+      if (!url || core.workItemIdFromUrl(url) !== String(row.id) || !/^[1-9]\d*$/.test(String(row.id))
+        || !Number.isSafeInteger(Number(row.id)) || typeof row.type !== "string" || !row.type.trim()) {
+        throw new Error("A work-item link or type is missing. Nothing was copied.");
+      }
+      return url;
+    });
+    const cells = rows.map(row => {
+      const words = core.shortType(row.type).split(" ");
+      const type = words.length > 1 ? words.map(word => word.match(/[\p{L}\p{N}]/u)?.[0] || "").join("").toUpperCase() : words[0];
+      return [cellText(`${type} ${row.id} ${row.title}`, title, htmlToText), cellText(row.state, state, htmlToText), cellText(row.value, field, htmlToText)];
+    });
     const render = (values, tag) => `<tr>${values.map(value => `<${tag}>${core.escapeHtml(value)}</${tag}>`).join("")}</tr>`;
     const tsv = value => value.includes('"') ? `"${value.replace(/"/g, '""')}"` : value;
     return { rich: true, mode: "table", label: `${rows.length} work items as a table`, count: rows.length,
       plainText: [headers, ...cells].map(values => values.map(tsv).join("\t")).join("\r\n"),
-      html: `<table><thead>${render(headers, "th")}</thead><tbody>${cells.map(values => render(values, "td")).join("")}</tbody></table>` };
+      html: `<table><thead>${render(headers, "th")}</thead><tbody>${cells.map((values, index) => `<tr><td><a href="${core.escapeHtml(links[index])}">${core.escapeHtml(values[0])}</a></td>${values.slice(1).map(value => `<td>${core.escapeHtml(value)}</td>`).join("")}</tr>`).join("")}</tbody></table>` };
   }
 
   class ReleaseTableClient {
@@ -104,20 +116,25 @@
 
     async read(items, field) {
       if (!validReference(field?.referenceName) || !this.catalog?.some(candidate => candidate.referenceName === field.referenceName)) throw new Error("Choose an available work-item field first.");
-      const ids = [...new Set(items.map(item => api.itemRoute(item.url, this.pageUrl).id))];
+      const routes = new Map(items.map(item => {
+        const route = api.itemRoute(item.url, this.pageUrl);
+        return [route.id, route.url];
+      }));
+      const ids = [...routes.keys()];
       if (!ids.length) throw new Error("There are no work items to copy.");
       return this.run(async signal => {
         const rows = new Map();
         for (let start = 0; start < ids.length; start += 50) {
           const batch = ids.slice(start, start + 50);
-          const fields = [...new Set(["System.Id", "System.Title", "System.State", field.referenceName])].join(",");
+          const fields = [...new Set(["System.Id", "System.Title", "System.State", "System.WorkItemType", field.referenceName])].join(",");
           const values = await this.get(`workitems?ids=${batch.join(",")}&fields=${encodeURIComponent(fields)}&errorPolicy=Fail&api-version=7.1`, signal);
           for (const item of values) {
             const id = String(item?.id), data = item?.fields;
             if (!batch.includes(id) || rows.has(id) || (data?.["System.Id"] != null && String(data["System.Id"]) !== id)
               || typeof data?.["System.Title"] !== "string" || !data["System.Title"].trim()
+              || typeof data?.["System.WorkItemType"] !== "string" || !data["System.WorkItemType"].trim()
               || typeof data?.["System.State"] !== "string" || !data["System.State"].trim()) throw new Error("Azure DevOps returned incomplete or mismatched work-item data. Nothing was copied.");
-            rows.set(id, { title: data["System.Title"], state: data["System.State"], value: data[field.referenceName] });
+            rows.set(id, { id, url: routes.get(id), type: data["System.WorkItemType"], title: data["System.Title"], state: data["System.State"], value: data[field.referenceName] });
           }
           if (batch.some(id => !rows.has(id))) throw new Error("Some work items could not be read. Nothing was copied.");
         }

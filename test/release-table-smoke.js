@@ -22,13 +22,15 @@ async function runReleaseTableSmoke(browser, extensionId) {
     const request = route.request(), query = new URL(request.url()).searchParams;
     assert.equal(request.method(), "GET"); assert.equal(query.get("errorPolicy"), "Fail");
     const ids = query.get("ids").split(",").map(Number);
-    const extra = query.get("fields").split(",").find(name => !["System.Id", "System.Title", "System.State"].includes(name));
+    const extra = query.get("fields").split(",").find(name => !["System.Id", "System.Title", "System.State", "System.WorkItemType"].includes(name));
+    assert.ok(query.get("fields").split(",").includes("System.WorkItemType"));
     assert.ok(fields.some(field => field.referenceName === extra));
     reads.push({ ids, extra });
     if (delay) await new Promise(resolve => { reply = resolve; });
     if (deny) return route.fulfill({ status: 403, json: { message: "Denied" } });
     await route.fulfill({ json: { value: ids.slice().reverse().map(id => ({ id, fields: {
       "System.Id": id, "System.Title": id === 701 ? "Fix <copy> & table\nlayout" : `Saved title ${id}`,
+      "System.WorkItemType": id === 701 ? "Product Backlog Item" : id === 702 ? "Bug" : "Customer Support Request",
       "System.State": id === 701 ? "Active" : "Done",
       [extra]: extra === qa.referenceName ? (id === 701 ? { displayName: "QA Person", uniqueName: "qa@example.test" } : id === 702 ? null : "=1+1")
         : extra === "System.Description" ? "First<div>Second &amp; third<br>Fourth</div><script>bad()</script><img src='https://invalid.example.test/tracker'>"
@@ -73,7 +75,7 @@ async function runReleaseTableSmoke(browser, extensionId) {
     }
     await button.click();
     await page.getByText("Copied 3 rows. Select a cell in Excel and paste.", { exact: true }).waitFor();
-    const expected = "Title\tState\tAssigned QA PBI\r\nFix <copy> & table layout\tActive\tQA Person\r\nSaved title 702\tDone\t\r\nSaved title 703\tDone\t'=1+1";
+    const expected = "Title\tState\tAssigned QA PBI\r\nPBI 701 Fix <copy> & table layout\tActive\tQA Person\r\nBug 702 Saved title 702\tDone\t\r\nCSR 703 Saved title 703\tDone\t'=1+1";
     assert.equal(await page.evaluate(() => navigator.clipboard.readText()), expected);
     assert.deepEqual(reads, [{ ids: [701, 702, 703], extra: qa.referenceName }]);
     await page.evaluate(() => {
@@ -88,9 +90,11 @@ async function runReleaseTableSmoke(browser, extensionId) {
     const pasted = await page.locator("#paste-table-rich").evaluate(host => ({
       cells: [...host.querySelectorAll("tr")].map(row => [...row.querySelectorAll("th,td")].map(cell => cell.textContent)),
       unsafe: host.querySelectorAll("script,img,iframe").length,
+      links: [...host.querySelectorAll("a")].map(link => ({ text: link.textContent, url: link.href, column: link.closest("td").cellIndex })),
     }));
     assert.deepEqual(pasted.cells, expected.split("\r\n").map(row => row.split("\t")));
     assert.equal(pasted.unsafe, 0);
+    assert.deepEqual(pasted.links, [701,702,703].map((id, index) => ({ text: expected.split("\r\n")[index + 1].split("\t")[0], url: `https://dev.azure.com/example/00000000-0000-0000-0000-000000000001/_workitems/edit/${id}`, column: 0 })), "each pasted Title retains its working native work-item link in the first column");
     // Close the popup before selecting the rows it covers, then retain the field choice.
     await moreSummary.click();
     await page.locator("tbody tr").nth(0).locator("[data-azure-niceties-release-select]").check();

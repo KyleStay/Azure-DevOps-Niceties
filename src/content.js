@@ -630,9 +630,9 @@
     const rowsLabel = document.createElement("label"); rowsLabel.append("Rows", rows);
     const button = releaseButton("Copy table", "table");
     button.disabled = true;
-    button.title = "Copy Title, State, and your chosen field for pasting into Excel.";
+    button.title = "Copy linked Type + ID + Title, State, and your chosen field for pasting into Excel.";
     const hint = document.createElement("small");
-    hint.textContent = "Title, State, and your chosen field. Blank fields stay blank.";
+    hint.textContent = "Linked Type + ID + Title, State, and your chosen field. Blank fields stay blank.";
     const status = document.createElement("span");
     status.setAttribute("role", "status");
     status.dataset.azureNicetiesReleaseTableStatus = "true";

@@ -1,4 +1,6 @@
-# Azure DevOps Niceties 0.6.12
+# Azure DevOps Niceties 0.6.13
+
+- Copy table Titles as working work-item links labeled Type ID Title, such as PBI 123 Improve search. Abbreviate multiword standard/custom types and keep State and the chosen field in their own columns.
 
 - Add Copy as table to release lists: choose all loaded or selected items and a custom or standard work-item field. Paste Title, State, and that field into Excel for the web as three columns. Read saved values on demand; keep blank fields and preserve the clipboard on errors.
 

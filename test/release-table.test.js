@@ -4,7 +4,8 @@ const { ReleaseTableClient, resolveField, formatTable } = require("../src/releas
 const pageUrl = "https://dev.azure.com/example/project/_releaseProgress?releaseId=53";
 const qa = { name: "Assigned QA PBI", referenceName: "Custom.AssignedQAPBI", type: "string" };
 const item = id => ({ url: `https://dev.azure.com/example/project/_workitems/edit/${id}` });
-const responseItem = (id, value = "QA owner") => ({ id, fields: { "System.Id": id, "System.Title": `Title ${id}`, "System.State": "Done", [qa.referenceName]: value } });
+const tableRow = values => ({ id: "123", url: item(123).url, type: "Product Backlog Item", ...values });
+const responseItem = (id, value = "QA owner") => ({ id, fields: { "System.Id": id, "System.WorkItemType": "Product Backlog Item", "System.Title": `Title ${id}`, "System.State": "Done", [qa.referenceName]: value } });
 const response = value => ({ ok: true, json: async () => ({ value }) });
 function client(options = {}) {
   const calls = [];
@@ -32,33 +33,33 @@ test("browser request functions retain the global receiver", async () => {
 });
 
 test("clipboard table has exactly three columns, headers, escaped HTML, and tab-separated plain text", () => {
-  const formatted = formatTable([{ title: 'Fix <table> & "copy"\t now', state: "In\nProgress", value: "QA\r\nOwner" },
-    { title: "Empty field", state: "Done", value: null }], qa);
-  assert.equal(formatted.plainText, 'Title\tState\tAssigned QA PBI\r\n"Fix <table> & ""copy"" now"\tIn Progress\tQA Owner\r\nEmpty field\tDone\t');
+  const formatted = formatTable([tableRow({ title: 'Fix <table> & "copy"\t now', state: "In\nProgress", value: "QA\r\nOwner" }),
+    tableRow({ id: "124", url: item(124).url, title: "Empty field", state: "Done", value: null })], qa);
+  assert.equal(formatted.plainText, 'Title\tState\tAssigned QA PBI\r\n"PBI 123 Fix <table> & ""copy"" now"\tIn Progress\tQA Owner\r\nPBI 124 Empty field\tDone\t');
   assert.equal((formatted.html.match(/<th>/g) || []).length, 3);
   assert.equal((formatted.html.match(/<td>/g) || []).length, 6);
-  assert.ok(formatted.html.includes("Fix &lt;table&gt; &amp; &quot;copy&quot; now"));
+  assert.ok(formatted.html.includes('<a href="https://dev.azure.com/example/project/_workitems/edit/123">PBI 123 Fix &lt;table&gt; &amp; &quot;copy&quot; now</a>'));
   assert.equal(formatted.rich, true);
 });
 
 test("table preserves identities, zero, false and negative numbers, and treats formula-like strings as text", () => {
   for (const [value, expected] of [[{ displayName: "QA Person", uniqueName: "private@example.test" }, "QA Person"], [0, "0"], [false, "false"], [-5, "-5"], ["=1+1", "'=1+1"], [" \t@SUM(A1)", "'@SUM(A1)"], ["-2+3", "'-2+3"]]) {
-    const table = formatTable([{ title: "Title", state: "Done", value }], qa);
+    const table = formatTable([tableRow({ title: "Title", state: "Done", value })], qa);
     assert.equal(table.plainText.split("\r\n")[1].split("\t")[2], expected);
     assert.equal(table.html.includes("private@example.test"), false);
   }
-  assert.throws(() => formatTable([{ title: "Title", state: "Done", value: { unknown: true } }], qa), /unsupported value/);
+  assert.throws(() => formatTable([tableRow({ title: "Title", state: "Done", value: { unknown: true } })], qa), /unsupported value/);
   assert.throws(() => formatTable([], qa), /no work items/);
 });
 
 test("rich-text fields use the inert text converter before escaping", () => {
   let input;
-  const table = formatTable([{ title: "Title", state: "Done", value: "<div>QA &amp; review</div>" }], { ...qa, type: "html" }, value => { input = value; return "QA & review"; });
+  const table = formatTable([tableRow({ title: "Title", state: "Done", value: "<div>QA &amp; review</div>" })], { ...qa, type: "html" }, value => { input = value; return "QA & review"; });
   assert.equal(input, "<div>QA &amp; review</div>");
   assert.ok(table.html.includes("<td>QA &amp; review</td>"));
 });
 
-test("custom fields are fetched on demand; read-only batches request only IDs, Title, State, and the chosen field", async () => {
+test("custom fields are fetched on demand; read-only batches request IDs, type, Title, State, and the chosen field", async () => {
   const { value, calls } = client();
   assert.equal(calls.length, 0);
   assert.deepEqual(await value.fields(), [qa]);
@@ -72,7 +73,7 @@ test("custom fields are fetched on demand; read-only batches request only IDs, T
     assert.ok(url.startsWith("https://dev.azure.com/example/_apis/wit/"));
     assert.equal(init.method, "GET"); assert.equal(init.credentials, "include"); assert.equal(init.redirect, "error");
     if (url.includes("workitems?")) {
-      assert.equal(new URL(url).searchParams.get("fields"), "System.Id,System.Title,System.State,Custom.AssignedQAPBI");
+      assert.equal(new URL(url).searchParams.get("fields"), "System.Id,System.Title,System.State,System.WorkItemType,Custom.AssignedQAPBI");
       assert.equal(new URL(url).searchParams.get("errorPolicy"), "Fail");
     }
   }
@@ -83,18 +84,35 @@ test("custom fields are fetched on demand; read-only batches request only IDs, T
 test("table uses current server states, preserves snapshot order, and leaves missing optional fields blank", async () => {
   const { value } = client({ fetch: async () => response([responseItem(2, null), { ...responseItem(1), fields: { ...responseItem(1).fields, "System.State": "Active" } }]) });
   await value.fields();
-  assert.deepEqual((await value.read([item(1), item(2)], qa)).map(row => [row.title, row.state, row.value]), [["Title 1", "Active", "QA owner"], ["Title 2", "Done", null]]);
+  const rows = await value.read([item(1), item(2)], qa);
+  assert.deepEqual(rows.map(row => [row.title, row.state, row.value]), [["Title 1", "Active", "QA owner"], ["Title 2", "Done", null]]);
+  assert.equal(rows[0].url, item(1).url); assert.equal(rows[0].id, "1"); assert.equal(rows[0].type, "Product Backlog Item");
 });
 
 for (const [name, payload] of [["missing items", []], ["wrong item", [responseItem(2)]], ["duplicate item", [responseItem(1), responseItem(1)]],
   ["wrong field ID", [{ ...responseItem(1), fields: { ...responseItem(1).fields, "System.Id": 9 } }]],
   ["missing title", [{ ...responseItem(1), fields: { "System.State": "Done" } }]],
-  ["missing state", [{ ...responseItem(1), fields: { "System.Title": "Title" } }]]]) {
+  ["missing state", [{ ...responseItem(1), fields: { "System.Title": "Title" } }]],
+  ["missing type", [{ ...responseItem(1), fields: { "System.Title": "Title", "System.State": "Done" } }]]]) {
   test(`table refuses incomplete copies: ${name}`, async () => {
     const { value } = client({ fetch: async () => response(payload) });
     await value.fields(); await assert.rejects(value.read([item(1)], qa), /Nothing was copied/);
   });
 }
+
+test("title labels abbreviate standard and custom multiword types and retain single-word types", () => {
+  for (const [type, expected] of [["Product Backlog Item", "PBI"], ["User Story", "US"], ["Customer Support Request", "CSR"], ["Bug", "Bug"], ["Task", "Task"]]) {
+    const formatted = formatTable([tableRow({ type, title: "asdfasdf", state: "Done" })], qa);
+    assert.equal(formatted.plainText.split("\r\n")[1].split("\t")[0], `${expected} 123 asdfasdf`);
+    assert.ok(formatted.html.includes(`>${expected} 123 asdfasdf</a>`));
+  }
+});
+
+test("table links reject unsafe destinations and IDs mismatched with the link", () => {
+  for (const values of [{ url: "javascript:alert(1)" }, { url: "https://example.test/_workitems/edit/123" }, { id: "9" }, { id: "0", url: item(0).url }, { type: "" }]) {
+    assert.throws(() => formatTable([tableRow({ title: "Title", state: "Done", ...values })], qa), /Nothing was copied/);
+  }
+});
 
 test("table refuses unknown fields and unsafe or foreign work-item routes before any item request", async () => {
   const { value, calls } = client(); await value.fields();
