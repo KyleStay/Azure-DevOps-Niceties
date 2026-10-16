@@ -1,10 +1,10 @@
 # Chrome Web Store submission kit
 
-Prepared October 15, 2026, for version 0.6.9. This updates the existing extension with compact release lists, process-aware bulk copying, and inline state editing. The kit contains the runtime ZIP, current screenshots, icon, promotional image, listing, privacy answers, release notes, and reviewer procedure. See QA.md for actual checks and limits. Before submitting this version, publish the updated docs/privacy.html at the policy URL below and verify the hosted text matches. The earlier hosted policy does not yet include this version’s process-order lookup and native form-refresh details. Publisher account details, private reviewer access, distribution choices, and dashboard submission remain publisher steps. Store approval is determined by Google.
+Prepared October 15, 2026, for version 0.6.10. This updates the existing extension with compact release lists, process-aware bulk copying, and inline state editing. The kit contains the runtime ZIP, current screenshots, icon, promotional image, listing, privacy answers, release notes, and reviewer procedure. See QA.md for actual checks and limits. Before submitting this version, publish the updated docs/privacy.html at the policy URL below and verify the hosted text matches. The earlier hosted policy does not yet include this version’s process-order lookup, native form-refresh details, and missing-release-title reads. Publisher account details, private reviewer access, distribution choices, and dashboard submission remain publisher steps. Store approval is determined by Google.
 
 ## Upload this file
 
-Upload **`azure-devops-niceties-0.6.9.zip`** to Chrome Web Store. For an existing listing, upload it to that same item; use Add new item only for a first submission. The larger submission-kit ZIP contains this guide and store materials; do not upload that outer ZIP as the extension.
+Upload **`azure-devops-niceties-0.6.10.zip`** to Chrome Web Store. For an existing listing, upload it to that same item; use Add new item only for a first submission. The larger submission-kit ZIP contains this guide and store materials; do not upload that outer ZIP as the extension.
 
 Runtime ZIP SHA-256 (integrity verified during packaging):
 
@@ -17,6 +17,7 @@ bf3919ae1599ceed080ea1f4728478262fc682e539eb035f9b530b127d9c0d2e
 - Shared State detection now handles nested item metadata, split grid headers, alternate field-reference attributes, hidden native editors, and panels becoming visible. Release item lists, Sprints → Backlog, and product backlog use the same editing path.
 
 - Enhanced copying and selected-item summaries start enabled, while saved opt-outs are preserved. Automatic theme matching preserves selected native dark and high-contrast themes.
+- Bolt spacer cells are excluded from field indexing and layout. Empty native release title links are recovered with read-only same-organization requests; native title links remain untouched and incomplete copying stays disabled on lookup failure.
 - Release lists fill the overlay with aligned columns and flexible nested title text. The standalone ID column stays hidden; copied references retain IDs. Sort labels preserve Title and State mapping. The compact toolbar keeps extra copy actions and type choices in dismissible menus. Release lists have copy icons in the first column, selection checkboxes in the second, State before Title, a hidden Type column, and Select by type controls. Copy all bugs + PBIs and Copy all PBIs adapt to the project’s requirement and bug categories, including Agile stories, Basic issues, CMMI requirements, and custom types. Manual type selection remains available. Custom types and partial selections are supported; Copy all loaded still includes all types.
 - Selected loaded rows show Effort and other displayed estimate totals. Copies use clean, clickable references such as `PBI 601: Improve search results`, one line per item, without extra blank lines or font styling.
 - Displayed State values in identifiable work-item lists open a workflow picker. Explicit choices save immediately using normal Azure DevOps permissions and a revision check. Inline state editing has an independent local opt-out. Browser write scenarios use controlled fixtures.
@@ -25,10 +26,10 @@ bf3919ae1599ceed080ea1f4728478262fc682e539eb035f9b530b127d9c0d2e
 
 | Item | File / source |
 | --- | --- |
-| Extension package | `azure-devops-niceties-0.6.9.zip` — upload this ZIP |
-| Downloadable release guide | `azure-devops-niceties-0.6.9-submission-guide.md` |
+| Extension package | `azure-devops-niceties-0.6.10.zip` — upload this ZIP |
+| Downloadable release guide | `azure-devops-niceties-0.6.10-submission-guide.md` |
 | Copy-and-paste publishing helper | Open the included `publish.html` (offline; contains this exact ZIP) |
-| All submission materials | `azure-devops-niceties-0.6.9-submission-kit.zip` — unpack locally; upload the inner runtime ZIP |
+| All submission materials | `azure-devops-niceties-0.6.10-submission-kit.zip` — unpack locally; upload the inner runtime ZIP |
 | Listing and privacy-tab answers | `store/LISTING.md` |
 | Hosted privacy policy | https://kylestay.github.io/Azure-DevOps-Niceties/privacy.html (source: `docs/privacy.html`) |
 | Reviewer's test steps | `store/REVIEWER-TESTS.md` |
@@ -38,9 +39,9 @@ bf3919ae1599ceed080ea1f4728478262fc682e539eb035f9b530b127d9c0d2e
 | Verification evidence and limits | `store/QA.md` |
 | Package and asset checksums | `SHA256SUMS.txt` |
 
-These files are provided in `release/0.6.9/` in the project. Extract the submission kit to get the upload ZIP, guide, helper, `store/` materials, and checksums together.
+These files are provided in `release/0.6.10/` in the project. Extract the submission kit to get the upload ZIP, guide, helper, `store/` materials, and checksums together.
 
-The upload ZIP must have `manifest.json` at its root, with packaged `src/`, `options/`, and `icons/` files present. Do not include `node_modules`, tests, Git files, account credentials, or this submission documentation in the runtime package. The release target is version 0.6.9 with Chrome 111 or later; confirm the final manifest matches. The package version is the version in the final manifest; do not upload an earlier ZIP after code changes.
+The upload ZIP must have `manifest.json` at its root, with packaged `src/`, `options/`, and `icons/` files present. Do not include `node_modules`, tests, Git files, account credentials, or this submission documentation in the runtime package. The release target is version 0.6.10 with Chrome 111 or later; confirm the final manifest matches. The package version is the version in the final manifest; do not upload an earlier ZIP after code changes.
 
 The HTML helper has copy buttons for every text field, downloads for the exact ZIP, release guide and five images, a private reviewer-notes editor, and a submission checklist. It also works offline as one file. Reviewer notes remain only in the open tab and are not saved or uploaded. `npm run package` regenerates the helper from `LISTING.md`, `REVIEWER-TESTS.md`, and the current release files, and includes it at the root of the submission kit.
 

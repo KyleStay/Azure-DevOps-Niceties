@@ -88,15 +88,15 @@
       const scope = gridOwner(row);
       if (scope && !headerCache.has(scope)) {
         headerCache.set(scope, [...scope.querySelectorAll(HEADER)]
-          .filter(header => gridOwner(header) === scope && !header.hasAttribute("data-azure-niceties-release-column"))
-          .map((header, index) => ({ index: header.getAttribute("aria-colindex") || String(index + 1),
+          .filter(header => gridOwner(header) === scope && !header.hasAttribute("data-azure-niceties-release-column") && !core.isPresentationCell(header))
+          .map((header, index) => ({ index: core.columnIndex(header, index),
             field: headerField(header) })));
       }
       const headers = headerCache.get(scope) || [];
       const fields = new Map();
       const candidates = new Set();
-      [...row.querySelectorAll(CELL)].filter(cell => rowOwner(cell) === row && !cell.hasAttribute("data-azure-niceties-release-column")).forEach((cell, index) => {
-        const field = fieldName(cell) || headers.find(header => header.index === (cell.getAttribute("aria-colindex") || String(index + 1)))?.field;
+      [...row.querySelectorAll(CELL)].filter(cell => rowOwner(cell) === row && !cell.hasAttribute("data-azure-niceties-release-column") && !core.isPresentationCell(cell)).forEach((cell, index) => {
+        const field = fieldName(cell) || headers.find(header => header.index === (core.columnIndex(cell, index)))?.field;
         if (field) fields.set(field, cell);
         if (field === "state") candidates.add(cell);
       });

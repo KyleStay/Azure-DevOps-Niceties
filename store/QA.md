@@ -1,3 +1,13 @@
+# Supplied Bolt release row — 0.6.10
+
+The supplied live row exposed concrete gaps in earlier fixtures: native presentation/spacer cells were treated as data columns, a leading spacer could shadow ID’s index, the title’s nested work-item-small-view/title-link flex chain was missing from the test pages, and its native title anchor was empty. The new fixture reproduces those classes and column attributes with anonymized IDs/URLs, leading/trailing spacers, an empty title, and a real title equal to the state name Done.
+
+Copying, State editing, and selection summaries now share presentation-cell exclusion and ARIA/zero-based Bolt indexing. Layout removes the spacers and gives the native title flex chain the remaining width. Empty titles use Microsoft’s read-only Work Items List API with only System.Id and System.Title, batches of at most 50, a three-second timeout, same-organization validation, response validation, one attempt per mounted-list key, consent/navigation cancellation, and page-memory caching. Native anchors remain untouched; owned fallback links disappear when native title text arrives. Incomplete copies remain disabled on metadata failure.
+
+Tests cover batch coalescing/limits, failures/redirects/identity mismatches, invalid/outside-organization IDs, opt-out, navigation, late responses, and hung fetch/JSON. The supplied-row browser regression checks 35 rows at 360/836/1280px, zero spacer width, correct ID classification, aligned readable title wrappers, copied recovered text, unchanged native anchors, titles equal to state names, independent State opt-out/re-enable, recycled rows, permission failure, no PATCH writes, and cleanup. Browser results and exact ZIP evidence are recorded in the release verification receipt. The live authenticated page remains unavailable; this test uses the supplied row structure and mocked metadata.
+
+API contract: [Microsoft Work Items — List](https://learn.microsoft.com/en-us/rest/api/azure/devops/wit/work-items/list?view=azure-devops-rest-7.1).
+
 # Release list simplification — 0.6.9
 
 The user's 0.6.8 screenshot invalidated the earlier layout assumptions: the toolbar and table were still constrained to a narrow strip. The earlier fixtures had a recognized dialog boundary and did not cover nested unnamed width constraints or headers outside a presentation table. Passing those tests did not establish the user's actual release layout.

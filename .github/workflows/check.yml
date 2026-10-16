@@ -58,6 +58,9 @@ jobs:
             /tmp/azure-release-nested-360.png
             /tmp/azure-release-nested-836.png
             /tmp/azure-release-nested-1280.png
+            /tmp/azure-release-bolt-360.png
+            /tmp/azure-release-bolt-836.png
+            /tmp/azure-release-bolt-1280.png
             /tmp/azure-release-selection-demo.png
             /tmp/azure-publisher-package.png
             store/assets/settings-*-1280x800.png

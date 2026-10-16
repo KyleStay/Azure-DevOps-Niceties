@@ -284,12 +284,12 @@
 
   function releaseHeaders(scope) {
     return Array.from(scope.querySelectorAll(RELEASE_HEADER_CELL))
-      .filter((cell) => releaseScopeOwner(cell) === scope && !cell.matches(RELEASE_COLUMN));
+      .filter((cell) => releaseScopeOwner(cell) === scope && !cell.matches(RELEASE_COLUMN) && !core.isPresentationCell(cell));
   }
 
   function releaseCells(row) {
     return Array.from(row.querySelectorAll(RELEASE_DATA_CELL))
-      .filter((cell) => cell.closest(RELEASE_ROW) === row && !cell.matches(RELEASE_COLUMN));
+      .filter((cell) => cell.closest(RELEASE_ROW) === row && !cell.matches(RELEASE_COLUMN) && !core.isPresentationCell(cell));
   }
 
   function listFields(row, headerCache = new Map()) {
@@ -297,13 +297,13 @@
     const grid = releaseScopeOwner(row);
     if (!grid) return {};
     if (!headerCache.has(grid)) headerCache.set(grid, releaseHeaders(grid)
-      .map((header, index) => ({ index: header.getAttribute("aria-colindex") || String(index + 1),
+      .map((header, index) => ({ index: core.columnIndex(header, index),
         field: releaseHeaderField(header) })));
     const headers = headerCache.get(grid);
     const fields = {};
     releaseCells(row).forEach((cell, index) => {
         const name = releaseFieldAttribute(cell)
-          || headers.find((header) => header.index === (cell.getAttribute("aria-colindex") || String(index + 1)))?.field;
+          || headers.find((header) => header.index === (core.columnIndex(cell, index)))?.field;
         if (name) {
           const source = cell.querySelector(RELEASE_ACTIONS) ? cell.cloneNode(true) : cell;
           source.querySelectorAll(RELEASE_ACTIONS).forEach((actions) => actions.remove());
@@ -327,6 +327,7 @@
   }
 
   function releaseRecords(scope) {
+    const entry = releaseLists.get(scope);
     const rows = new Set(scope.querySelectorAll(RELEASE_ROW));
     const headers = new Map();
     for (const link of scope.querySelectorAll("a[href*='/_workitems/edit/']")) {
@@ -353,8 +354,12 @@
         const id = core.workItemIdFromUrl(urls[0]);
         const explicitId = attributeId || fields.id;
         if (explicitId && explicitId !== id) continue;
-        const title = extractTitle(row, links[0], id, fields);
-        if (!title || (title === id && !fields.title && !firstMatch(row, TITLE_TEXT_SELECTORS))) continue;
+        const nativeTitle = extractTitle(row, links[0], id, fields);
+        if (!nativeTitle && fields.titleCell?.querySelector("input,textarea,[contenteditable]:not([contenteditable='false'])")) continue;
+        if ((!nativeTitle && !fields.titleCell) || (nativeTitle === id && !fields.title && !firstMatch(row, TITLE_TEXT_SELECTORS))) continue;
+        const key = releaseKey({ id, url: urls[0] });
+        if (nativeTitle) entry?.titles.set(key, nativeTitle);
+        const title = nativeTitle || entry?.titles.get(key) || "";
         item = { id, title, type: extractType(row, fields), url: urls[0] };
       } else {
         // Release grids can render IDs/titles as clickable cells without anchors.
@@ -367,13 +372,15 @@
         if (!url) continue;
         item = { id, title: fields.title, type, url };
       }
-      records.push({ row, item, key: releaseKey(item), titleCell: fields.titleCell, linked: links.length > 0 });
+      records.push({ row, item, key: releaseKey(item), titleCell: fields.titleCell, linked: links.length > 0,
+        fallbackTitle: Boolean(links.length && fields.titleCell && !fields.title) });
     }
     return records;
   }
 
   function removeReleaseEntry(entry) {
     entry.processController?.abort();
+    entry.titleController?.abort();
     setReleaseWidthHosts(entry, new Set());
     entry.scope.removeAttribute("data-azure-niceties-release-list");
     entry.toolbar.remove();
@@ -390,6 +397,7 @@
     entry.col?.remove();
     entry.copyCol?.remove();
     entry.selected.clear();
+    entry.titles.clear();
   }
 
   function removeReleaseColumn(entry, row) {
@@ -398,6 +406,7 @@
     row.removeAttribute("data-azure-niceties-release-column-layout");
     for (const cell of row.querySelectorAll("[data-azure-niceties-release-field]")) cell.removeAttribute("data-azure-niceties-release-field");
     for (const element of row.querySelectorAll("[data-azure-niceties-release-content]")) element.removeAttribute("data-azure-niceties-release-content");
+    for (const cell of row.querySelectorAll("[data-azure-niceties-release-title-fallback]")) cell.removeAttribute("data-azure-niceties-release-title-fallback");
     entry.columns.delete(row);
     entry.copyColumns.delete(row);
   }
@@ -445,7 +454,7 @@
     for (const { row } of records) rows.add(row);
     const headerCells = releaseHeaders(entry.scope);
     const headerCell = headerCells[0];
-    const fields = headerCells.map((cell, index) => ({ index: cell.getAttribute("aria-colindex") || String(index + 1),
+    const fields = headerCells.map((cell, index) => ({ index: core.columnIndex(cell, index),
       field: releaseHeaderField(cell) }));
     let header = headerCell && (headerCell.closest(RELEASE_ROW) || headerCell.parentElement);
     if (header === entry.scope) header = null;
@@ -467,12 +476,13 @@
       // summaries still use the original field indices. CSS changes their order.
       const nativeCells = row === header ? headerCells : releaseCells(row);
       nativeCells.forEach((child, index) => {
+        for (const element of child.querySelectorAll("[data-azure-niceties-release-content]")) element.removeAttribute("data-azure-niceties-release-content");
         child.dataset.azureNicetiesReleaseField = releaseFieldAttribute(child)
-          || fields.find((field) => field.index === (child.getAttribute("aria-colindex") || String(index + 1)))?.field || "other";
+          || fields.find((field) => field.index === (core.columnIndex(child, index)))?.field || "other";
         if (row !== header && ["id", "title", "state"].includes(child.dataset.azureNicetiesReleaseField)) {
           // Native cell wrappers can retain the old column width even after
           // their containing row stretches to fill a release overlay.
-          for (const element of child.querySelectorAll("div,span,a")) {
+          for (const element of child.querySelectorAll(":scope > div,:scope > span,:scope > a,.bolt-table-cell-content,.work-item-small-view,.title-link,.work-item-state,.work-item-state-name")) {
             if (element.closest(`${RELEASE_ACTIONS},[data-azure-niceties-state-trigger]`) || element.matches("[aria-hidden='true'],[role='img'],.fabric-icon,.bowtie-icon,.work-item-state-circle,.state-circle,.state-indicator")) continue;
             element.dataset.azureNicetiesReleaseContent = "true";
           }
@@ -587,6 +597,57 @@
     return core.shortType(item.type).toLowerCase();
   }
 
+  async function loadReleaseTitles(entry, records) {
+    if (!enabled || entry.titleController) return;
+    const api = globalThis.AzureNicetiesStateClient;
+    const pending = new Map();
+    for (const { item, key } of records) {
+      if (item.title || entry.titleAttempts.has(key)) continue;
+      entry.titleAttempts.add(key);
+      try {
+        const route = api.itemRoute(item.url, entry.page);
+        pending.set(route.id, key);
+      } catch (_) { /* Never request metadata outside this page's organization. */ }
+      if (pending.size === 50) break;
+    }
+    if (!pending.size) return;
+    const controller = new AbortController();
+    entry.titleController = controller;
+    const consentVersion = consentLoad;
+    const active = () => enabled && consentLoad === consentVersion && !controller.signal.aborted
+      && entry.titleController === controller && entry.scope.isConnected && location.href === entry.page;
+    const deadline = window.setTimeout(() => controller.abort(), PARENT_LOOKUP_TIMEOUT_MS);
+    try {
+      const url = `${api.organizationUrl(entry.page)}/_apis/wit/workitems?ids=${[...pending.keys()].join(",")}&fields=System.Id,System.Title&errorPolicy=Omit&api-version=7.1`;
+      const cancelled = new Promise((_, reject) => controller.signal.addEventListener("abort", () => reject(new Error("Cancelled")), { once: true }));
+      const result = await Promise.race([cancelled, (async () => {
+        const response = await fetch(url, { credentials: "include", redirect: "error", signal: controller.signal, headers: { Accept: "application/json" } });
+        if (!response.ok || response.redirected || (response.url && response.url !== url)) throw new Error("Title lookup failed");
+        return response.json();
+      })()]);
+      if (!active() || !Array.isArray(result?.value)) return;
+      const titles = new Map();
+      for (const item of result.value) {
+        const id = String(item?.id);
+        const title = typeof item?.fields?.["System.Title"] === "string" ? core.normalizeWhitespace(item.fields["System.Title"]) : "";
+        if (!pending.has(id) || titles.has(id) || !title
+          || (item.fields["System.Id"] != null && String(item.fields["System.Id"]) !== id)) throw new Error("Invalid title response");
+        titles.set(id, title);
+      }
+      if (active()) for (const [id, title] of titles) entry.titles.set(pending.get(id), title);
+    } catch (_) {
+      // Keep an Open link and disable incomplete copies if metadata is unavailable.
+    } finally {
+      window.clearTimeout(deadline);
+      if (entry.titleController === controller) {
+        entry.titleController = null;
+        if (enabled && releaseLists.get(entry.scope) === entry && entry.scope.isConnected && entry.page === location.href) {
+          updateReleaseEntry(entry, releaseRecords(entry.scope));
+        }
+      }
+    }
+  }
+
   async function loadReleaseCategories(entry) {
     entry.processController?.abort();
     if (!enabled) return;
@@ -634,7 +695,8 @@
       const count = core.filterReleaseItems([...loaded.values()], kind, entry.categories).length;
       const text = `${label} (${count})`;
       if (button.textContent !== text) button.textContent = text;
-      button.disabled = entry.processState !== "ready" || count === 0;
+      button.disabled = entry.processState !== "ready" || count === 0
+        || core.filterReleaseItems([...loaded.values()], kind, entry.categories).some(item => !item.title);
       const help = entry.processState === "loading" ? "Loading project work-item types."
         : entry.processState === "unavailable" ? "Choose types below, then use Copy selected."
         : "Copies loaded, visible items of these types. Shift: Markdown; Alt/Option: IDs; Ctrl/Command: URLs; Shift+Alt/Option: branch names.";
@@ -648,9 +710,10 @@
     const groups = new Map();
     for (const [key, item] of available) {
       const type = releaseType(item);
-      if (!groups.has(type)) groups.set(type, { label: core.shortType(item.type), total: 0, selected: 0 });
+      if (!groups.has(type)) groups.set(type, { label: core.shortType(item.type), total: 0, selected: 0, incomplete: false });
       const group = groups.get(type);
       group.total++;
+      group.incomplete ||= !item.title;
       if (entry.selected.has(key)) group.selected++;
     }
     for (const [type, control] of entry.types) {
@@ -677,7 +740,7 @@
       if (control.checkbox.getAttribute("aria-label") !== name) control.checkbox.setAttribute("aria-label", name);
       control.checkbox.checked = group.total > 0 && group.selected === group.total;
       control.checkbox.indeterminate = group.selected > 0 && group.selected < group.total;
-      control.checkbox.disabled = group.total === 0;
+      control.checkbox.disabled = group.total === 0 || group.incomplete;
     }
     entry.typeChoices.hidden = groups.size === 0;
   }
@@ -733,7 +796,8 @@
     toolbar.append(commands);
     scope.before(toolbar);
     const entry = { scope, toolbar, all, selectedButton, allButton, bugsBacklogButton, backlogButton, clear, typeChoices,
-      types: new Map(), selected: new Map(), rows: new Map(), columns: new Map(), copyColumns: new Map(), page: location.href };
+      types: new Map(), selected: new Map(), rows: new Map(), columns: new Map(), copyColumns: new Map(),
+      titles: new Map(), titleAttempts: new Set(), page: location.href };
     loadReleaseCategories(entry);
     return entry;
   }
@@ -753,15 +817,20 @@
         controls.copy.remove();
         row.removeAttribute("data-azure-niceties-release-row");
         row.removeAttribute("data-azure-niceties-release-selected");
+        for (const cell of row.querySelectorAll("[data-azure-niceties-release-title-fallback]")) cell.removeAttribute("data-azure-niceties-release-title-fallback");
         entry.rows.delete(row);
       }
     }
     for (const record of records) {
       const { row, item, key } = record;
+      for (const cell of row.querySelectorAll("[data-azure-niceties-release-title-fallback]")) {
+        if (!record.fallbackTitle || cell !== record.titleCell) cell.removeAttribute("data-azure-niceties-release-title-fallback");
+      }
+      if (record.fallbackTitle) record.titleCell.setAttribute("data-azure-niceties-release-title-fallback", "true");
       let controls = entry.rows.get(row);
       if (!controls || !row.contains(controls.actions) || !entry.columns.get(row)?.contains(controls.checkbox)
         || !entry.copyColumns.get(row)?.contains(controls.copy)
-        || controls.key !== key || controls.linked !== record.linked) {
+        || controls.key !== key || controls.linked !== record.linked || controls.fallbackTitle !== record.fallbackTitle) {
         controls?.actions.remove();
         controls?.checkbox.remove();
         controls?.copy.remove();
@@ -776,7 +845,14 @@
         const copy = releaseButton("Copy", "item");
         entry.copyColumns.get(row).append(copy);
         entry.columns.get(row).append(checkbox);
-        if (!record.linked) {
+        if (!record.linked || record.fallbackTitle) {
+          const nativeIcon = record.fallbackTitle && record.titleCell.querySelector(".type-icon-container [role='img']");
+          if (nativeIcon) {
+            const icon = nativeIcon.cloneNode(true);
+            icon.removeAttribute("tabindex"); icon.setAttribute("aria-hidden", "true");
+            icon.dataset.azureNicetiesReleaseFallbackIcon = "true";
+            actions.append(icon);
+          }
           const open = document.createElement("a");
           open.textContent = "Open";
           open.target = "_blank";
@@ -784,14 +860,18 @@
           actions.append(open);
         }
         (record.titleCell || row.querySelector("[role='gridcell'],[role='cell'],td") || row).prepend(actions);
-        controls = { actions, checkbox, copy, key, linked: record.linked };
+        controls = { actions, checkbox, copy, key, linked: record.linked, fallbackTitle: record.fallbackTitle, copyHelp: copy.title };
         entry.rows.set(row, controls);
       }
-      const label = core.labelFor(item);
+      const label = item.title ? core.labelFor(item) : `${core.shortType(item.type)} ${item.id}`;
       if (controls.checkbox.getAttribute("aria-label") !== `Select ${label}`) controls.checkbox.setAttribute("aria-label", `Select ${label}`);
       if (controls.copy.getAttribute("aria-label") !== `Copy ${label}`) controls.copy.setAttribute("aria-label", `Copy ${label}`);
       const open = controls.actions.querySelector("a");
       if (open && open.getAttribute("href") !== item.url) open.href = item.url;
+      const title = item.title || (entry.titleController || !entry.titleAttempts.has(key) ? "Loading title…" : "Title unavailable — open item");
+      if (open && record.fallbackTitle && open.textContent !== title) open.textContent = title;
+      controls.copy.disabled = controls.checkbox.disabled = !item.title;
+      controls.copy.title = item.title ? controls.copyHelp : "The work-item title is unavailable. Open the item to check access.";
       const selected = entry.selected.has(key);
       controls.checkbox.checked = selected;
       if (!row.hasAttribute("data-azure-niceties-release-row")) row.setAttribute("data-azure-niceties-release-row", "true");
@@ -801,14 +881,16 @@
     const selectedLoaded = [...keys].filter((key) => entry.selected.has(key)).length;
     entry.all.checked = keys.size > 0 && selectedLoaded === keys.size;
     entry.all.indeterminate = selectedLoaded > 0 && selectedLoaded < keys.size;
-    entry.all.disabled = keys.size === 0;
+    const incomplete = [...unique.values()].some(item => !item.title);
+    entry.all.disabled = keys.size === 0 || incomplete;
     const allLabel = `Copy all loaded (${keys.size})`;
     const selectedLabel = `Copy selected (${entry.selected.size})`;
     if (entry.allButton.textContent !== allLabel) entry.allButton.textContent = allLabel;
     if (entry.selectedButton.textContent !== selectedLabel) entry.selectedButton.textContent = selectedLabel;
-    entry.selectedButton.disabled = entry.selected.size === 0;
-    entry.allButton.disabled = keys.size === 0;
+    entry.selectedButton.disabled = entry.selected.size === 0 || [...entry.selected.values()].some(item => !item.title);
+    entry.allButton.disabled = keys.size === 0 || incomplete;
     entry.clear.disabled = entry.selected.size === 0;
+    loadReleaseTitles(entry, records);
   }
 
   function updateReleaseLists() {
@@ -857,6 +939,10 @@
       if (!entry) { entry = createReleaseEntry(scope); releaseLists.set(scope, entry); }
       entry.toolbar.hidden = false;
       if (entry.page !== location.href) {
+        entry.titleController?.abort();
+        entry.titleController = null;
+        entry.titles.clear();
+        entry.titleAttempts.clear();
         entry.selected.clear();
         for (const control of entry.types.values()) control.label.remove();
         entry.types.clear();
@@ -904,6 +990,7 @@
     for (const [key, item] of chosen) entry.selected.set(key, item);
     for (const [key, item] of entry.selected) if (!chosen.has(key)) chosen.set(key, item);
     const items = core.filterReleaseItems(kind === "selected" ? [...chosen.values()] : [...loaded.values()], kind, entry.categories);
+    if (items.some(item => !item.title)) return;
     const preferences = await settings();
     if (location.href !== page || !entry.scope.isConnected) return;
     const formatted = core.formatWorkItems(items, { mode, branchPrefix: preferences.branchPrefix });
@@ -1349,7 +1436,7 @@
       if (ownedRow) {
         event.preventDefault(); event.stopImmediatePropagation();
         const record = releaseRecords(entry.scope).find(({ row }) => row === ownedRow[0]);
-        if (record) copyWorkItem(record.item, core.modeFromModifiers(event), clicked, ++latestCopyRequest).catch(() => {
+        if (record?.item.title) copyWorkItem(record.item, core.modeFromModifiers(event), clicked, ++latestCopyRequest).catch(() => {
           const status = confirmationStatus();
           if (status) status.textContent = "Could not copy this work item. Try again.";
         });
@@ -1395,7 +1482,7 @@
         for (const record of records) {
           if (visited.has(record.key)) continue;
           visited.add(record.key);
-          if (releaseType(record.item) === type) entry.selected.set(record.key, record.item);
+          if (record.item.title && releaseType(record.item) === type) entry.selected.set(record.key, record.item);
         }
       } else {
         for (const [key, item] of entry.selected) if (releaseType(item) === type) entry.selected.delete(key);
@@ -1403,7 +1490,7 @@
     } else if (event.target === entry.all) {
       event.stopImmediatePropagation();
       for (const record of records) {
-        if (entry.all.checked) entry.selected.set(record.key, record.item);
+        if (entry.all.checked && record.item.title) entry.selected.set(record.key, record.item);
         else entry.selected.delete(record.key);
       }
     } else {
@@ -1411,7 +1498,7 @@
       if (!ownedRow) return;
       event.stopImmediatePropagation();
       const record = records.find(({ row }) => row === ownedRow[0]);
-      if (!record) return;
+      if (!record?.item.title) { event.target.checked = false; return; }
       if (event.target.checked) entry.selected.set(record.key, record.item);
       else entry.selected.delete(record.key);
     }

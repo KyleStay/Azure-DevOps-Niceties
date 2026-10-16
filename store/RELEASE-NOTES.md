@@ -1,4 +1,6 @@
-# Azure DevOps Niceties 0.6.9
+# Azure DevOps Niceties 0.6.10
+
+- Fix native Bolt release rows: exclude presentation/spacer cells, align ID/header mapping, and preserve the work-item-small-view/title-link flex chain. Recover empty native title links through bounded read-only ID/title requests and an extension-owned display link. Disable incomplete copying if a title cannot be loaded. Native links and work-item fields remain untouched.
 
 - Simplify release work-item lists to Copy, selection, State, and Title. Fix nested narrow containers and row tables with separate headers. Keep extra bulk-copy options and type selection in compact menus; hide standalone IDs while retaining them in copied references.
 - After a confirmed inline save, refresh a matching older item form through the native form service when it is available. Forms with unsaved edits stay untouched; synchronization does not save fields or reload the page.

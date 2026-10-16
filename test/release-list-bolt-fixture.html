@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Release work items — anonymized supplied Bolt row</title>
+<style>
+  body { margin: 0; padding: 20px; color: #242424; font: 14px "Segoe UI", Arial, sans-serif; }
+  h1 { font-size: 22px; font-weight: 400; }
+  .native-group, .native-host { width: 280px; max-width: 280px; }
+  table { width: 360px; max-width: 360px; table-layout: fixed; border-collapse: collapse; }
+  .bolt-table-cell, .bolt-table-header-cell { padding: 8px; border-bottom: 1px solid #eee; }
+  .bolt-table-cell-content { display: flex; align-items: center; }
+  .work-item-small-view { display: flex; flex: 1 1 auto; width: 100%; min-width: 0; }
+  .type-icon-container { flex: 0 0 16px; width: 16px; margin-right: 4px; }
+  .bowtie-symbol-list::before { content: "▤"; }
+  .title-link { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .work-item-state { display: inline-flex; align-items: center; }
+  .work-item-state-circle { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+  .bolt-table-spacer-cell { width: 16px; }
+  .sample { color: #777; font-size: 11px; }
+</style>
+<section class="stage-frame">
+  <h1>Production · Work items</h1>
+  <p class="sample">Anonymized supplied Bolt-row structure · synthetic titles and IDs</p>
+  <h2>Example build <small>(35 work items)</small></h2>
+  <div class="native-group"><div class="native-host">
+    <table class="bolt-table" id="bolt-items" role="grid">
+      <colgroup><col><col><col><col><col><col><col></colgroup>
+      <thead><tr class="bolt-table-header-row" role="row">
+        <th class="bolt-table-header-cell bolt-table-spacer-cell" role="presentation" aria-hidden="true"></th>
+        <th class="bolt-table-header-cell" role="columnheader" aria-colindex="1" data-column-index="0">Id</th>
+        <th class="bolt-table-header-cell" role="columnheader" aria-colindex="2" data-column-index="1">Work Item Type</th>
+        <th class="bolt-table-header-cell" role="columnheader" aria-colindex="3" data-column-index="2">Title</th>
+        <th class="bolt-table-header-cell" role="columnheader" aria-colindex="4" data-column-index="3">State</th>
+        <th class="bolt-table-header-cell" role="presentation" aria-colindex="5" aria-hidden="true"></th>
+        <th class="bolt-table-header-cell bolt-table-spacer-cell" role="presentation" aria-hidden="true"></th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div></div>
+</section>
+<script>
+  const titles = ["", "Done", "Keep release titles readable through the native flex wrappers", "Preserve deployment approvals when checks retry", "Improve the release audit history"];
+  for (let index = 0; index < 35; index++) {
+    const id = 701 + index;
+    const title = index === 0 ? "" : titles[1 + (index - 1) % 4];
+    const row = document.createElement("tr");
+    row.className = "bolt-table-row bolt-list-row";
+    row.setAttribute("role", "row"); row.setAttribute("tabindex", "-1");
+    row.setAttribute("aria-rowindex", String(index + 3)); row.dataset.rowIndex = String(index + 1);
+    row.innerHTML = `<td aria-hidden="true" class="bolt-table-cell-compact bolt-table-cell bolt-list-cell bolt-table-spacer-cell" role="presentation"></td>
+      <td aria-colindex="1" class="work-item-grid-column-cell bolt-table-cell bolt-list-cell" data-column-index="0" role="gridcell"><div class="bolt-table-cell-content flex-row flex-center"><div class="text-ellipsis">${id}</div></div></td>
+      <td aria-colindex="2" class="work-item-grid-column-cell bolt-table-cell bolt-list-cell" data-column-index="1" role="gridcell"><div class="bolt-table-cell-content flex-row flex-center"><div class="text-ellipsis">Product Backlog Item</div></div></td>
+      <td aria-colindex="3" class="work-item-grid-column-cell bolt-table-cell bolt-list-cell" data-column-index="2" role="gridcell"><div class="bolt-table-cell-content flex-row flex-center"><div class="wit-ui-control work-item-small-view"><div class="type-icon-container"><span aria-label="Product Backlog Item" class="fluent-icons-enabled" role="img" tabindex="0" style="color:rgb(0,152,199)"><span aria-hidden="true" class="work-item-type-icon normal bowtie-icon bowtie-symbol-list flex-noshrink"></span></span></div><div class="title-link"><a class="bolt-link no-underline-link" href="https://dev.azure.com/example/00000000-0000-0000-0000-000000000001/_workitems/edit/${id}" tabindex="0">${title}</a></div></div></div></td>
+      <td aria-colindex="4" class="work-item-grid-column-cell bolt-table-cell bolt-list-cell" data-column-index="3" role="gridcell"><div class="bolt-table-cell-content flex-row flex-center"><div class="wit-ui-control work-item-state"><div class="work-item-state-circle withText" style="background-color:rgb(51,153,51);border-color:rgba(51,153,51,.3)"></div><div class="work-item-state-name"><span>Done</span></div></div></div></td>
+      <td aria-colindex="5" aria-hidden="true" class="bolt-table-cell bolt-list-cell col-4" data-column-index="4" role="presentation"></td>
+      <td aria-hidden="true" class="bolt-table-cell-compact bolt-table-cell bolt-list-cell bolt-table-spacer-cell" role="presentation"></td>`;
+    document.querySelector("tbody").append(row);
+  }
+</script>
+</html>

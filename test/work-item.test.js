@@ -2,6 +2,23 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const workItem = require("../src/work-item.js");
 
+test("Bolt presentation cells never participate in field indexing", () => {
+  const cell = attributes => ({ getAttribute: name => attributes[name] ?? null });
+  for (const attributes of [{ role: "presentation" }, { role: "none" }, { "aria-hidden": "true" }, { class: "bolt-table-cell bolt-table-spacer-cell" }]) {
+    assert.equal(workItem.isPresentationCell(cell(attributes)), true);
+  }
+  assert.equal(workItem.isPresentationCell(cell({ role: "gridcell", "aria-colindex": "1" })), false);
+});
+
+test("column indices prefer ARIA, support zero-based Bolt indices, and otherwise use semantic order", () => {
+  const cell = attributes => ({ getAttribute: name => attributes[name] ?? null });
+  assert.equal(workItem.columnIndex(cell({ "aria-colindex": "3", "data-column-index": "7" }), 0), "3");
+  assert.equal(workItem.columnIndex(cell({ "data-column-index": "0" }), 4), "1");
+  assert.equal(workItem.columnIndex(cell({ "data-column-index": "3" }), 0), "4");
+  assert.equal(workItem.columnIndex(cell({ "aria-colindex": "0", "data-column-index": "-1" }), 2), "3");
+  assert.equal(workItem.columnIndex(cell({ "aria-colindex": "99999999999999999999" }), 1), "2");
+});
+
 test("shortens Product Backlog Item to PBI", () => {
   assert.equal(workItem.shortType("Product Backlog Item"), "PBI");
 });
