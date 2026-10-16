@@ -84,6 +84,8 @@ async function runReleaseTableSmoke(browser, extensionId) {
     await page.evaluate(() => {
       const plain = document.createElement("textarea"); plain.id = "paste-table-plain";
       const rich = document.createElement("div"); rich.id = "paste-table-rich"; rich.contentEditable = "true";
+      // Keep our paste destinations from widening the fixture during mobile menu checks.
+      rich.style.cssText = "max-width:100%;overflow:auto";
       document.body.append(plain, rich);
     });
     const pasteKey = process.platform === "darwin" ? "Meta+V" : "Control+V";
