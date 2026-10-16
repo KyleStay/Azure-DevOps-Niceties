@@ -97,7 +97,7 @@ Writes an Azure DevOps work-item reference or a release-stage list of references
 ### storage
 
 ```text
-Stores the user's system-theme-sync preference, include-parent preference, and branch-name prefix using chrome.storage.sync so those settings persist and can follow the user's Chrome profile across devices. Stores the default-on enhanced-copying, selection-summary, and inline-state-editing preferences only in chrome.storage.local. These features start enabled unless the user saves a local opt-out. Work-item data is not saved in Chrome storage.
+Stores the user's system-theme-sync preference, include-parent preference, and branch-name prefix using chrome.storage.sync so those settings persist and can follow the user's Chrome profile across devices. Stores the default-on enhanced-copying, selection-summary, and inline-state-editing preferences only in chrome.storage.local. These features start enabled unless the user saves a local opt-out. Additional export field reference names and their order use chrome.storage.local under the Azure DevOps organization identifier. Work-item data is not saved in Chrome storage.
 ```
 
 ### Website access / content-script matches

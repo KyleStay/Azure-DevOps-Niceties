@@ -3,9 +3,9 @@
 - Add and remove optional columns in Copy as table. Remember chosen field reference names and order per organization on this device, including an export with no optional fields. Keep linked Title and State first; store no work-item values.
 - Show the work-item ID beside each displayed release-list title. Keep native title links and all copied text unchanged.
 
-- Copy table Titles as working work-item links labeled Type ID Title, such as PBI 123 Improve search. Abbreviate multiword standard/custom types and keep State and the chosen field in their own columns.
+- Copy table Titles as working work-item links labeled Type ID Title, such as PBI 123 Improve search. Abbreviate multiword standard/custom types and keep State and each chosen field in their own columns.
 
-- Add Copy as table to release lists: choose all loaded or selected items and a custom or standard work-item field. Paste Title, State, and that field into Excel for the web as three columns. Read saved values on demand; keep blank fields and preserve the clipboard on errors.
+- Add Copy as table to release lists: choose all loaded or selected items and optional custom or standard work-item fields. Paste linked Title, State, and each chosen field into separate Excel for the web columns. Read saved values on demand; keep blank fields and preserve the clipboard on errors.
 
 - Make enhanced release work-item grid wrappers use one full-width column instead of the native three-column layout. Turning enhanced copying off restores the native grid.
 

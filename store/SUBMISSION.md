@@ -9,10 +9,13 @@ Upload **`azure-devops-niceties-0.6.14.zip`** to Chrome Web Store. For an existi
 Runtime ZIP SHA-256 (integrity verified during packaging):
 
 ```text
-bf3919ae1599ceed080ea1f4728478262fc682e539eb035f9b530b127d9c0d2e
+0bcd0459c0528d84701139d093693dc6c2da5efe0a289845537b56a53d15bf3b
 ```
 
 ## Included in this release
+
+- Copy as table includes linked Title and State followed by any optional fields added by the user. Field reference names and order are remembered locally per organization, including an empty optional selection. Work-item values are not stored.
+- Release-list Title cells show the work-item ID beside the native title without changing copied references or table labels.
 
 - Shared State detection now handles nested item metadata, split grid headers, alternate field-reference attributes, hidden native editors, and panels becoming visible. Release item lists, Sprints → Backlog, and product backlog use the same editing path.
 
