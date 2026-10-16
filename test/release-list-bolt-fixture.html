@@ -3,12 +3,19 @@
 <meta charset="utf-8">
 <title>Release work items — anonymized supplied Bolt row</title>
 <style>
+  /* Native baseline: Microsoft azure-devops-ui 2.273.4, Table.css/Core/core.css (MIT).
+     https://unpkg.com/azure-devops-ui@2.273.4/Components/Table/Table.css */
+  * { box-sizing: inherit; }
+  body { box-sizing: border-box; }
+  .bolt-table-header-cell-content { border: 1px solid transparent; border-radius: 4px; font-weight: 600; margin: 7px 0; padding: .375rem .6875rem; position: relative; text-align: left; }
+  .flex-row { display: flex; flex-direction: row; }
+  .flex-center { align-items: center; }
   body { margin: 0; padding: 20px; color: #242424; font: 14px "Segoe UI", Arial, sans-serif; }
   h1 { font-size: 22px; font-weight: 400; }
   .native-group, .native-host { width: 280px; max-width: 280px; }
   table { width: 360px; max-width: 360px; table-layout: fixed; border-collapse: collapse; }
   .bolt-table-cell, .bolt-table-header-cell { padding: 8px; border-bottom: 1px solid #eee; }
-  .bolt-table-cell-content { display: flex; align-items: center; }
+  .bolt-table-cell-content { display: flex; align-items: center; padding: .5625rem .75rem; }
   .work-item-small-view { display: flex; flex: 1 1 auto; width: 100%; min-width: 0; }
   .type-icon-container { flex: 0 0 16px; width: 16px; margin-right: 4px; }
   .bowtie-symbol-list::before { content: "▤"; }
@@ -29,10 +36,10 @@
       <colgroup><col><col><col><col><col><col><col></colgroup>
       <thead><tr class="bolt-table-header-row" role="row">
         <th class="bolt-table-header-cell bolt-table-spacer-cell" role="presentation" aria-hidden="true"></th>
-        <th class="bolt-table-header-cell" role="columnheader" aria-colindex="1" data-column-index="0">Id</th>
-        <th class="bolt-table-header-cell" role="columnheader" aria-colindex="2" data-column-index="1">Work Item Type</th>
-        <th class="bolt-table-header-cell" role="columnheader" aria-colindex="3" data-column-index="2">Title</th>
-        <th class="bolt-table-header-cell" role="columnheader" aria-colindex="4" data-column-index="3">State</th>
+        <th class="bolt-table-header-cell" role="columnheader" aria-colindex="1" data-column-index="0"><div class="bolt-table-header-cell-content flex-row flex-center">Id</div></th>
+        <th class="bolt-table-header-cell" role="columnheader" aria-colindex="2" data-column-index="1"><div class="bolt-table-header-cell-content flex-row flex-center">Work Item Type</div></th>
+        <th class="bolt-table-header-cell" role="columnheader" aria-colindex="3" data-column-index="2"><div class="bolt-table-header-cell-content flex-row flex-center">Title</div></th>
+        <th class="bolt-table-header-cell" role="columnheader" aria-colindex="4" data-column-index="3"><div class="bolt-table-header-cell-content flex-row flex-center">State</div></th>
         <th class="bolt-table-header-cell" role="presentation" aria-colindex="5" aria-hidden="true"></th>
         <th class="bolt-table-header-cell bolt-table-spacer-cell" role="presentation" aria-hidden="true"></th>
       </tr></thead>

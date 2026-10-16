@@ -53,6 +53,7 @@ async function runReleaseBoltSmoke(browser, extensionId) {
         const rows = [...table.querySelectorAll("tr")];
         return { width: table.getBoundingClientRect().width, available: document.querySelector(".stage-frame").getBoundingClientRect().width,
           overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+          heights: rows.map(row => row.getBoundingClientRect().height),
           spacers: [...table.querySelectorAll("[role='presentation']")].map(cell => ({ display: getComputedStyle(cell).display, width: cell.getBoundingClientRect().width })),
           ids: rows.map(row => row.querySelector("[data-column-index='0']")?.dataset.azureNicetiesReleaseField),
           titles: rows.map(row => { const box = row.querySelector("[data-azure-niceties-release-field='title']")?.getBoundingClientRect(); return box && { x: box.x, width: box.width }; }),
@@ -67,6 +68,7 @@ async function runReleaseBoltSmoke(browser, extensionId) {
         };
       });
       assert.ok(Math.abs(layout.width - layout.available) < 2); assert.equal(layout.overflow, false);
+      assert.ok(layout.heights.every(height => height <= 38), "native inner padding and header margins do not double the compact row height");
       assert.ok(layout.spacers.every(cell => cell.display === "none" && cell.width === 0), "Bolt spacers consume zero layout width");
       assert.ok(layout.ids.every(field => field === "id"), "the leading spacer cannot steal ID's index");
       assert.ok(layout.titles.every(box => box && box.width > 120 && Math.abs(box.x - layout.titles[0].x) < 2), "native header and all Title cells align and receive available width");
