@@ -11,6 +11,8 @@ async function runReleaseBoltSmoke(browser, extensionId) {
   const categoryUrl = "https://dev.azure.com/example/project/_apis/wit/workitemtypecategories?api-version=7.1";
   const titlePattern = /^https:\/\/dev\.azure\.com\/example\/_apis\/wit\/workitems\?/;
   const titleRequests = [];
+  const pageErrors = [];
+  page.on("pageerror", error => pageErrors.push(error.message));
   const writes = [];
   const recovered = "Restore <release> & work-item titles";
   const fixtureRoute = request => request.fulfill({ contentType: "text/html", body: fs.readFileSync(path.join(__dirname, "release-list-bolt-fixture.html"), "utf8") });
@@ -52,7 +54,7 @@ async function runReleaseBoltSmoke(browser, extensionId) {
           overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
           spacers: [...table.querySelectorAll("[role='presentation']")].map(cell => ({ display: getComputedStyle(cell).display, width: cell.getBoundingClientRect().width })),
           ids: rows.map(row => row.querySelector("[data-column-index='0']")?.dataset.azureNicetiesReleaseField),
-          titles: rows.map(row => row.querySelector("[data-azure-niceties-release-field='title']")?.getBoundingClientRect()),
+          titles: rows.map(row => { const box = row.querySelector("[data-azure-niceties-release-field='title']")?.getBoundingClientRect(); return box && { x: box.x, width: box.width }; }),
           links: [...table.querySelectorAll("tbody .title-link")].slice(1).map(link => link.getBoundingClientRect().width),
           states: [...table.querySelectorAll("tbody [data-azure-niceties-release-field='state']")].map(cell => cell.textContent.trim()),
           labels: [...table.querySelectorAll("[data-azure-niceties-release-copy='item']")].map(button => button.getAttribute("aria-label")),
@@ -92,6 +94,14 @@ async function runReleaseBoltSmoke(browser, extensionId) {
     await page.waitForFunction(() => !document.querySelector("[data-azure-niceties-release-toolbar]"));
     assert.equal(await page.locator("[data-azure-niceties-release-title-fallback],[data-azure-niceties-release-content]").count(), 0);
     console.log(JSON.stringify({ releaseBoltRow: "passed", rows: 35, widths: [360,836,1280], cases: "supplied spacers, ID indexing, native flex chain, empty-title GET recovery, no native title mutation, state-label title preservation, recycling, permissions, no writes, opt-out" }));
+  } catch (error) {
+    console.log(JSON.stringify({ releaseBoltDiagnosis: await page.evaluate(() => ({
+      text: document.body.innerText.slice(0, 1500),
+      firstRow: document.querySelector("tbody tr")?.outerHTML.slice(0, 8000),
+      headers: [...document.querySelectorAll("thead th")].map(cell => ({ text: cell.textContent, field: cell.dataset.azureNicetiesReleaseField })),
+    })), titleRequests, pageErrors }));
+    await page.screenshot({ path: path.join(os.tmpdir(), "azure-release-bolt-failure.png") }).catch(() => {});
+    throw error;
   } finally {
     if (saved) await options.evaluate(async previous => {
       await chrome.storage.local.remove(["dataConsent", "inlineStateEditing"]);
