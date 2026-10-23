@@ -164,3 +164,8 @@ The public privacy policy matching 0.6.3 was verified byte-for-byte against `doc
 Provide dedicated, non-sensitive reviewer access and complete the authenticated procedure in `REVIEWER-TESTS.md` where available. Publisher account fields and Google review remain external steps. No Web Store upload or publication was performed.
 
 Only synthetic instance URLs and sample content are committed. Disposable browser profiles are removed by the harness; supported original clipboard formats are kept in memory and restored without logging their contents. The exact ZIP run restored the clipboard and removed its profile. Recorded owned browser birth identities were verified gone after the runs; the final supported process inventory contained no Chrome for Testing processes.
+
+
+## 0.6.15 candidate verification
+
+See `../evidence/REPORT.md` for this candidate. Earlier checks above describe 0.6.14 and were not rerun as browser validation for 0.6.15. The permission-free runner was blocked before launch in this environment.

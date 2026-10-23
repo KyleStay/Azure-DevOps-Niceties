@@ -71,7 +71,8 @@ store_copy = destination / "store"
 if store_copy.exists():
     shutil.rmtree(store_copy)
 shutil.copytree(ROOT / "store", store_copy)
-kit_entries = [(upload.name, upload), (publisher.name, publisher), (guide.name, guide)]
+kit_entries = [(upload.name, upload), (publisher.name, publisher), (guide.name, guide),
+               ("DEVELOPMENT.md", ROOT / "DEVELOPMENT.md")]
 kit_entries += [(str(file.relative_to(destination)), file) for file in sorted(store_copy.rglob("*")) if file.is_file()]
 checksums = destination / "SHA256SUMS.txt"
 checksums.write_text("".join(f"{hashlib.sha256(source.read_bytes()).hexdigest()}  {name}\n" for name, source in kit_entries))
