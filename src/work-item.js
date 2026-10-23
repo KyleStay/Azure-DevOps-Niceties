@@ -20,6 +20,20 @@
     return String(value ?? "").replace(/[\s\u0085]+/g, " ").trim();
   }
 
+  function isPresentationCell(cell) {
+    return /^(presentation|none)$/.test(cell.getAttribute("role") || "")
+      || cell.getAttribute("aria-hidden") === "true"
+      || /(?:^|\s)bolt-table-spacer-cell(?:\s|$)/.test(cell.getAttribute("class") || "");
+  }
+
+  function columnIndex(cell, index) {
+    const aria = cell.getAttribute("aria-colindex");
+    const native = cell.getAttribute("data-column-index");
+    if (/^[1-9]\d*$/.test(aria || "") && Number.isSafeInteger(Number(aria))) return String(Number(aria));
+    if (/^\d+$/.test(native || "") && Number.isSafeInteger(Number(native) + 1)) return String(Number(native) + 1);
+    return String(index + 1);
+  }
+
   function escapeHtml(value) {
     return String(value)
       .replace(/&/g, "&amp;")
@@ -38,7 +52,7 @@
     try {
       const url = new URL(String(value || ""));
       if (url.protocol !== "https:" || url.username || url.password || url.port) return "";
-      if (!/\/_workitems\/edit\/\d+$/i.test(url.pathname)) return "";
+      if (!/\/_workitems\/edit\/\d+\/?$/i.test(url.pathname)) return "";
 
       if (url.hostname === "dev.azure.com") {
         const organization = decodeURIComponent(url.pathname.split("/")[1] || "");
@@ -186,6 +200,8 @@
     labelFor,
     modeFromModifiers,
     normalizeWhitespace,
+    isPresentationCell,
+    columnIndex,
     safeWorkItemUrl,
     releaseCategories,
     shortType,

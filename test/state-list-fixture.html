@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Work-item State controls — synthetic cross-view sample</title>
+<style>
+body { margin: 24px; font: 14px Arial; }
+table { width: 100%; border-collapse: collapse; }
+th, td, [role='columnheader'], [role='gridcell'] { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+.headers, [role='row']:not(tr) { display: grid; grid-template-columns: 80px 1fr 160px; }
+section { margin-bottom: 28px; }
+.sort-hint { font-size: 11px; margin-left: 8px; }
+.work-item-state { display: flex; align-items: center; gap: 6px; width: 100px; }
+.work-item-state-circle { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.work-item-state-name { min-width: 0; }
+</style>
+<h1>Work-item State controls</h1>
+<p>Synthetic sample — release work items, sprint backlog, and product backlog.</p>
+<section role="treegrid" aria-label="Split backlog grid">
+  <div role="row" class="headers"><div role="columnheader">ID</div><div role="columnheader">Title</div><div role="columnheader"><span>State</span><span class="sort-hint">Sort descending</span></div></div>
+  <table role="presentation"><tbody><tr id="split-row">
+    <td></td><td><a class="work-item-card-title" data-item-id="720" href="/example/project/_workitems/edit/720">Nested item metadata and hidden native editor</a><input hidden value="Native editor"></td><td>New</td>
+  </tr></tbody></table>
+</section>
+<section role="grid" aria-label="Fields without native links">
+  <div role="row"><div role="columnheader">ID</div><div role="columnheader">Title</div><div role="columnheader">Workflow</div></div>
+  <div role="row" id="field-row"><div role="gridcell">721</div><div role="gridcell">State field reference metadata</div><div role="gridcell" data-field-reference-name="System.State">New</div></div>
+</section>
+<section role="grid" aria-label="Late-visible list" id="late-list" style="display: none">
+  <div role="row"><div role="columnheader">ID</div><div role="columnheader">Title</div><div role="columnheader">State</div></div>
+  <div role="row" id="late-row"><div role="gridcell">722</div><div role="gridcell">Panel opened by a style change</div><div role="gridcell">New</div></div>
+</section>
+<section role="grid" aria-label="Unsaved edits stay native">
+  <div role="row"><div role="columnheader">ID</div><div role="columnheader">Title</div><div role="columnheader">State</div></div>
+  <div role="row" data-item-id="723" id="unsaved-row"><div role="gridcell">723</div><div role="gridcell"><input value="Unsaved title"></div><div role="gridcell">New</div></div>
+</section>
+<ul><li id="plain-list-row"><a data-item-id="725" href="/example/project/_workitems/edit/725">Plain list item with nested metadata</a> · <span data-field-name="System.State">New</span></li></ul>
+<!-- Structure supplied from a real sprint backlog row; all item data anonymized. -->
+<section aria-label="Native sprint backlog row">
+<h2>Sprint backlog row structure</h2>
+<table role="treegrid" class="bolt-table"><tbody>
+<tr aria-busy="false" aria-expanded="true" aria-level="1" aria-rowindex="2" class="bolt-tree-row bolt-table-row bolt-list-row first-row selected" data-focuszone="focuszone-6" data-row-index="0" id="native-bolt-row" role="row" tabindex="0" aria-selected="true">
+  <td aria-hidden="true" class="bolt-table-cell-compact bolt-table-cell bolt-list-cell" role="presentation"><div class="bolt-gripper-container bolt-table-cell-content-reveal"><div class="bolt-gripper"></div></div></td>
+  <td aria-colindex="1" class="justify-center remove-padding add-cell bolt-table-cell bolt-list-cell" data-column-index="0" role="gridcell"><div class="bolt-table-cell-content flex-row flex-center"><button aria-label="Add: Task" class="add-line-button bolt-list-cell-content-reveal bolt-button bolt-icon-button enabled subtle icon-only bolt-focus-treatment" data-focuszone="focuszone-19" data-is-focusable="true" role="button" tabindex="0" type="button"><span class="fluent-icons-enabled"><span aria-hidden="true" class="left-icon flex-noshrink fabric-icon ms-Icon--Add small"></span></span></button></div></td>
+  <td aria-colindex="2" class="backlog-tree-cell flex-row flex-center bolt-table-cell bolt-list-cell" data-column-index="1" role="gridcell"><div class="bolt-table-cell-content flex-row flex-center"><span class="margin-right-4">1</span></div></td>
+  <td aria-colindex="3" class="backlog-tree-cell bolt-table-cell bolt-list-cell" data-column-index="2" role="gridcell"><div class="bolt-table-cell-content flex-row flex-center"><div class="text-ellipsis">726</div></div></td>
+  <td aria-colindex="4" class="backlog-tree-cell bolt-tree-cell bolt-table-cell bolt-list-cell" data-column-index="3" role="gridcell"><div class="bolt-table-cell-content-with-link bolt-table-cell-content flex-row flex-center"><span class="fluent-icons-enabled"><span aria-hidden="true" class="bolt-tree-expand-button font-size cursor-pointer flex-noshrink fabric-icon ms-Icon--ChevronDownMed small" role="presentation"></span></span><span aria-label="Product Backlog Item" class="fluent-icons-enabled" role="img" tabindex="0" style="color: rgb(0, 152, 199);"><span aria-hidden="true" class="work-item-type-icon margin-right-4 normal bowtie-icon bowtie-symbol-list flex-noshrink"></span></span><a class="bolt-list-cell bolt-table-inline-link text-ellipsis bolt-link no-underline-link" data-focuszone="focuszone-19" href="/example/Project%20One/_workitems/edit/726/" tabindex="-1">Sample sprint backlog item</a></div></td>
+  <td aria-colindex="5" class="bolt-table-cell-side-action bolt-table-cell bolt-list-cell col-4" data-column-index="4"><div class="bolt-table-cell-content-reveal flex-row justify-center"><div class="bolt-table-button-more bolt-expandable-button inline-flex-row"><button aria-expanded="false" aria-haspopup="true" aria-label="More options" class="icon-only bolt-button bolt-icon-button enabled subtle icon-only bolt-focus-treatment" data-focuszone="focuszone-19" data-is-focusable="true" role="button" tabindex="0" type="button"><span class="fluent-icons-enabled"><span aria-hidden="true" class="small left-icon flex-noshrink fabric-icon ms-Icon--MoreVertical medium"></span></span></button></div></div></td>
+  <td aria-colindex="6" class="backlog-tree-cell bolt-table-cell bolt-list-cell" data-column-index="5" role="gridcell"><div class="bolt-table-cell-content flex-row flex-center"><div class="wit-ui-control work-item-state"><div class="work-item-state-circle withText" style="background-color: rgb(0, 122, 204); border-color: rgba(0, 122, 204, 0.3);"></div><div class="work-item-state-name"><span>Committed</span></div></div></div></td>
+  <td aria-colindex="7" class="backlog-tree-cell bolt-table-cell bolt-list-cell" data-column-index="6" role="gridcell"><div class="bolt-table-cell-content flex-row flex-center"></div></td>
+  <td aria-colindex="8" class="backlog-tree-cell bolt-table-cell bolt-list-cell" data-column-index="7" role="gridcell"><div class="bolt-table-cell-content flex-row flex-center"><div class="text-ellipsis"></div></div></td>
+  <td aria-colindex="9" class="backlog-tree-cell bolt-table-cell bolt-list-cell" data-column-index="8" role="gridcell"><div class="bolt-table-cell-content flex-row flex-center"><div class="text-ellipsis"></div></div></td>
+  <td aria-colindex="10" class="backlog-tree-cell bolt-table-cell bolt-list-cell" data-column-index="9" role="gridcell"><div class="bolt-table-cell-content flex-row flex-center"></div></td>
+  <td aria-colindex="11" class="backlog-tree-cell bolt-table-cell bolt-list-cell" data-column-index="10" role="gridcell"><div class="bolt-table-cell-content flex-row flex-center"><div class="text-ellipsis">Business</div></div></td>
+  <td aria-colindex="12" class="backlog-tree-cell backlog-tags-cell scroll-hidden bolt-table-cell bolt-list-cell" data-column-index="11" role="gridcell"><div class="bolt-table-cell-content flex-row flex-center"><ul class="responsive-tags-list tag-item"><li class="tag-item Sample" data-tag="Sample" style="margin-right: 8px; max-width: 91.5px;"><div class="bolt-pill flex-row flex-center themed-standard regular"><div aria-label="Sample" class="bolt-pill-content text-ellipsis" data-focuszone="focuszone-19" role="presentation" tabindex="0">Sample</div></div></li></ul></div></td>
+  <td aria-colindex="13" aria-hidden="true" class="bolt-table-cell bolt-list-cell col-12" data-column-index="12" role="presentation"></td>
+  <td aria-hidden="true" class="bolt-table-cell-compact bolt-table-cell bolt-list-cell" role="presentation"></td>
+</tr></tbody></table>
+</section>
+</html>

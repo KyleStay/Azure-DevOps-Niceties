@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Azure DevOps Niceties",
-  "version": "0.6.3",
+  "version": "0.6.15",
   "description": "Follow system theme, copy work-item references, summarize estimates, and edit work-item states in Azure DevOps.",
   "permissions": [
     "clipboardWrite",
@@ -35,6 +35,7 @@
         "src/work-item.js",
         "src/theme-settings.js",
         "src/state-client.js",
+        "src/release-table.js",
         "src/state-editor.js",
         "src/content.js",
         "src/selection-summary.js"
@@ -50,7 +51,8 @@
         "https://*.visualstudio.com/*"
       ],
       "js": [
-        "src/theme.js"
+        "src/theme.js",
+        "src/state-form.js"
       ],
       "run_at": "document_idle",
       "world": "MAIN"

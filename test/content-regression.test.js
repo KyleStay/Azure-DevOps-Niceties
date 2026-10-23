@@ -6,7 +6,7 @@ const core = require("../src/work-item.js");
 const source = fs.readFileSync(require.resolve("../src/content.js"), "utf8").replace(/\}\)\(\);\s*$/, `globalThis.contentHelpers = {
   titleWithoutWorkItemPrefix, extractWorkItem, isWorkItemCopyControl, fetchParent,
   parentApiUrl, parentCache, activeParentLookups, nativeFallbackControls, reloadConsent, writeClipboard, showConfirmation,
-  loadReleaseCategories,
+  loadReleaseCategories, loadReleaseTitles, releaseHeaderField, releaseFieldAttribute, releaseScopeOwner,
   updateReleaseWidthHosts, setReleaseWidthHosts, releaseLists, updateReleaseColumns,
   copyForTest: workItem => copyWorkItem(workItem, "rich", null, ++latestCopyRequest), enabled: () => enabled
 }; })();`);
@@ -54,7 +54,7 @@ function harness({ approved = true, fetch = async () => { throw Error("Unexpecte
   const status = new FakeElement();
   let storageListener;
   const context = {
-    AzureNicetiesWorkItem: core, URL, AbortController, Blob, Promise, Map, WeakSet,
+    AzureNicetiesWorkItem: core, AzureNicetiesStateClient: require("../src/state-client.js"), URL, AbortController, Blob, Promise, Map, WeakSet,
     Element: FakeElement, HTMLElement: FakeElement, location: { href }, console: { debug() {}, warn() {} },
     navigator: { clipboard: { writeText: async () => {} } },
     document: {
@@ -121,9 +121,132 @@ const categoryPayload = { value: [
 ] };
 const releaseUrl = "https://dev.azure.com/example/project/_releaseProgress?releaseId=50";
 const releaseEntry = (page = releaseUrl) => ({ scope: new FakeElement(), page });
+const titleEntry = () => ({ ...releaseEntry(), titles: new Map(), titleAttempts: new Set() });
+const titleRecord = (id = "701", title = "", org = "example") => {
+  const base = org === "other" ? "https://dev.azure.com/other" : "https://dev.azure.com/example";
+  return { key: `${base}/${id}`, item: { id, title, type: "Product Backlog Item", url: `${base}/project/_workitems/edit/${id}` } };
+};
 
-function widthHost(parentElement) {
-  return { parentElement, dataset: {}, removeAttribute(name) {
+test("empty release titles use a bounded read-only same-organization field request", async () => {
+  let calls = 0;
+  const h = harness({ href: releaseUrl, fetch: async (url, options) => {
+    calls++;
+    const query = new URL(url);
+    assert.equal(query.pathname, "/example/_apis/wit/workitems");
+    assert.equal(query.searchParams.get("ids"), "701,702");
+    assert.equal(query.searchParams.get("fields"), "System.Id,System.Title");
+    assert.equal(query.searchParams.get("errorPolicy"), "Omit");
+    assert.equal(options.credentials, "include"); assert.equal(options.redirect, "error");
+    assert.equal(options.method, undefined, "lookup never writes a work item");
+    return response({ value: [701,702].map(id => ({ id, fields: { "System.Id": id, "System.Title": ` Release ${id}\n title ` } })) });
+  } });
+  const entry = titleEntry();
+  await h.loadReleaseTitles(entry, [titleRecord(), titleRecord(), titleRecord("702"), titleRecord("703", "Already displayed")]);
+  assert.equal(calls, 1);
+  assert.equal(entry.titles.get(titleRecord().key), "Release 701 title");
+  assert.equal(entry.titles.get(titleRecord("702").key), "Release 702 title");
+  await h.loadReleaseTitles(entry, [titleRecord()]); assert.equal(calls, 1, "failed or completed entries are not requested repeatedly");
+});
+
+test("title lookups reject permission failures, redirects, wrong IDs, duplicates, and blank titles", async () => {
+  for (const result of [{ ok: false }, { ...response({ value: [] }), redirected: true },
+    { ...response({ value: [] }), url: "https://evil.test/workitems" },
+    response({ value: [{ id: 999, fields: { "System.Title": "Wrong item" } }] }),
+    response({ value: [{ id: 701, fields: { "System.Id": 702, "System.Title": "Wrong ID field" } }] }),
+    response({ value: [{ id: 701, fields: { "System.Title": " " } }] }),
+    response({ value: [1,2].map(() => ({ id: 701, fields: { "System.Title": "Duplicate" } })) }),
+  ]) {
+    const h = harness({ href: releaseUrl, fetch: async () => result }); const entry = titleEntry();
+    await h.loadReleaseTitles(entry, [titleRecord()]); assert.equal(entry.titles.size, 0);
+    assert.equal(entry.titleController, null);
+  }
+});
+
+test("displayed titles, foreign items, unsafe IDs, and copying opt-out make no title requests", async () => {
+  for (const approved of [true, false]) {
+    let calls = 0;
+    const h = harness({ approved, href: releaseUrl, fetch: async () => { calls++; throw Error("Unexpected"); } });
+    await h.loadReleaseTitles(titleEntry(), approved ? [titleRecord("701", "Visible"), titleRecord("702", "", "other"), titleRecord("0")] : [titleRecord()]);
+    assert.equal(calls, 0);
+  }
+});
+
+test("late title responses cannot cross navigation or copying revocation", async () => {
+  for (const change of ["navigation", "opt-out"]) {
+    let finish;
+    const h = harness({ href: releaseUrl, fetch: () => new Promise(resolve => { finish = resolve; }) });
+    const entry = titleEntry(); const running = h.loadReleaseTitles(entry, [titleRecord()]);
+    if (change === "navigation") h.context.location.href = "https://dev.azure.com/other/project/_release?releaseId=1";
+    else { h.context.azureNicetiesTestSettings.dataConsent = false; await h.reloadConsent(); }
+    finish(response({ value: [{ id: 701, fields: { "System.Title": "Late title" } }] }));
+    await running; assert.equal(entry.titles.size, 0);
+  }
+});
+
+test("title batches stay at 50 IDs and coalesce concurrent scans", async () => {
+  const sizes = [];
+  const h = harness({ href: releaseUrl, fetch: async url => {
+    const ids = new URL(url).searchParams.get("ids").split(","); sizes.push(ids.length);
+    return response({ value: ids.map(id => ({ id: Number(id), fields: { "System.Title": `Title ${id}` } })) });
+  } });
+  const entry = titleEntry(); const records = Array.from({ length: 65 }, (_, index) => titleRecord(String(701 + index)));
+  await Promise.all([h.loadReleaseTitles(entry, records), h.loadReleaseTitles(entry, records)]);
+  assert.deepEqual(sizes, [50]);
+  await h.loadReleaseTitles(entry, records); assert.deepEqual(sizes, [50,15]); assert.equal(entry.titles.size, 65);
+});
+
+test("hung title fetches and JSON reads time out without retry loops", async () => {
+  for (const phase of ["fetch", "json"]) {
+    let signal;
+    const h = harness({ href: releaseUrl, timeout: 20, fetch: async (_url, options) => {
+      signal = options.signal;
+      return phase === "fetch" ? new Promise(() => {}) : { ok: true, json: () => new Promise(() => {}) };
+    } });
+    const entry = titleEntry(); await h.loadReleaseTitles(entry, [titleRecord()]);
+    assert.equal(signal.aborted, true); assert.equal(entry.titleController, null); assert.equal(entry.titles.size, 0);
+    assert.equal(entry.titleAttempts.has(titleRecord().key), true);
+  }
+});
+
+test("release headers retain their fields when native sort labels decorate the text", () => {
+  const { releaseHeaderField } = harness();
+  for (const label of ["Title", "State", "Work Item Type", "ID"]) {
+    const header = new FakeElement({}, `${label} Sorted ascending`);
+    header.childNodes = [{ nodeType: 3, nodeValue: label }, { nodeType: 1,
+      matches: () => false, childNodes: [{ nodeType: 3, nodeValue: "Sorted ascending" }] }];
+    assert.equal(releaseHeaderField(header), ({ Title: "title", State: "state", "Work Item Type": "type", ID: "id" })[label]);
+  }
+});
+
+test("release field metadata and accessible names take precedence over decorative header text", () => {
+  const { releaseHeaderField, releaseFieldAttribute } = harness();
+  for (const attribute of ["data-field-name", "data-field-reference-name", "data-column-id"]) {
+    const cell = new FakeElement({ [attribute]: "System.Title" }, "Sort column");
+    assert.equal(releaseFieldAttribute(cell), "title");
+    assert.equal(releaseHeaderField(cell), "title");
+  }
+  assert.equal(releaseHeaderField(new FakeElement({ "aria-label": "State" }, "Workflow")), "state");
+  const ambiguous = new FakeElement({}, "Title State");
+  ambiguous.childNodes = [{ nodeType: 3, nodeValue: "Title" }, { nodeType: 3, nodeValue: "State" }];
+  assert.equal(releaseHeaderField(ambiguous), "");
+});
+
+test("presentation and headerless row tables use the surrounding release grid headers", () => {
+  const { releaseScopeOwner } = harness();
+  const grid = { matches: () => false };
+  for (const [presentation, hasHeaders, expected] of [[true, false, grid], [false, false, grid], [false, true, null]]) {
+    const table = { matches: selector => selector === "table" || presentation,
+      parentElement: { closest: () => grid }, querySelector: () => hasHeaders ? {} : null };
+    const row = { closest: () => table };
+    assert.equal(releaseScopeOwner(row), expected || table);
+  }
+});
+
+function widthHost(parentElement, width = 0) {
+  return { parentElement, dataset: {}, getBoundingClientRect: () => ({ width }), contains(element) {
+    for (let node = element; node; node = node.parentElement) if (node === this) return true;
+    return false;
+  }, removeAttribute(name) {
     if (name === "data-azure-niceties-release-width") delete this.dataset.azureNicetiesReleaseWidth;
   } };
 }
@@ -180,6 +303,25 @@ test("release column layout maps native cells rather than decorative row childre
   assert.ok(decorations.every(node => node.dataset.azureNicetiesReleaseField === undefined));
   assert.equal(row.children[0].dataset.azureNicetiesReleaseColumn, "copy");
   assert.equal(row.children[1].dataset.azureNicetiesReleaseColumn, "select");
+});
+
+test("unnamed release wrappers expand through every narrow ancestor and retain a stable boundary", () => {
+  const h = harness();
+  const available = widthHost(h.context.document.body, 1000);
+  const outer = widthHost(available, 280);
+  const middle = widthHost(outer, 280);
+  const inner = widthHost(middle, 280);
+  const scope = widthHost(inner, 280);
+  scope.closest = () => null;
+  const entry = { scope, columns: new Map() };
+  h.updateReleaseWidthHosts(entry);
+  assert.equal(entry.widthBoundary, available);
+  for (const node of [inner, middle, outer]) assert.equal(node.dataset.azureNicetiesReleaseWidth, "true");
+  assert.equal(available.dataset.azureNicetiesReleaseWidth, undefined);
+  for (const node of [scope, inner, middle, outer]) node.getBoundingClientRect = () => ({ width: 1000 });
+  h.updateReleaseWidthHosts(entry);
+  assert.equal(entry.widthBoundary, available, "our own expanded widths do not oscillate the boundary");
+  for (const node of [inner, middle, outer]) assert.equal(node.dataset.azureNicetiesReleaseWidth, "true");
 });
 
 test("release width follows legacy header and virtual canvases through shrink-wrapped panel groups", () => {
@@ -322,6 +464,19 @@ test("explicit Title columns retain text resembling a work-item display prefix",
     cells[2].textContent = `  ${title}\n `;
     assert.equal(h.extractWorkItem(container).title, title);
   }
+});
+
+test("extension-owned recovery links can never become the native title", () => {
+  const h = harness();
+  const { container } = row({ title: "" });
+  const placeholder = new FakeElement({ href: "https://dev.azure.com/example/project/_workitems/edit/12" }, "Loading title…");
+  placeholder.closest = selector => selector.includes("data-azure-niceties-release-actions") ? {} : null;
+  container.links.push(placeholder);
+  assert.equal(h.extractWorkItem(container, {}), null, "a loading label is not work-item data");
+  container.links[0].textContent = "Actual title";
+  assert.equal(h.extractWorkItem(container, {}).title, "Actual title");
+  placeholder.textContent = "Title unavailable — open item";
+  assert.equal(h.extractWorkItem(container, {}).title, "Actual title");
 });
 
 test("numeric titles retain their text while explicit work-item prefixes are removed", () => {

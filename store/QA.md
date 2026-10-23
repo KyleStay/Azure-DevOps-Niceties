@@ -1,3 +1,85 @@
+# Remembered optional fields and displayed IDs — 0.6.14
+
+Copy as table supports zero or more optional fields after linked Title and State. Add/remove controls edit the ordered selection. Valid choices are saved automatically in Chrome local storage as field reference names under an organization-scoped key; no work-item values are stored. Reloads restore choices and order, including an empty optional-field selection. Deleted fields stay visible for correction. Storage errors are visible without preventing table copying. Writes are serialized to prevent older choices from replacing newer ones.
+
+The displayed release list prefixes each title with an extension-owned ID span inside the existing owned-actions container. Copy extraction already excludes that container, so native links, titles, and existing clipboard output remain unchanged. Responsive checks account for the visible ID consuming part of the flexible Title cell while still checking useful title space, aligned headers, and no horizontal scrollbar.
+
+Unit checks cover multiple/empty exports, duplicate selection, request field filtering/order, persistent preference round trips, organization separation, concurrent writes, another tab updating preferences, corrupt preferences, and storage-write retries. Browser checks add five-column native paste, add/remove controls, saved choices before copying and across reload, empty configuration, deleted-field recovery, displayed IDs/recycling, and unchanged reference copies. APIs use synthetic fixtures, not authenticated Azure DevOps/Excel. Final execution evidence is in the release handoff.
+
+# Linked table titles — 0.6.13
+
+Table reads now include System.WorkItemType. Each exported Title is labeled Type ID Title without a colon and links to the validated native item URL. Standard abbreviations reuse the shared map; other multiword types use initials. Single-word types remain unchanged. HTML contains exactly one anchor in each first-column cell; the TSV fallback contains the same readable label. State and the user-chosen field remain separate columns. Normal paste retains links; plain-text paste cannot retain hyperlinks. Unit cases cover type abbreviations, link/ID validation, missing types, escaped labels, and preserved field values. Browser checks paste the real clipboard into a rich destination and validate every first-column anchor URL and label. ADO API responses are mocked; authenticated Excel is not accessed.
+
+# Excel table copy — 0.6.12
+
+Copy as table loads organization field metadata only when opened. Users choose all loaded or selected items and an additional field by display or reference name. The copy reads current saved Title, State, and the chosen field from the same organization. Batches contain at most 50 items under a ten-second overall read deadline. The output has three columns and a header row in both escaped HTML and tab-separated text. Rich text becomes plain cell text, identities use display names, blank values remain blank, and formula-like strings are treated as text. Permission failures, incomplete item responses, cancellation, or opt-out do not overwrite the clipboard. Field metadata is kept only in page memory and discarded when the menu closes.
+
+Unit tests cover custom and ambiguous field names, typed and blank values, safe formatting, batch limits/order, allowed routes, response validation, timeouts including body parsing, and late replies. The browser regression mocks the supplied release-row structure and field APIs, checking real clipboard HTML/text and native paste, QA field choice, saved State values, selected rows, rich-text cleanup, denied reads, cancellation, mobile layout, and opt-out. Exact source/ZIP execution evidence is recorded in the release handoff. Live authenticated Excel for the web and Azure DevOps are not accessed. Microsoft documents that tabular paste preserves rows and columns in Excel for the web: https://support.microsoft.com/en-us/word/copy-and-paste-in-office-for-the-web
+
+# Single-column release wrapper — 0.6.11
+
+The supplied `.wit-ui-control.work-item-grid` wrapper retained three native CSS grid tracks even after it expanded to full width. The release-only override now uses `minmax(0, 1fr)` on marked work-item-grid wrappers. Other grids remain unchanged and removing the release markers restores native columns. The supplied-row browser fixture now includes a three-column wrapper and asserts one full-width computed track at 360/836/1280px, full-width table bounds, and restoration to three tracks on opt-out. Browser execution results are recorded in the release handoff.
+
+# Supplied Bolt release row — 0.6.10
+
+The supplied live row exposed concrete gaps in earlier fixtures: native presentation/spacer cells were treated as data columns, a leading spacer could shadow ID’s index, the title’s nested work-item-small-view/title-link flex chain was missing from the test pages, and its native title anchor was empty. Microsoft’s published Bolt Table/Core CSS also showed that native inner cell padding and header margins must be removed when the compact row supplies its own padding. The fixture includes that native baseline and checks compact row height and header text position. The new fixture reproduces those classes and column attributes with anonymized IDs/URLs, leading/trailing spacers, an empty title, and a real title equal to the state name Done.
+
+Copying, State editing, and selection summaries now share presentation-cell exclusion and ARIA/zero-based Bolt indexing. Layout removes the spacers and gives the native title flex chain the remaining width. Empty titles use Microsoft’s read-only Work Items List API with only System.Id and System.Title, batches of at most 50, a three-second timeout, same-organization validation, response validation, one attempt per mounted-list key, consent/navigation cancellation, and page-memory caching. Native anchors remain untouched; owned fallback links disappear when native title text arrives. Incomplete copies remain disabled on metadata failure.
+
+Tests cover batch coalescing/limits, failures/redirects/identity mismatches, invalid/outside-organization IDs, opt-out, navigation, late responses, and hung fetch/JSON. The supplied-row browser regression checks 35 rows at 360/836/1280px, zero spacer width, correct ID classification, aligned readable title wrappers, copied recovered text, unchanged native anchors, titles equal to state names, independent State opt-out/re-enable, recycled rows, permission failure, no PATCH writes, and cleanup. Browser results and exact ZIP evidence are recorded in the release verification receipt. The live authenticated page remains unavailable; this test uses the supplied row structure and mocked metadata.
+
+Native CSS baseline: [Microsoft azure-devops-ui 2.273.4 Table.css](https://unpkg.com/azure-devops-ui@2.273.4/Components/Table/Table.css), [Core CSS](https://unpkg.com/azure-devops-ui@2.273.4/Core/core.css).
+
+API contract: [Microsoft Work Items — List](https://learn.microsoft.com/en-us/rest/api/azure/devops/wit/work-items/list?view=azure-devops-rest-7.1).
+
+# Release list simplification — 0.6.9
+
+The user's 0.6.8 screenshot invalidated the earlier layout assumptions: the toolbar and table were still constrained to a narrow strip. The earlier fixtures had a recognized dialog boundary and did not cover nested unnamed width constraints or headers outside a presentation table. Passing those tests did not establish the user's actual release layout.
+
+The width walk now expands all intermediate wrappers up to the available-width boundary and retains that boundary across scans. Presentation/headerless row tables share the surrounding grid's headers. Inline-size containment is removed. The visible columns are Copy, selection, State, and flexible Title; standalone IDs and Type remain in extraction/copying data. Extra category-copy actions and type choices sit in native details menus. Clear selection appears only when needed, and the persistent instruction paragraph is removed.
+
+Regression coverage adds a 35-row nested release page with three 280px-wide unnamed wrappers, separate grid headers, a presentation table, state dots, and deliberately 24px-wide inner text wrappers. At 360/836/1280px it checks table and toolbar width, all State/Title mappings, aligned useful title space, compact toolbar height, no horizontal overflow, menu access and Escape, hidden-ID copying, and complete opt-out restoration. Existing copy/selection/virtual-row checks remain. Browser evidence and exact-package results are recorded in the release verification receipt. These fixtures approximate the screenshot; authenticated Azure DevOps markup remains unavailable at the user's direction.
+
+# Release list layout — 0.6.8
+
+Release header parsing now recognizes native field metadata and labels split from sort descriptions. The prior parser treated decorated Title/State headers as unknown fields, allocating generic widths. A nested native title wrapper could also retain its old narrow width after the row stretched. Both are addressed without replacing native rows or changing their DOM order.
+
+The compact layout gives Title the remaining width after copy, selection, ID, and State. Header/body spacing aligns, nested ID/Title/State wrappers use their column width, and copy icons use compact borderless buttons. Container queries hide the standalone ID below 440px to retain useful State/Title space. IDs stay in copying and selection data. The toolbar groups copy actions, clear, type choices, and a shorter selection-lifetime note. Opt-out removes the added wrapper markers and restores native widths.
+
+All 213 Node tests pass, including decorated and ambiguous header cases and alternate metadata attributes. Browser regressions use native-style absolute virtual rows, sorted headers, deliberately 36px-wide nested title wrappers, populated 14-row lists, and 360/836/1280px views. They check overlay width, header/body alignment, useful title space, hidden Type, responsive ID visibility, no horizontal overflow, copy/selection behavior, and opt-out restoration. New captures show wide and narrow populated release lists. Browser source and exact-ZIP evidence is recorded in the release handoff. These are controlled fixtures; the authenticated release overlay is unavailable at the user's direction.
+
+# Compact State controls, workflow order, and form refresh — 0.6.7
+
+State controls use the available text width without a persistent arrow or its reserved spacing. Hover and an open picker show a highlight, and keyboard focus retains a visible outline. Browser regressions verify the supplied Bolt-row reproduction has no arrow, reserves no indicator width, fits Committed, and keeps its width on hover.
+
+State choices use explicit project process order when accessible. An optional same-organization project-capability and process-state lookup is bounded by a 1.5-second deadline and cached with the workflow definition for one minute. Permission failures, missing metadata, and unsupported processes retain type-definition order. Current-state selection, valid transitions, and hidden/disabled exclusions remain intact. No extension permissions are added.
+
+A confirmed save passes only the item ID and revision to a bundled MAIN-world form adapter. For up to five minutes, it checks a visible native form through the documented WorkItemFormService contract. It refreshes only a matching older clean form, checks identity and unsaved status again after asynchronous reads, stops on opt-out or organization navigation, and bounds late callbacks and refresh retries. It does not set fields, save the form, or reload the page. Native modules are not loaded while no form is visible. Missing native APIs leave native Refresh available; support on an authenticated Azure DevOps host is unverified because account access was declined.
+
+All 211 Node tests pass. Browser regressions cover hover width, keyboard focus, process-ordered New/Approved/Committed/Done choices, opening a cached form after a confirmed save, preserving an unsaved title, and refreshing after the simulated independent edit is resolved. Source and exact-ZIP execution evidence is recorded in the release handoff. Item APIs, process metadata, and the native form-service contract in browser tests are mocked. These checks do not establish that every Azure DevOps page exposes the native service.
+
+# Native sprint backlog links — 0.6.6
+
+The user supplied an actual Bolt sprint backlog row whose title link ends in a slash. The shared safe-work-item URL validator rejected that link, causing State discovery to skip the whole row. It now accepts one optional trailing slash while preserving the existing HTTPS, host, same-organization, ID, and path restrictions.
+
+All 195 Node tests pass. Six new regression tests failed against 0.6.5 and pass after the validator fix: route validation, copy output, and picker discovery on release, sprint, product-backlog, and query URLs. Tests also retain rejection of extra path segments, duplicate trailing slashes, and cross-organization links.
+
+The manifest-loaded browser suite includes an anonymized reproduction of the supplied Bolt row, retaining its utility columns, ARIA indices, nested state text, type icon, tag list, and trailing-slash title link. On release, sprint-backlog, product-backlog, and query routes it checks one picker, no writes on opening, an explicit revision-checked save for the correct item, state-label refresh, and preservation of native Add, More options, and tag controls. All work-item API responses and writes in these tests are mocked. Source and exact-ZIP browser execution evidence is recorded in the release handoff; the user's signed-in environment remains unverified.
+
+# State list compatibility — 0.6.5
+
+Prepared October 15, 2026. The State editor now keeps nested item metadata within its structural work-item row, resolves split presentation-table headers, recognizes field-reference metadata and decorated column labels, ignores hidden native editors, and rescans style-only visibility changes. Separate native tables retain independent header mappings. Visible unsaved inputs and ambiguous or conflicting item identities remain protected.
+
+All 187 Node tests pass, including 15 new compatibility regressions. Thirteen of those compatibility cases fail when run against the original 0.6.4 source in an isolated test directory; all 15 pass with the revised discovery code. Browser coverage adds controlled release-work-item, sprint-backlog, and product-backlog routes, each verifying picker opening, explicit revision-checked saving, cancellation and late-visible lists. The workflow repeats the full suite against the extracted upload ZIP. Final execution evidence is recorded in the release handoff. These fixtures do not establish the markup of the user's unavailable authenticated tab.
+
+The 16-file runtime ZIP SHA-256 is `879f6764bdd156594bfc925e38a20384102bb0a3c30a76140275bfa281f68333`.
+
+# Update package — 0.6.4
+
+Prepared October 15, 2026. The runtime is the reviewed work-item-controls implementation below with manifest/package versions raised from 0.6.3 to 0.6.4. The runtime ZIP contains 16 allowlisted files and passed ZIP integrity, manifest-reference, and version checks. Its SHA-256 is `4abd89d2cde91be2985547ee8b410135a9f1f01126d98c66eede58c69cf94178`. The public privacy policy matched `docs/privacy.html` byte-for-byte on October 15, 2026.
+
+The release CI workflow runs the full browser suite from source, builds the package, extracts the exact ZIP to a separate directory, reruns the full manifest-loaded suite against that extracted extension, and verifies the publishing helper. Use the release handoff's CI result for the final package's execution evidence. Authenticated Azure DevOps checks remain manual, as described below.
+
 # Work-item controls verification — October 15, 2026
 
 [Isolated Ubuntu verification](https://github.com/KyleStay/Azure-DevOps-Niceties/actions/runs/38764196198) passed with Chrome for Testing 151.0.7922.34: all 172 Node tests, syntax/public-content checks, the full manifest-loaded browser suite, allowlisted packaging, and the publishing-helper suite.
@@ -82,3 +164,8 @@ The public privacy policy matching 0.6.3 was verified byte-for-byte against `doc
 Provide dedicated, non-sensitive reviewer access and complete the authenticated procedure in `REVIEWER-TESTS.md` where available. Publisher account fields and Google review remain external steps. No Web Store upload or publication was performed.
 
 Only synthetic instance URLs and sample content are committed. Disposable browser profiles are removed by the harness; supported original clipboard formats are kept in memory and restored without logging their contents. The exact ZIP run restored the clipboard and removed its profile. Recorded owned browser birth identities were verified gone after the runs; the final supported process inventory contained no Chrome for Testing processes.
+
+
+## 0.6.15 candidate verification
+
+See `../evidence/REPORT.md` for this candidate. Earlier checks above describe 0.6.14 and were not rerun as browser validation for 0.6.15. The permission-free runner was blocked before launch in this environment.

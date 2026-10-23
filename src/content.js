@@ -20,6 +20,7 @@
   let releaseObserver;
   let releaseTimer;
   let releasePrompt;
+  let releaseTableSequence = 0;
   const RELEASE_ROW = "[role='row'],tr,.grid-row,.bolt-table-row,[role='listitem'],li,.work-item-row,.workitem-row";
   const RELEASE_SCOPE = "[role='grid'],[role='treegrid'],[role='table'],table,.grid,.bolt-table,.work-item-grid,.work-items-grid,.workitem-grid,.workitems-grid,.work-item-list,.workitems-list,.work-items-list,.release-work-items";
   const RELEASE_ACTIONS = "[data-azure-niceties-release-actions]";
@@ -188,7 +189,8 @@
     if (textElement && textElement !== link) return elementValue(textElement);
 
     const candidates = [
-      ...Array.from(container.querySelectorAll("a[href*='/_workitems/edit/']"), (candidate) => candidate.textContent),
+      ...Array.from(container.querySelectorAll("a[href*='/_workitems/edit/']"))
+        .filter(candidate => !candidate.closest(RELEASE_ACTIONS)).map(candidate => candidate.textContent),
       attributeValue(link, ["title"]),
       attributeValue(link, ["aria-label"]),
       textElement && textElement.textContent,
@@ -255,29 +257,55 @@
       core.normalizeWhitespace(name).toLowerCase().replace(/[^a-z]/g, "")] || "";
   }
 
+  function releaseFieldAttribute(cell) {
+    return ["data-field", "data-field-name", "data-field-reference-name", "data-column-name", "data-column-key", "data-column-id"]
+      .map(name => releaseField(cell.getAttribute(name))).find(Boolean) || "";
+  }
+
+  function releaseHeaderField(cell) {
+    const explicit = releaseFieldAttribute(cell) || releaseField(cell.getAttribute("aria-label")) || releaseField(cell.getAttribute("title"));
+    if (explicit) return explicit;
+    const names = new Set();
+    function visit(node) {
+      if (node.nodeType === 3) { const name = releaseField(node.nodeValue); if (name) names.add(name); return; }
+      if (node !== cell && node.matches?.("svg,[hidden],[aria-hidden='true']")) return;
+      for (const child of node.childNodes || []) visit(child);
+    }
+    const whole = releaseField(cell.textContent);
+    if (whole) return whole;
+    visit(cell);
+    return names.size === 1 ? [...names][0] : "";
+  }
+
+  function releaseScopeOwner(element) {
+    const scope = element.closest(RELEASE_SCOPE);
+    if (!scope?.matches("table")) return scope;
+    const outer = scope.parentElement?.closest(RELEASE_SCOPE);
+    return outer && (scope.matches("[role='presentation'],[role='none']") || !scope.querySelector(RELEASE_HEADER_CELL)) ? outer : scope;
+  }
+
   function releaseHeaders(scope) {
     return Array.from(scope.querySelectorAll(RELEASE_HEADER_CELL))
-      .filter((cell) => cell.closest(RELEASE_SCOPE) === scope && !cell.matches(RELEASE_COLUMN));
+      .filter((cell) => releaseScopeOwner(cell) === scope && !cell.matches(RELEASE_COLUMN) && !core.isPresentationCell(cell));
   }
 
   function releaseCells(row) {
     return Array.from(row.querySelectorAll(RELEASE_DATA_CELL))
-      .filter((cell) => cell.closest(RELEASE_ROW) === row && !cell.matches(RELEASE_COLUMN));
+      .filter((cell) => cell.closest(RELEASE_ROW) === row && !cell.matches(RELEASE_COLUMN) && !core.isPresentationCell(cell));
   }
 
   function listFields(row, headerCache = new Map()) {
     if (!row.matches(RELEASE_ROW)) return {};
-    const gridSelector = RELEASE_SCOPE;
-    const grid = row.closest(gridSelector);
+    const grid = releaseScopeOwner(row);
     if (!grid) return {};
     if (!headerCache.has(grid)) headerCache.set(grid, releaseHeaders(grid)
-      .map((header, index) => ({ index: header.getAttribute("aria-colindex") || String(index + 1),
-        field: releaseField(attributeValue(header, ["data-field", "data-column-name", "data-column-key"]) || header.textContent) })));
+      .map((header, index) => ({ index: core.columnIndex(header, index),
+        field: releaseHeaderField(header) })));
     const headers = headerCache.get(grid);
     const fields = {};
     releaseCells(row).forEach((cell, index) => {
-        const name = releaseField(attributeValue(cell, ["data-field", "data-column-name", "data-column-key"]))
-          || headers.find((header) => header.index === (cell.getAttribute("aria-colindex") || String(index + 1)))?.field;
+        const name = releaseFieldAttribute(cell)
+          || headers.find((header) => header.index === (core.columnIndex(cell, index)))?.field;
         if (name) {
           const source = cell.querySelector(RELEASE_ACTIONS) ? cell.cloneNode(true) : cell;
           source.querySelectorAll(RELEASE_ACTIONS).forEach((actions) => actions.remove());
@@ -301,6 +329,7 @@
   }
 
   function releaseRecords(scope) {
+    const entry = releaseLists.get(scope);
     const rows = new Set(scope.querySelectorAll(RELEASE_ROW));
     const headers = new Map();
     for (const link of scope.querySelectorAll("a[href*='/_workitems/edit/']")) {
@@ -311,7 +340,7 @@
     const records = [];
     for (const row of rows) {
       if (!isVisibleShortcutCandidate(row) || row.closest(FORM_SELECTOR) || isEditableTarget(row)) continue;
-      const owner = row.closest(RELEASE_SCOPE);
+      const owner = releaseScopeOwner(row);
       if (owner && owner !== scope) continue;
       const links = Array.from(row.querySelectorAll("a[href*='/_workitems/edit/']"))
         .filter((link) => !link.closest(RELEASE_ACTIONS));
@@ -327,8 +356,12 @@
         const id = core.workItemIdFromUrl(urls[0]);
         const explicitId = attributeId || fields.id;
         if (explicitId && explicitId !== id) continue;
-        const title = extractTitle(row, links[0], id, fields);
-        if (!title || (title === id && !fields.title && !firstMatch(row, TITLE_TEXT_SELECTORS))) continue;
+        const nativeTitle = extractTitle(row, links[0], id, fields);
+        if (!nativeTitle && fields.titleCell?.querySelector("input,textarea,[contenteditable]:not([contenteditable='false'])")) continue;
+        if ((!nativeTitle && !fields.titleCell) || (nativeTitle === id && !fields.title && !firstMatch(row, TITLE_TEXT_SELECTORS))) continue;
+        const key = releaseKey({ id, url: urls[0] });
+        if (nativeTitle) entry?.titles.set(key, nativeTitle);
+        const title = nativeTitle || entry?.titles.get(key) || "";
         item = { id, title, type: extractType(row, fields), url: urls[0] };
       } else {
         // Release grids can render IDs/titles as clickable cells without anchors.
@@ -341,13 +374,16 @@
         if (!url) continue;
         item = { id, title: fields.title, type, url };
       }
-      records.push({ row, item, key: releaseKey(item), titleCell: fields.titleCell, linked: links.length > 0 });
+      records.push({ row, item, key: releaseKey(item), titleCell: fields.titleCell, linked: links.length > 0,
+        fallbackTitle: Boolean(links.length && fields.titleCell && !fields.title) });
     }
     return records;
   }
 
   function removeReleaseEntry(entry) {
+    entry.tableClient?.close();
     entry.processController?.abort();
+    entry.titleController?.abort();
     setReleaseWidthHosts(entry, new Set());
     entry.scope.removeAttribute("data-azure-niceties-release-list");
     entry.toolbar.remove();
@@ -364,6 +400,7 @@
     entry.col?.remove();
     entry.copyCol?.remove();
     entry.selected.clear();
+    entry.titles.clear();
   }
 
   function removeReleaseColumn(entry, row) {
@@ -371,6 +408,8 @@
     entry.copyColumns.get(row)?.remove();
     row.removeAttribute("data-azure-niceties-release-column-layout");
     for (const cell of row.querySelectorAll("[data-azure-niceties-release-field]")) cell.removeAttribute("data-azure-niceties-release-field");
+    for (const element of row.querySelectorAll("[data-azure-niceties-release-content]")) element.removeAttribute("data-azure-niceties-release-content");
+    for (const cell of row.querySelectorAll("[data-azure-niceties-release-title-fallback]")) cell.removeAttribute("data-azure-niceties-release-title-fallback");
     entry.columns.delete(row);
     entry.copyColumns.delete(row);
   }
@@ -392,22 +431,34 @@
     for (const row of entry.columns.keys()) {
       for (let host = row.parentElement; host && host !== entry.scope; host = host.parentElement) hosts.add(host);
     }
-    const panel = entry.scope.closest("[role='dialog'],.bolt-panel,.ms-Panel,.ui-dialog");
-    for (let host = entry.scope.parentElement; host && host !== panel && host !== document.body; host = host.parentElement) {
-      hosts.add(host);
-      if (!panel) break;
+    // Release pages also use unnamed nested wrappers outside any dialog. Find
+    // the available-width boundary before changing those wrappers, then retain
+    // it so our own resize does not change the next scan's decision.
+    if (!entry.widthBoundary?.contains(entry.scope)) {
+      entry.widthBoundary = entry.scope.closest("[role='dialog'],.bolt-panel,.ms-Panel,.ui-dialog,[role='tabpanel'],main,[role='main']");
+      if (!entry.widthBoundary) {
+        const target = Math.max(480, (entry.scope.getBoundingClientRect?.().width || 0) + 64);
+        let widest = entry.scope.parentElement;
+        for (let host = entry.scope.parentElement; host && host !== document.body; host = host.parentElement) {
+          const width = host.getBoundingClientRect?.().width || 0;
+          if (width > (widest?.getBoundingClientRect?.().width || 0)) widest = host;
+          if (width >= target) { widest = host; break; }
+        }
+        entry.widthBoundary = widest;
+      }
     }
+    for (let host = entry.scope.parentElement; host && host !== entry.widthBoundary && host !== document.body; host = host.parentElement) hosts.add(host);
     setReleaseWidthHosts(entry, hosts);
   }
 
   function updateReleaseColumns(entry, records) {
     const rows = new Set(Array.from(entry.scope.querySelectorAll(RELEASE_ROW)).filter((row) =>
-      row.closest(RELEASE_SCOPE) === entry.scope && !row.closest(`${FORM_SELECTOR},[data-azure-niceties-release-header]`)));
+      releaseScopeOwner(row) === entry.scope && !row.closest(`${FORM_SELECTOR},[data-azure-niceties-release-header]`)));
     for (const { row } of records) rows.add(row);
     const headerCells = releaseHeaders(entry.scope);
     const headerCell = headerCells[0];
-    const fields = headerCells.map((cell, index) => ({ index: cell.getAttribute("aria-colindex") || String(index + 1),
-      field: releaseField(attributeValue(cell, ["data-field", "data-column-name", "data-column-key"]) || cell.textContent) }));
+    const fields = headerCells.map((cell, index) => ({ index: core.columnIndex(cell, index),
+      field: releaseHeaderField(cell) }));
     let header = headerCell && (headerCell.closest(RELEASE_ROW) || headerCell.parentElement);
     if (header === entry.scope) header = null;
     if (header && entry.header) { entry.header.remove(); entry.header = null; }
@@ -428,8 +479,17 @@
       // summaries still use the original field indices. CSS changes their order.
       const nativeCells = row === header ? headerCells : releaseCells(row);
       nativeCells.forEach((child, index) => {
-        child.dataset.azureNicetiesReleaseField = releaseField(attributeValue(child, ["data-field", "data-column-name", "data-column-key"]))
-          || fields.find((field) => field.index === (child.getAttribute("aria-colindex") || String(index + 1)))?.field || "other";
+        for (const element of child.querySelectorAll("[data-azure-niceties-release-content]")) element.removeAttribute("data-azure-niceties-release-content");
+        child.dataset.azureNicetiesReleaseField = releaseFieldAttribute(child)
+          || fields.find((field) => field.index === (core.columnIndex(child, index)))?.field || "other";
+        if (row !== header && ["id", "title", "state"].includes(child.dataset.azureNicetiesReleaseField)) {
+          // Native cell wrappers can retain the old column width even after
+          // their containing row stretches to fill a release overlay.
+          for (const element of child.querySelectorAll(":scope > div,:scope > span,:scope > a,.bolt-table-cell-content,.work-item-small-view,.title-link,.work-item-state,.work-item-state-name")) {
+            if (element.closest(`${RELEASE_ACTIONS},[data-azure-niceties-state-trigger]`) || element.matches("[aria-hidden='true'],[role='img'],.fabric-icon,.bowtie-icon,.work-item-state-circle,.state-circle,.state-indicator")) continue;
+            element.dataset.azureNicetiesReleaseContent = "true";
+          }
+        }
       });
       row.dataset.azureNicetiesReleaseColumnLayout = "compact";
       let cell = entry.columns.get(row);
@@ -540,6 +600,249 @@
     return core.shortType(item.type).toLowerCase();
   }
 
+  function tableHtmlText(value) {
+    // Template content stays inert: field markup is never attached to the page.
+    const template = document.createElement("template");
+    template.innerHTML = value;
+    template.content.querySelectorAll("script,style,iframe,object,template").forEach(node => node.remove());
+    template.content.querySelectorAll("br").forEach(node => node.replaceWith(document.createTextNode(" ")));
+    template.content.querySelectorAll("p,div,li,tr,td,th,h1,h2,h3,h4,h5,h6").forEach(node => {
+      node.prepend(document.createTextNode(" ")); node.append(document.createTextNode(" "));
+    });
+    return template.content.textContent;
+  }
+
+  function addReleaseTableMenu(entry, menu) {
+    const api = globalThis.AzureNicetiesReleaseTable;
+    const preferences = new api.FieldPreferences({ pageUrl: entry.page });
+    const choices = document.createElement("datalist");
+    choices.id = `azure-niceties-release-fields-${++releaseTableSequence}`;
+    const fieldsList = document.createElement("div");
+    fieldsList.dataset.azureNicetiesReleaseTableFields = "true";
+    const add = document.createElement("button");
+    add.type = "button";
+    add.textContent = "Add field";
+    const rows = document.createElement("select");
+    rows.setAttribute("aria-label", "Rows");
+    for (const [value, label] of [["all", "All loaded items"], ["selected", "Selected items"]]) {
+      const option = document.createElement("option"); option.value = value; option.textContent = label; rows.append(option);
+    }
+    const rowsLabel = document.createElement("label"); rowsLabel.append("Rows", rows);
+    const button = releaseButton("Copy table", "table");
+    button.disabled = true;
+    button.title = "Copy linked Type + ID + Title, State, and your chosen fields for pasting into Excel.";
+    const hint = document.createElement("small");
+    hint.textContent = "Linked Title and State come first. Additional fields are remembered for this organization on this device.";
+    const preferenceStatus = document.createElement("span");
+    preferenceStatus.setAttribute("role", "status");
+    preferenceStatus.dataset.azureNicetiesReleaseTablePreferencesStatus = "true";
+    const status = document.createElement("span");
+    status.setAttribute("role", "status");
+    status.dataset.azureNicetiesReleaseTableStatus = "true";
+    const form = document.createElement("form");
+    form.dataset.azureNicetiesReleaseTable = "true";
+    button.type = "submit";
+    form.append(rowsLabel, fieldsList, add, choices, hint, preferenceStatus, button, status);
+    entry.tableMenu = menu("Copy as table", "table", form);
+    entry.tableFields = [];
+    entry.tableAdd = add;
+    entry.tableRows = rows;
+    entry.tableStatus = status;
+    entry.tableButton = button;
+    entry.persistTableFields = (quiet = false, selectedFields) => {
+      if (!entry.tableClient?.catalog) return;
+      try {
+        const fields = selectedFields || api.resolveFields(entry.tableClient.catalog, entry.tableFields.map(slot => slot.input.value));
+        if (!entry.tableBusy) status.textContent = "";
+        preferences.save(fields).then(() => { preferenceStatus.textContent = ""; }).catch(() => {
+          preferenceStatus.textContent = "Could not remember fields on this device. Your table can still be copied.";
+        });
+      } catch (error) {
+        if (!quiet) status.textContent = error.message;
+      }
+    };
+    function labelFields() {
+      entry.tableFields.forEach((slot, index) => {
+        slot.caption.textContent = `Additional field ${index + 1}`;
+        slot.remove.setAttribute("aria-label", `Remove field ${index + 1}`);
+      });
+    }
+    function appendField(value = "") {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = "Choose or type a field";
+      input.autocomplete = "off";
+      input.setAttribute("list", choices.id);
+      input.value = value;
+      const label = document.createElement("label");
+      const caption = document.createElement("span");
+      label.append(caption, input);
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.textContent = "Remove";
+      const row = document.createElement("div");
+      row.dataset.azureNicetiesReleaseTableFieldRow = "true";
+      row.append(label, remove);
+      const slot = { row, input, remove, caption };
+      entry.tableFields.push(slot);
+      fieldsList.append(row);
+      labelFields();
+      for (const type of ["input", "change"]) input.addEventListener(type, event => {
+        if (event.isTrusted && enabled && !entry.tableBusy) entry.persistTableFields(type === "input");
+      });
+      remove.addEventListener("click", event => {
+        if (!event.isTrusted || !enabled || entry.tableBusy) return;
+        event.preventDefault(); event.stopImmediatePropagation();
+        const index = entry.tableFields.indexOf(slot);
+        entry.tableFields.splice(index, 1);
+        row.remove(); labelFields();
+        entry.persistTableFields();
+        (entry.tableFields[index]?.input || add).focus();
+      });
+      return input;
+    }
+    add.addEventListener("click", event => {
+      if (!event.isTrusted || !enabled || entry.tableBusy) return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      appendField().focus();
+    });
+    let opening = 0;
+    entry.tableMenu.addEventListener("toggle", async () => {
+      const token = ++opening;
+      entry.tableClient?.close();
+      entry.tableClient = null;
+      setReleaseTableBusy(entry, true);
+      choices.replaceChildren();
+      if (!entry.tableMenu.open || !enabled || entry.page !== location.href) return;
+      preferenceStatus.textContent = "";
+      status.textContent = "Loading fields…";
+      const client = new api.ReleaseTableClient({ pageUrl: entry.page });
+      entry.tableClient = client;
+      try {
+        const [fields, saved] = await Promise.all([client.fields(), preferences.load().catch(() => {
+          if (token === opening) preferenceStatus.textContent = "Could not restore saved fields. Choose them again; copying still works.";
+          return null;
+        })]);
+        if (token !== opening || client !== entry.tableClient || !entry.tableMenu.open) return;
+        choices.replaceChildren();
+        for (const item of fields) {
+          const option = document.createElement("option");
+          option.value = item.referenceName; option.label = item.name;
+          choices.append(option);
+        }
+        fieldsList.replaceChildren();
+        entry.tableFields = [];
+        for (const reference of saved === null ? [""] : saved) {
+          const item = fields.find(field => field.referenceName.toLowerCase() === reference.toLowerCase());
+          const uniqueName = item && fields.filter(field => field.name.toLowerCase() === item.name.toLowerCase()).length === 1;
+          appendField(item ? (uniqueName ? item.name : item.referenceName) : reference);
+        }
+        status.textContent = "";
+        if (saved?.some(reference => !fields.some(field => field.referenceName.toLowerCase() === reference.toLowerCase()))) {
+          status.textContent = "A saved field is no longer available. Remove it or choose another field.";
+        }
+        setReleaseTableBusy(entry, false);
+      } catch (error) {
+        if (token === opening && entry.tableMenu.open && !client.closed) status.textContent = `${error.message} Close and reopen this menu to retry.`;
+      }
+    });
+    form.addEventListener("submit", event => {
+      event.preventDefault(); event.stopImmediatePropagation();
+      if (!event.isTrusted || !enabled || button.disabled) return;
+      copyReleaseTable(entry).catch(() => {});
+    });
+  }
+
+  function setReleaseTableBusy(entry, busy) {
+    entry.tableBusy = busy;
+    entry.tableButton.disabled = entry.tableRows.disabled = entry.tableAdd.disabled = busy;
+    for (const slot of entry.tableFields) slot.input.disabled = slot.remove.disabled = busy;
+  }
+
+  async function copyReleaseTable(entry) {
+    if (!entry.tableClient || entry.tableClient.closed) return;
+    const requestId = ++latestCopyRequest, consentVersion = consentLoad;
+    const page = location.href, client = entry.tableClient;
+    const active = () => enabled && consentLoad === consentVersion && requestId === latestCopyRequest
+      && entry.page === page && location.href === page && entry.scope.isConnected
+      && isVisibleShortcutCandidate(entry.scope)
+      && isVisibleShortcutCandidate(entry.tableMenu)
+      && entry.tableClient === client && entry.tableMenu.open && !client.closed;
+    setReleaseTableBusy(entry, true);
+    entry.tableStatus.textContent = "Reading table values…";
+    try {
+      const fields = await client.fields();
+      const selectedFields = globalThis.AzureNicetiesReleaseTable.resolveFields(fields, entry.tableFields.map(slot => slot.input.value));
+      entry.persistTableFields(false, selectedFields);
+      const loaded = new Map(releaseRecords(entry.scope).map(record => [record.key, record.item]));
+      const selected = new Map([...entry.selected].map(([key, item]) => [key, loaded.get(key) || item]));
+      const items = [...(entry.tableRows.value === "selected" ? selected : loaded).values()];
+      const rows = await client.read(items, selectedFields);
+      if (!active()) return;
+      const formatted = globalThis.AzureNicetiesReleaseTable.formatTable(rows, selectedFields, tableHtmlText);
+      await copyFormatted(formatted, entry.tableButton, requestId, active);
+      if (active()) entry.tableStatus.textContent = `Copied ${rows.length} rows. Select a cell in Excel and paste.`;
+    } catch (error) {
+      if (active()) entry.tableStatus.textContent = error.message || "Could not copy the table. Try again.";
+    } finally {
+      if (entry.tableClient === client && entry.tableMenu.open && !client.closed) {
+        setReleaseTableBusy(entry, false);
+        if (!active()) entry.tableStatus.textContent = "Table copy cancelled.";
+      }
+    }
+  }
+
+  async function loadReleaseTitles(entry, records) {
+    if (!enabled || entry.titleController) return;
+    const api = globalThis.AzureNicetiesStateClient;
+    const pending = new Map();
+    for (const { item, key } of records) {
+      if (item.title || entry.titleAttempts.has(key)) continue;
+      entry.titleAttempts.add(key);
+      try {
+        const route = api.itemRoute(item.url, entry.page);
+        pending.set(route.id, key);
+      } catch (_) { /* Never request metadata outside this page's organization. */ }
+      if (pending.size === 50) break;
+    }
+    if (!pending.size) return;
+    const controller = new AbortController();
+    entry.titleController = controller;
+    const consentVersion = consentLoad;
+    const active = () => enabled && consentLoad === consentVersion && !controller.signal.aborted
+      && entry.titleController === controller && entry.scope.isConnected && location.href === entry.page;
+    const deadline = window.setTimeout(() => controller.abort(), PARENT_LOOKUP_TIMEOUT_MS);
+    try {
+      const url = `${api.organizationUrl(entry.page)}/_apis/wit/workitems?ids=${[...pending.keys()].join(",")}&fields=System.Id,System.Title&errorPolicy=Omit&api-version=7.1`;
+      const cancelled = new Promise((_, reject) => controller.signal.addEventListener("abort", () => reject(new Error("Cancelled")), { once: true }));
+      const result = await Promise.race([cancelled, (async () => {
+        const response = await fetch(url, { credentials: "include", redirect: "error", signal: controller.signal, headers: { Accept: "application/json" } });
+        if (!response.ok || response.redirected || (response.url && response.url !== url)) throw new Error("Title lookup failed");
+        return response.json();
+      })()]);
+      if (!active() || !Array.isArray(result?.value)) return;
+      const titles = new Map();
+      for (const item of result.value) {
+        const id = String(item?.id);
+        const title = typeof item?.fields?.["System.Title"] === "string" ? core.normalizeWhitespace(item.fields["System.Title"]) : "";
+        if (!pending.has(id) || titles.has(id) || !title
+          || (item.fields["System.Id"] != null && String(item.fields["System.Id"]) !== id)) throw new Error("Invalid title response");
+        titles.set(id, title);
+      }
+      if (active()) for (const [id, title] of titles) entry.titles.set(pending.get(id), title);
+    } catch (_) {
+      // Keep an Open link and disable incomplete copies if metadata is unavailable.
+    } finally {
+      window.clearTimeout(deadline);
+      if (entry.titleController === controller) {
+        entry.titleController = null;
+        if (enabled && releaseLists.get(entry.scope) === entry && entry.scope.isConnected && entry.page === location.href) {
+          updateReleaseEntry(entry, releaseRecords(entry.scope));
+        }
+      }
+    }
+  }
+
   async function loadReleaseCategories(entry) {
     entry.processController?.abort();
     if (!enabled) return;
@@ -587,7 +890,8 @@
       const count = core.filterReleaseItems([...loaded.values()], kind, entry.categories).length;
       const text = `${label} (${count})`;
       if (button.textContent !== text) button.textContent = text;
-      button.disabled = entry.processState !== "ready" || count === 0;
+      button.disabled = entry.processState !== "ready" || count === 0
+        || core.filterReleaseItems([...loaded.values()], kind, entry.categories).some(item => !item.title);
       const help = entry.processState === "loading" ? "Loading project work-item types."
         : entry.processState === "unavailable" ? "Choose types below, then use Copy selected."
         : "Copies loaded, visible items of these types. Shift: Markdown; Alt/Option: IDs; Ctrl/Command: URLs; Shift+Alt/Option: branch names.";
@@ -601,15 +905,16 @@
     const groups = new Map();
     for (const [key, item] of available) {
       const type = releaseType(item);
-      if (!groups.has(type)) groups.set(type, { label: core.shortType(item.type), total: 0, selected: 0 });
+      if (!groups.has(type)) groups.set(type, { label: core.shortType(item.type), total: 0, selected: 0, incomplete: false });
       const group = groups.get(type);
       group.total++;
+      group.incomplete ||= !item.title;
       if (entry.selected.has(key)) group.selected++;
     }
     for (const [type, control] of entry.types) {
       if (!groups.has(type)) groups.set(type, { label: control.name, total: 0, selected: 0 });
     }
-    let index = 1; // The legend is the first child.
+    let index = 1; // The type caption is the first child.
     for (const [type, group] of [...groups].sort((a, b) => a[1].label.localeCompare(b[1].label))) {
       let control = entry.types.get(type);
       if (!control) {
@@ -630,7 +935,7 @@
       if (control.checkbox.getAttribute("aria-label") !== name) control.checkbox.setAttribute("aria-label", name);
       control.checkbox.checked = group.total > 0 && group.selected === group.total;
       control.checkbox.indeterminate = group.selected > 0 && group.selected < group.total;
-      control.checkbox.disabled = group.total === 0;
+      control.checkbox.disabled = group.total === 0 || group.incomplete;
     }
     entry.typeChoices.hidden = groups.size === 0;
   }
@@ -655,16 +960,44 @@
     clear.type = "button";
     clear.textContent = "Clear selection";
     const hint = document.createElement("small");
-    hint.textContent = "Choose types or rows, then Copy selected. Selections stay while this list is open. Copy all includes every loaded, visible row.";
-    const typeChoices = document.createElement("fieldset");
+    hint.textContent = "Copy all uses loaded items. Selections stay while this list is open.";
+    const typeChoices = document.createElement("div");
     typeChoices.dataset.azureNicetiesReleaseTypes = "true";
-    const legend = document.createElement("legend");
-    legend.textContent = "Select by type (selected/available)";
+    typeChoices.setAttribute("role", "group");
+    typeChoices.setAttribute("aria-label", "Select by type (selected/available)");
+    typeChoices.title = "Counts show selected / available items.";
+    const legend = document.createElement("span");
+    legend.dataset.azureNicetiesReleaseTypeCaption = "true";
+    legend.textContent = "Select by type";
     typeChoices.append(legend);
-    toolbar.append(selectedButton, allButton, bugsBacklogButton, backlogButton, clear, typeChoices, hint);
+    const commands = document.createElement("div");
+    commands.dataset.azureNicetiesReleaseCommands = "true";
+    clear.dataset.azureNicetiesReleaseClear = "true";
+    function menu(label, name, ...contents) {
+      const details = document.createElement("details");
+      details.dataset.azureNicetiesReleaseMenu = name;
+      const summary = document.createElement("summary");
+      summary.textContent = label;
+      const panel = document.createElement("div");
+      panel.dataset.azureNicetiesReleaseMenuPanel = "true";
+      panel.append(...contents);
+      details.append(summary, panel);
+      return details;
+    }
+    const more = menu("More copy options", "copy", bugsBacklogButton, backlogButton);
+    const types = menu("Select by type", "types", typeChoices);
+    commands.append(selectedButton, allButton, more, types, clear);
+    toolbar.title = hint.textContent;
+    toolbar.append(commands);
     scope.before(toolbar);
     const entry = { scope, toolbar, all, selectedButton, allButton, bugsBacklogButton, backlogButton, clear, typeChoices,
-      types: new Map(), selected: new Map(), rows: new Map(), columns: new Map(), copyColumns: new Map(), page: location.href };
+      types: new Map(), selected: new Map(), rows: new Map(), columns: new Map(), copyColumns: new Map(),
+      titles: new Map(), titleAttempts: new Set(), page: location.href };
+    addReleaseTableMenu(entry, menu);
+    more.querySelector("[data-azure-niceties-release-menu-panel]").append(entry.tableMenu);
+    more.addEventListener("toggle", () => {
+      if (!more.open) entry.tableMenu.open = false;
+    });
     loadReleaseCategories(entry);
     return entry;
   }
@@ -684,15 +1017,20 @@
         controls.copy.remove();
         row.removeAttribute("data-azure-niceties-release-row");
         row.removeAttribute("data-azure-niceties-release-selected");
+        for (const cell of row.querySelectorAll("[data-azure-niceties-release-title-fallback]")) cell.removeAttribute("data-azure-niceties-release-title-fallback");
         entry.rows.delete(row);
       }
     }
     for (const record of records) {
       const { row, item, key } = record;
+      for (const cell of row.querySelectorAll("[data-azure-niceties-release-title-fallback]")) {
+        if (!record.fallbackTitle || cell !== record.titleCell) cell.removeAttribute("data-azure-niceties-release-title-fallback");
+      }
+      if (record.fallbackTitle) record.titleCell.setAttribute("data-azure-niceties-release-title-fallback", "true");
       let controls = entry.rows.get(row);
       if (!controls || !row.contains(controls.actions) || !entry.columns.get(row)?.contains(controls.checkbox)
         || !entry.copyColumns.get(row)?.contains(controls.copy)
-        || controls.key !== key || controls.linked !== record.linked) {
+        || controls.key !== key || controls.linked !== record.linked || controls.fallbackTitle !== record.fallbackTitle) {
         controls?.actions.remove();
         controls?.checkbox.remove();
         controls?.copy.remove();
@@ -701,28 +1039,44 @@
         actions.dataset.azureNicetiesReleaseActions = "true";
         actions.setAttribute("role", "group");
         actions.setAttribute("aria-label", "Work-item links");
+        const displayId = document.createElement("span");
+        displayId.dataset.azureNicetiesReleaseDisplayId = "true";
+        displayId.textContent = item.id;
+        actions.append(displayId);
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.dataset.azureNicetiesReleaseSelect = "true";
         const copy = releaseButton("Copy", "item");
         entry.copyColumns.get(row).append(copy);
         entry.columns.get(row).append(checkbox);
-        if (!record.linked) {
+        if (!record.linked || record.fallbackTitle) {
+          const nativeIcon = record.fallbackTitle && record.titleCell.querySelector(".type-icon-container [role='img']");
+          if (nativeIcon) {
+            const icon = nativeIcon.cloneNode(true);
+            icon.removeAttribute("tabindex"); icon.setAttribute("aria-hidden", "true");
+            icon.dataset.azureNicetiesReleaseFallbackIcon = "true";
+            actions.append(icon);
+          }
           const open = document.createElement("a");
+          if (record.fallbackTitle) open.className = "bolt-link no-underline-link";
           open.textContent = "Open";
           open.target = "_blank";
           open.rel = "noopener noreferrer";
           actions.append(open);
         }
         (record.titleCell || row.querySelector("[role='gridcell'],[role='cell'],td") || row).prepend(actions);
-        controls = { actions, checkbox, copy, key, linked: record.linked };
+        controls = { actions, checkbox, copy, key, linked: record.linked, fallbackTitle: record.fallbackTitle, copyHelp: copy.title };
         entry.rows.set(row, controls);
       }
-      const label = core.labelFor(item);
+      const label = item.title ? core.labelFor(item) : `${core.shortType(item.type)} ${item.id}`;
       if (controls.checkbox.getAttribute("aria-label") !== `Select ${label}`) controls.checkbox.setAttribute("aria-label", `Select ${label}`);
       if (controls.copy.getAttribute("aria-label") !== `Copy ${label}`) controls.copy.setAttribute("aria-label", `Copy ${label}`);
       const open = controls.actions.querySelector("a");
       if (open && open.getAttribute("href") !== item.url) open.href = item.url;
+      const title = item.title || (entry.titleController || !entry.titleAttempts.has(key) ? "Loading title…" : "Title unavailable — open item");
+      if (open && record.fallbackTitle && open.textContent !== title) open.textContent = title;
+      controls.copy.disabled = controls.checkbox.disabled = !item.title;
+      controls.copy.title = item.title ? controls.copyHelp : "The work-item title is unavailable. Open the item to check access.";
       const selected = entry.selected.has(key);
       controls.checkbox.checked = selected;
       if (!row.hasAttribute("data-azure-niceties-release-row")) row.setAttribute("data-azure-niceties-release-row", "true");
@@ -732,14 +1086,16 @@
     const selectedLoaded = [...keys].filter((key) => entry.selected.has(key)).length;
     entry.all.checked = keys.size > 0 && selectedLoaded === keys.size;
     entry.all.indeterminate = selectedLoaded > 0 && selectedLoaded < keys.size;
-    entry.all.disabled = keys.size === 0;
+    const incomplete = [...unique.values()].some(item => !item.title);
+    entry.all.disabled = keys.size === 0 || incomplete;
     const allLabel = `Copy all loaded (${keys.size})`;
     const selectedLabel = `Copy selected (${entry.selected.size})`;
     if (entry.allButton.textContent !== allLabel) entry.allButton.textContent = allLabel;
     if (entry.selectedButton.textContent !== selectedLabel) entry.selectedButton.textContent = selectedLabel;
-    entry.selectedButton.disabled = entry.selected.size === 0;
-    entry.allButton.disabled = keys.size === 0;
+    entry.selectedButton.disabled = entry.selected.size === 0 || [...entry.selected.values()].some(item => !item.title);
+    entry.allButton.disabled = keys.size === 0 || incomplete;
     entry.clear.disabled = entry.selected.size === 0;
+    loadReleaseTitles(entry, records);
   }
 
   function updateReleaseLists() {
@@ -778,7 +1134,11 @@
         const entry = releaseLists.get(scope);
         if (entry) {
           if (entry.page !== location.href) { removeReleaseEntry(entry); releaseLists.delete(scope); }
-          else entry.toolbar.hidden = true;
+          else {
+            entry.toolbar.hidden = true;
+            entry.tableClient?.close();
+            entry.tableMenu.open = false;
+          }
         }
         continue;
       }
@@ -788,6 +1148,12 @@
       if (!entry) { entry = createReleaseEntry(scope); releaseLists.set(scope, entry); }
       entry.toolbar.hidden = false;
       if (entry.page !== location.href) {
+        entry.tableClient?.close();
+        entry.tableMenu.open = false;
+        entry.titleController?.abort();
+        entry.titleController = null;
+        entry.titles.clear();
+        entry.titleAttempts.clear();
         entry.selected.clear();
         for (const control of entry.types.values()) control.label.remove();
         entry.types.clear();
@@ -835,6 +1201,7 @@
     for (const [key, item] of chosen) entry.selected.set(key, item);
     for (const [key, item] of entry.selected) if (!chosen.has(key)) chosen.set(key, item);
     const items = core.filterReleaseItems(kind === "selected" ? [...chosen.values()] : [...loaded.values()], kind, entry.categories);
+    if (items.some(item => !item.title)) return;
     const preferences = await settings();
     if (location.href !== page || !entry.scope.isConnected) return;
     const formatted = core.formatWorkItems(items, { mode, branchPrefix: preferences.branchPrefix });
@@ -1116,11 +1483,11 @@
     return copyFormatted(formatted, control, requestId);
   }
 
-  async function copyFormatted(formatted, control, requestId) {
-    if (!enabled || requestId !== latestCopyRequest) return;
+  async function copyFormatted(formatted, control, requestId, active = () => true) {
+    if (!enabled || requestId !== latestCopyRequest || !active()) return;
 
     const write = clipboardWriteQueue.then(async () => {
-      if (!enabled || requestId !== latestCopyRequest) return false;
+      if (!enabled || requestId !== latestCopyRequest || !active()) return false;
       clipboardWriteInProgress = true;
       try {
         let clipboardWrite;
@@ -1138,7 +1505,7 @@
     });
     clipboardWriteQueue = write.catch(() => {});
     const wrote = await write;
-    if (wrote && requestId === latestCopyRequest) showConfirmation(control, formatted.label);
+    if (wrote && requestId === latestCopyRequest && active()) showConfirmation(control, formatted.label);
   }
 
   function enhanceCopyControl(control) {
@@ -1243,6 +1610,9 @@
       return;
     }
     const entry = releaseEntryFor(event.target);
+    for (const list of releaseLists.values()) {
+      for (const menu of list.toolbar.querySelectorAll("details[open]")) if (!menu.contains(event.target)) menu.open = false;
+    }
     if (entry) {
       const open = event.target.closest("a");
       if (open && Array.from(entry.rows.values()).some((row) => row.actions.querySelector("a") === open)) {
@@ -1256,6 +1626,10 @@
         return;
       }
       const clicked = event.target.closest("button");
+      if (clicked === entry.tableButton) {
+        event.stopImmediatePropagation();
+        return;
+      }
       if (clicked === entry.clear) {
         event.preventDefault(); event.stopImmediatePropagation();
         entry.selected.clear();
@@ -1265,6 +1639,8 @@
       if ([entry.allButton, entry.selectedButton, entry.bugsBacklogButton, entry.backlogButton].includes(clicked)) {
         event.preventDefault(); event.stopImmediatePropagation();
         if (clicked.disabled) return;
+        const menu = clicked.closest("details");
+        if (menu) { menu.open = false; menu.querySelector("summary").focus(); }
         copyReleaseItems(entry, core.modeFromModifiers(event), clicked, clicked.dataset.azureNicetiesReleaseCopy).catch(() => {
           const status = confirmationStatus();
           if (status) status.textContent = "Could not copy work items. Try again.";
@@ -1275,7 +1651,7 @@
       if (ownedRow) {
         event.preventDefault(); event.stopImmediatePropagation();
         const record = releaseRecords(entry.scope).find(({ row }) => row === ownedRow[0]);
-        if (record) copyWorkItem(record.item, core.modeFromModifiers(event), clicked, ++latestCopyRequest).catch(() => {
+        if (record?.item.title) copyWorkItem(record.item, core.modeFromModifiers(event), clicked, ++latestCopyRequest).catch(() => {
           const status = confirmationStatus();
           if (status) status.textContent = "Could not copy this work item. Try again.";
         });
@@ -1321,7 +1697,7 @@
         for (const record of records) {
           if (visited.has(record.key)) continue;
           visited.add(record.key);
-          if (releaseType(record.item) === type) entry.selected.set(record.key, record.item);
+          if (record.item.title && releaseType(record.item) === type) entry.selected.set(record.key, record.item);
         }
       } else {
         for (const [key, item] of entry.selected) if (releaseType(item) === type) entry.selected.delete(key);
@@ -1329,7 +1705,7 @@
     } else if (event.target === entry.all) {
       event.stopImmediatePropagation();
       for (const record of records) {
-        if (entry.all.checked) entry.selected.set(record.key, record.item);
+        if (entry.all.checked && record.item.title) entry.selected.set(record.key, record.item);
         else entry.selected.delete(record.key);
       }
     } else {
@@ -1337,7 +1713,7 @@
       if (!ownedRow) return;
       event.stopImmediatePropagation();
       const record = records.find(({ row }) => row === ownedRow[0]);
-      if (!record) return;
+      if (!record?.item.title) { event.target.checked = false; return; }
       if (event.target.checked) entry.selected.set(record.key, record.item);
       else entry.selected.delete(record.key);
     }
@@ -1347,6 +1723,14 @@
   document.addEventListener("keydown", function (event) {
     if (!enabled || !event.isTrusted) return;
     const focusedReleaseEntry = releaseEntryFor(event.target);
+    if (event.key === "Escape" && focusedReleaseEntry) {
+      const menu = focusedReleaseEntry.toolbar.querySelector("details[open]");
+      if (menu) {
+        event.preventDefault(); event.stopImmediatePropagation();
+        menu.open = false; menu.querySelector("summary").focus();
+        return;
+      }
+    }
     const ownSelection = focusedReleaseEntry && (event.target === focusedReleaseEntry.all
       || Array.from(focusedReleaseEntry.rows.values()).some((controls) => controls.checkbox === event.target)
       || Array.from(focusedReleaseEntry.types.values()).some((controls) => controls.checkbox === event.target));

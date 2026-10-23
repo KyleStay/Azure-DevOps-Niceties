@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Release work items — nested native layout regression</title>
+<style>
+  body { margin: 0; padding: 20px; font: 14px "Segoe UI", Arial, sans-serif; color: #242424; }
+  h1 { font-size: 24px; font-weight: 400; margin: 0 0 24px; }
+  nav { padding: 8px 0; border-bottom: 1px solid #ddd; }
+  .difference { background: #eff6fc; padding: 16px; margin: 8px 0 24px; }
+  h2 { font-size: 18px; font-weight: 400; border-bottom: 1px solid #ddd; padding-bottom: 12px; }
+  .native-group, .native-layer, .native-list-host { width: 280px; max-width: 280px; }
+  .native-group { display: flex; flex-direction: column; align-items: flex-start; }
+  .native-layer { display: inline-block; }
+  .grid { width: 280px; }
+  .grid-header { width: 360px; }
+  .grid-header-canvas { display: flex; height: 36px; }
+  .grid-header-column { flex: 0 0 90px; overflow: hidden; }
+  table { width: 360px; max-width: 360px; border-collapse: collapse; table-layout: fixed; }
+  td { width: 90px; padding: 8px; overflow: hidden; white-space: nowrap; border-bottom: 1px solid #eee; }
+  .native-value { display: flex; align-items: center; width: 24px; max-width: 24px; overflow: hidden; }
+  .state-dot { display: inline-block; flex: 0 0 8px; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; background: #299d35; }
+  .type-icon { color: #0098c7; margin-right: 5px; }
+  .sample-note { font-size: 11px; color: #777; }
+</style>
+<section class="stage-frame">
+  <h1>Production · Deploy</h1>
+  <nav>Summary &nbsp;&nbsp; Commits &nbsp;&nbsp; <strong>Work Items</strong></nav>
+  <div class="difference">Difference in work items<br><br>Showing changes compared to the previous deployment</div>
+  <h2>Example build <small>(35 work items)</small></h2>
+  <div class="native-group"><div class="native-layer"><div class="native-list-host">
+    <div class="grid" id="nested-items">
+      <div class="grid-header"><div class="grid-header-canvas" role="row">
+        <div class="grid-header-column" role="columnheader">Id</div>
+        <div class="grid-header-column" role="columnheader">Work Item Type</div>
+        <div class="grid-header-column" role="columnheader"><span>State</span><span hidden>Sort ascending</span></div>
+        <div class="grid-header-column" role="columnheader"><span>Title</span><span hidden>Sort ascending</span></div>
+      </div></div>
+      <table role="presentation"><tbody></tbody></table>
+    </div>
+  </div></div></div>
+  <p class="sample-note">Synthetic sample for testing nested release layouts.</p>
+</section>
+<script>
+  const titles = ["Keep release work-item titles readable across the overlay", "Fix deployment status after an environment is reopened", "Improve approval history for completed stages", "Preserve pending changes when deployment checks retry", "Add keyboard navigation to release controls"];
+  const body = document.querySelector("tbody");
+  for (let index = 0; index < 35; index++) {
+    const row = document.createElement("tr");
+    const type = index % 5 === 0 ? "Bug" : "Product Backlog Item";
+    const state = index % 4 === 0 ? "Committed" : "Done";
+    row.innerHTML = `<td>${701 + index}</td><td>${type}</td><td><div class="native-value work-item-state"><span class="state-dot" aria-hidden="true"></span><span>${state}</span></div></td><td><div class="native-value"><span class="type-icon" aria-hidden="true">▤</span><a href="/example/project/_workitems/edit/${701 + index}/">${titles[index % titles.length]}</a></div></td>`;
+    body.append(row);
+  }
+</script>
+</html>

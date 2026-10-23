@@ -11,6 +11,7 @@ test("state-picker interactions load on trusted open, cancel without saving, and
   const button = page.cells[2].querySelector(trigger);
   assert.ok(button);
   assert.equal(page.requests.length, 0);
+  assert.equal(page.messages.length, 0);
   assert.equal(page.cells[2].textContent, "New");
   const shortcut = await page.event("keydown", button, { key: "C", code: "KeyC", shiftKey: true, altKey: true });
   assert.equal(shortcut.stopped, undefined, "existing copy shortcuts remain available while the state button is focused");
@@ -28,6 +29,7 @@ test("state-picker interactions load on trusted open, cancel without saving, and
   await page.event("click", page.document.querySelectorAll(option)[0]);
   assert.equal(page.requests.filter(request => request.options.method === "PATCH").length, 1);
   assert.equal(page.cells[2].textContent, "Active");
+  assert.deepEqual(JSON.parse(JSON.stringify(page.messages)), [{ origin: "https://dev.azure.com", message: { type: "azure-niceties-state-saved", id: "701", rev: 5 } }]);
   assert.equal(page.document.querySelectorAll(popup).length, 0);
   await page.revoke();
   assert.equal(page.cells[2].querySelector(trigger), null);
@@ -40,6 +42,7 @@ test("a rejected save keeps the original displayed state and exposes an error wi
   await page.event("click", page.cells[2].querySelector(trigger));
   await page.event("click", page.document.querySelectorAll(option)[0]);
   assert.equal(page.cells[2].textContent, "New");
+  assert.equal(page.messages.length, 0, "a failed save never requests a native refresh");
   const menu = page.document.querySelectorAll(popup)[0];
   assert.match(menu.querySelector("[role='alert']").textContent, /required Resolution/);
   assert.equal(menu.querySelector("a").hidden, false);
@@ -47,6 +50,16 @@ test("a rejected save keeps the original displayed state and exposes an error wi
   await page.scan();
   assert.equal(page.requests.filter(request => request.options.method === "PATCH").length, 1);
   await page.revoke();
+});
+
+test("a form-notification failure does not change a confirmed save into an error", async () => {
+  const page = fixture({ notificationError: true });
+  await page.ready();
+  await page.event("click", page.cells[2].querySelector(trigger));
+  await page.event("click", page.document.querySelectorAll(option)[0]);
+  assert.equal(page.cells[2].textContent, "Active");
+  assert.equal(page.document.querySelectorAll(popup).length, 0);
+  assert.equal(page.requests.filter(request => request.options.method === "PATCH").length, 1);
 });
 
 test("recycling a row while its picker is loading discards the old item and cannot save", async () => {

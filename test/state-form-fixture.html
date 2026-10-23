@@ -1,0 +1,38 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<title>State save and stale native form — controlled reproduction</title>
+<style>body { font: 14px system-ui; margin: 32px; } table { width: 700px; border-collapse: collapse; } td, th { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; } .work-item-form { margin-top: 24px; padding: 24px; border: 1px solid #bbb; } label { display: block; margin: 12px 0; }</style>
+<h1>Inline State and cached form</h1>
+<p>Controlled sample with mocked item API and native form service.</p>
+<table><tr><th>ID</th><th>Title</th><th>State</th></tr>
+<tr data-item-id="701"><td>701</td><td><a id="open-item" href="/example/project/_workitems/edit/701/">Sample work item</a></td><td>New</td></tr></table>
+<section class="work-item-form" hidden>
+  <h2>Item #701 form</h2><p>State: <strong id="form-state">New</strong></p>
+  <label>Title <input id="form-title" value="Sample work item"></label>
+  <button id="close-form">Close form</button>
+</section>
+<script>
+const model = window.formFixture = { id: 701, rev: 4, state: "New", dirty: false, active: false, refreshes: 0, dirtyChecks: 0, moduleLoads: 0 };
+const form = document.querySelector(".work-item-form");
+const service = {
+  async hasActiveWorkItem() { return model.active; }, async getId() { return model.id; }, async getRevision() { return model.rev; },
+  async isDirty() { model.dirtyChecks++; return model.dirty; },
+  async refresh() {
+    if (model.dirty) throw Error("Test refuses to discard unsaved edits");
+    const item = await (await fetch("/example/_apis/wit/workitems/701?api-version=7.1")).json();
+    model.refreshes++; model.rev = item.rev; model.state = item.fields["System.State"];
+    document.querySelector("#form-state").textContent = model.state;
+  },
+  save() { throw Error("The extension must never save this form"); },
+  setFieldValue() { throw Error("The extension must never overwrite a field"); },
+};
+window.require = name => {
+  if (name !== "TFS/WorkItemTracking/Services") throw Error("Unknown fixture module");
+  model.moduleLoads++; return { WorkItemFormService: { getService: async () => service } };
+};
+document.querySelector("#open-item").addEventListener("click", event => {
+  event.preventDefault(); model.active = true; form.hidden = false;
+  document.querySelector("#form-state").textContent = model.state;
+});
+document.querySelector("#close-form").addEventListener("click", () => { model.active = false; form.hidden = true; });
+document.querySelector("#form-title").addEventListener("input", () => { model.dirty = true; });
+</script></html>

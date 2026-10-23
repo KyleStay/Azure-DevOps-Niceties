@@ -4,7 +4,7 @@ const vm = require("node:vm");
 const { fakeTimers } = require("./fake-timers.js");
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
-function fixture({ saveError = null, holdRead = false, holdSave = false } = {}) {
+function fixture({ saveError = null, holdRead = false, holdSave = false, notificationError = false, pageUrl = "https://dev.azure.com/example/project/_queries/query/1" } = {}) {
   const handlers = new Map();
   const timers = fakeTimers();
   let notify;
@@ -13,6 +13,7 @@ function fixture({ saveError = null, holdRead = false, holdSave = false } = {}) 
   let finishRead;
   let finishSave;
   const requests = [];
+  const messages = [];
   let item = { id: 701, rev: 4, fields: { "System.Id": 701, "System.State": "New", "System.WorkItemType": "Bug", "System.TeamProject": "project" } };
   const definition = { name: "Bug", states: [{ name: "New" }, { name: "Active", color: "0078d4" }], transitions: { New: [{ to: "Active" }] } };
   let document;
@@ -93,9 +94,10 @@ function fixture({ saveError = null, holdRead = false, holdSave = false } = {}) 
   row.append(...cells); table.append(header, row); document.body.append(table);
   const root = {
     URL, AbortController,
-    document, location: { href: "https://dev.azure.com/example/project/_queries/query/1" }, innerWidth: 1024, innerHeight: 768,
+    document, location: { href: pageUrl }, innerWidth: 1024, innerHeight: 768,
     AzureNicetiesWorkItem: require("../src/work-item.js"), AzureNicetiesStateClient: require("../src/state-client.js"),
     setTimeout: timers.setTimeout, clearTimeout: timers.clearTimeout, addEventListener() {},
+    postMessage(message, origin) { if (notificationError) throw Error("Notification failed"); messages.push({ message, origin }); },
     getComputedStyle: () => ({ visibility: "visible", opacity: "1" }),
     MutationObserver: class { constructor(callback) { notify = callback; } observe() {} disconnect() {} },
     chrome: { storage: { local: { get: async defaults => ({ ...defaults, inlineStateEditing: enabled }) },
@@ -112,7 +114,7 @@ function fixture({ saveError = null, holdRead = false, holdSave = false } = {}) 
   };
   vm.runInNewContext(fs.readFileSync(require.resolve("../src/state-editor.js"), "utf8"), root);
   return {
-    document, cells, row, requests,
+    document, cells, row, requests, messages,
     async ready() { await flush(); await timers.advance(100); },
     async event(type, target, values = {}) {
       const event = { target, isTrusted: true, preventDefault() {}, stopImmediatePropagation() { this.stopped = true; }, ...values };

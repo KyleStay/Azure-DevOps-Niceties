@@ -61,17 +61,40 @@
   min-width: 0 !important;
   align-self: stretch !important;
 }
+.work-item-grid:is([data-azure-niceties-release-width],[data-azure-niceties-release-list]) {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
 table[data-azure-niceties-release-list],
-table[data-azure-niceties-release-list] > :is(thead, tbody, tfoot) { display: block; }
+table[data-azure-niceties-release-list] > :is(thead, tbody, tfoot),
+table[data-azure-niceties-release-width],
+table[data-azure-niceties-release-width] > :is(thead, tbody, tfoot) { display: block; }
 table[data-azure-niceties-release-list] > :is(thead, tbody, tfoot)[hidden] { display: none !important; }
 table[data-azure-niceties-release-list] > colgroup { display: none; }
-[data-azure-niceties-release-toolbar] { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; box-sizing: border-box; min-width: 0; max-width: 100%; }
+[data-azure-niceties-release-toolbar] { display: block; padding: 8px 0; box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; font: 12px/1.4 system-ui, sans-serif; }
 [data-azure-niceties-release-toolbar][hidden] { display: none !important; }
+[data-azure-niceties-release-commands] { position: relative; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+[data-azure-niceties-release-clear] { margin-inline-start: auto; }
+[data-azure-niceties-release-clear]:disabled { display: none; }
+[data-azure-niceties-release-menu] { min-width: 0; }
+[data-azure-niceties-release-menu] > summary { padding: 5px 2px; cursor: pointer; white-space: nowrap; }
+[data-azure-niceties-release-menu] > summary:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+[data-azure-niceties-release-menu-panel] { position: absolute; inset: 100% auto auto 0; z-index: 1001; box-sizing: border-box; width: max-content; max-width: min(320px, 100%); padding: 8px; border: 1px solid GrayText; border-radius: 4px; color: var(--text-primary-color, CanvasText); background: var(--background-color, Canvas); box-shadow: 0 2px 8px #0002; }
+[data-azure-niceties-release-menu-panel] > button { display: block; width: 100%; text-align: left; }
+[data-azure-niceties-release-table] { display: flex; flex-direction: column; gap: 8px; width: 280px; max-width: 100%; margin: 0; }
+[data-azure-niceties-release-toolbar] [data-azure-niceties-release-table] label { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+[data-azure-niceties-release-table] :is(input,select) { box-sizing: border-box; width: 100%; min-width: 0; padding: 5px; font: inherit; color: inherit; background: var(--background-color, Canvas); border: 1px solid GrayText; border-radius: 3px; }
+[data-azure-niceties-release-table-status] { overflow-wrap: anywhere; }
+[data-azure-niceties-release-table-fields] { display: flex; flex-direction: column; gap: 8px; max-height: 40vh; overflow-y: auto; }
+[data-azure-niceties-release-table-field-row] { display: flex; align-items: flex-end; gap: 6px; min-width: 0; }
+[data-azure-niceties-release-table-field-row] > label { flex: 1; min-width: 0; }
+[data-azure-niceties-release-table-field-row] > button { flex: 0 0 auto; }
+[data-azure-niceties-release-table-preferences-status] { overflow-wrap: anywhere; }
+[data-azure-niceties-release-menu='table'] > [data-azure-niceties-release-menu-panel] { position: static; width: auto; max-width: 100%; padding: 8px 0 0; border: 0; box-shadow: none; }
 [data-azure-niceties-release-toolbar] label { display: inline-flex; align-items: center; gap: 6px; }
-[data-azure-niceties-release-toolbar] small { flex-basis: 100%; opacity: 0.8; }
-[data-azure-niceties-release-types] { display: flex; flex-wrap: wrap; gap: 8px 16px; flex-basis: 100%; min-width: 0; margin: 0; padding: 8px 12px; border: 1px solid var(--palette-neutral-20, GrayText); border-radius: 4px; }
+[data-azure-niceties-release-toolbar] small { font-size: 11px; opacity: 0.7; }
+[data-azure-niceties-release-types] { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
 [data-azure-niceties-release-types][hidden] { display: none; }
-[data-azure-niceties-release-types] legend { padding: 0 4px; font-size: 12px; }
+[data-azure-niceties-release-type-caption] { color: var(--text-secondary-color, GrayText); }
 [data-azure-niceties-release-types] label, [data-azure-niceties-release-types] input { cursor: pointer; }
 [data-azure-niceties-release-types] label { min-width: 0; max-width: 100%; }
 [data-azure-niceties-release-types] label span { overflow-wrap: anywhere; }
@@ -89,8 +112,10 @@ table[data-azure-niceties-release-list] > colgroup { display: none; }
   padding-inline: 0 !important;
   flex-direction: row !important;
   align-items: stretch;
+  border-bottom: 1px solid var(--palette-neutral-20, #e5e7eb);
 }
 [data-azure-niceties-release-column-layout='compact'][hidden] { display: none !important; }
+[data-azure-niceties-release-column-layout='compact'] > :is([role='presentation'],[role='none'],[aria-hidden='true'],.bolt-table-spacer-cell) { display: none !important; }
 [data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field] {
   box-sizing: border-box;
   position: static !important;
@@ -101,10 +126,41 @@ table[data-azure-niceties-release-list] > colgroup { display: none; }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding: 6px 8px !important;
+  line-height: 20px;
 }
+[data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='id'],
 [data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='type'] { display: none !important; }
-[data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='state'] { order: 1; flex-basis: 7rem !important; }
-[data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='title'] { order: 2; flex: 1 1 0 !important; }
+[data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='state'] { order: 1; flex: 0 0 7rem !important; }
+[data-azure-niceties-release-column-layout='compact'] > [data-azure-niceties-release-field='title'] { order: 2; flex: 1 1 12rem !important; }
+[data-azure-niceties-release-column-layout] > [data-azure-niceties-release-field] :is(.bolt-table-cell-content,.bolt-table-header-cell-content) { padding: 0 !important; }
+[data-azure-niceties-release-column-layout] > [data-azure-niceties-release-field] .bolt-table-header-cell-content { margin: 0 !important; justify-content: flex-start !important; }
+[data-azure-niceties-release-field='title'] [data-azure-niceties-release-content],
+[data-azure-niceties-release-field='id'] [data-azure-niceties-release-content],
+[data-azure-niceties-release-field='state'] [data-azure-niceties-release-content] {
+  position: static !important;
+  min-width: 0 !important;
+  width: auto !important;
+  max-width: 100% !important;
+}
+[data-azure-niceties-release-field='title'] [data-azure-niceties-release-content] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-azure-niceties-release-field='title']:has(> [data-azure-niceties-release-content]) { display: flex !important; align-items: center; }
+[data-azure-niceties-release-field='title'] > [data-azure-niceties-release-content] { flex: 1 1 0; }
+[data-azure-niceties-release-field='title'] > [data-azure-niceties-release-actions] { flex: 0 0 auto; gap: 6px; margin: 0 6px 0 0; }
+[data-azure-niceties-release-display-id] { flex: 0 0 auto; color: var(--text-secondary-color, GrayText); font-variant-numeric: tabular-nums; }
+[data-azure-niceties-release-field='title'] :is(.bolt-table-cell-content,.work-item-small-view) { display: flex !important; align-items: center; flex: 1 1 0 !important; min-width: 0 !important; }
+[data-azure-niceties-release-field='title'] .type-icon-container { flex: 0 0 auto !important; }
+[data-azure-niceties-release-field='title'] .title-link { display: block !important; flex: 1 1 0 !important; min-width: 0 !important; }
+[data-azure-niceties-release-field='title'] .title-link > a { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-azure-niceties-release-title-fallback] > :not([data-azure-niceties-release-actions]) { display: none !important; }
+[data-azure-niceties-release-title-fallback] > [data-azure-niceties-release-actions] { display: flex; flex: 1 1 0; align-items: center; gap: 4px; min-width: 0; margin: 0; }
+[data-azure-niceties-release-fallback-icon] { display: inline-flex; flex: 0 0 16px; width: 16px; }
+[data-azure-niceties-release-title-fallback] > [data-azure-niceties-release-actions] a { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+[data-azure-niceties-release-column-layout] a { font: inherit !important; }
+[data-azure-niceties-release-list] :is(th,[role='columnheader'],.grid-header-column) { font-weight: 600; color: var(--text-secondary-color, #5c6570); }
+[data-azure-niceties-release-column-layout] > :is(th,[role='columnheader'],.grid-header-column,.bolt-table-header-cell)[data-azure-niceties-release-field] { text-align: left !important; justify-content: flex-start !important; }
+[data-azure-niceties-release-row]:hover { background: color-mix(in srgb, Highlight 5%, transparent); }
+[data-azure-niceties-release-row][data-azure-niceties-release-selected='true'] { background: color-mix(in srgb, Highlight 9%, transparent); }
 [data-azure-niceties-release-column] {
   box-sizing: border-box;
   display: flex;
@@ -114,7 +170,7 @@ table[data-azure-niceties-release-list] > colgroup { display: none; }
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 4px !important;
+  padding: 2px !important;
 }
 [data-azure-niceties-release-column='copy'] { order: -2; }
 [data-azure-niceties-release-column='select'] { order: -1; }
@@ -133,9 +189,11 @@ table[data-azure-niceties-release-list] > colgroup { display: none; }
   padding: 6px 12px;
   cursor: pointer;
 }
-[data-azure-niceties-release-column] button { display: inline-flex; align-items: center; justify-content: center; padding: 3px; }
+[data-azure-niceties-release-column] button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 4px; border: 0; background: transparent; }
+[data-azure-niceties-release-column] button:hover { background: color-mix(in srgb, Highlight 12%, transparent); }
 [data-azure-niceties-release-toolbar] button:disabled { opacity: 0.5; cursor: default; }
-[data-azure-niceties-release-toolbar] button { max-width: 100%; white-space: normal; }
+[data-azure-niceties-release-toolbar] button { max-width: 100%; white-space: normal; padding: 4px 6px; min-height: 28px; border: 0; background: transparent; }
+[data-azure-niceties-release-toolbar] button:hover:not(:disabled) { background: color-mix(in srgb, Highlight 8%, transparent); }
 [data-azure-niceties-release-selected='true'] { outline: 1px solid Highlight; outline-offset: -1px; }
 [data-azure-niceties-release-toolbar] button:focus-visible,
 [data-azure-niceties-release-column] button:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
@@ -151,9 +209,8 @@ table[data-azure-niceties-release-list] > colgroup { display: none; }
 button[data-azure-niceties-state-trigger] {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
   box-sizing: border-box;
-  max-width: calc(100% - 12px);
+  max-width: 100%;
   min-width: 0;
   min-height: 20px;
   padding: 0;
@@ -168,17 +225,8 @@ button[data-azure-niceties-state-trigger] {
   cursor: pointer;
 }
 [data-azure-niceties-state-trigger] > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-[data-azure-niceties-state-trigger]::after {
-  content: "";
-  flex: 0 0 5px;
-  width: 5px;
-  height: 5px;
-  margin: -3px 2px 0 0;
-  border-inline-end: 1px solid currentColor;
-  border-block-end: 1px solid currentColor;
-  transform: rotate(45deg);
-}
-[data-azure-niceties-state-trigger]:hover { background: color-mix(in srgb, Highlight 12%, transparent); }
+[data-azure-niceties-state-trigger]:hover,
+[data-azure-niceties-state-trigger][aria-expanded='true'] { background: color-mix(in srgb, Highlight 12%, transparent); }
 [data-azure-niceties-state-trigger]:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
 [data-azure-niceties-state-trigger]:disabled { opacity: 0.6; cursor: wait; }
 [data-azure-niceties-state-menu] {

@@ -55,12 +55,15 @@ data = {
         field("purpose", "Single purpose", block("Single purpose"), multiline=True),
         field("clipboard", "clipboardWrite justification", block("clipboardWrite"), multiline=True),
         field("storage", "storage justification", block("storage"), multiline=True),
-        field("sites", "Site access justification", block("Website access / content-script matches"), multiline=True),
+        field("sites", "Host permission justification", block("Host permission justification"), "Site access is declared through content_scripts.matches, without a separate host_permissions entry.", multiline=True),
         field("remote", "Remote code explanation", block("Remote-code review note"), "Select Yes for the remote-code question, with this explanation.", True),
     ],
     "reviewerProcedure": procedure,
     "assets": [],
 }
+for item in data["privacy"]:
+    if len(item["value"]) > 1000:
+        raise ValueError(f"{item['label']} exceeds the dashboard's 1,000-character limit")
 for name, label, use in [
     ("icon-128.png", "Extension icon", "128 × 128 PNG"),
     ("promo-440x280.png", "Small promotional tile", "440 × 280 PNG"),
